@@ -1,9 +1,20 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.2.0",
+  "versi": "1.3.0",
   "tanggal": "2026-11-15",
   "server_min": "1.1.0",
   "riwayat": [
+    {
+      "versi": "1.3.0",
+      "tanggal": "2026-11-15",
+      "judul": "Bagan struktur organisasi otomatis",
+      "poin": [
+        "Profil Organisasi: bagan struktur tersusun otomatis dari data Pengurus (Jabatan, Bidang, Urutan) — Pembina/Penasehat, Ketua, Wakil Ketua, Sekretaris & Bendahara, lalu satu kolom per Bidang.",
+        "Tombol Unduh PNG untuk mencetak/membagikan bagan (foto diganti inisial pada berkas unduhan).",
+        "Kelola Beranda → Struktur & Pengurus: pratinjau bagan otomatis yang langsung berubah setiap data pengurus disimpan.",
+        "Gambar bagan unggahan tetap bisa dipakai dan tampil di bawah bagan otomatis."
+      ]
+    },
     {
       "versi": "1.2.0",
       "tanggal": "2026-11-15",

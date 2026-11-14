@@ -43,7 +43,9 @@
         '<div class="card-b" data-p="profil"><div class="grid g2"><div class="col gap-lg">' + t('PROFIL_TENTANG', 'Tentang organisasi', '', true, 6) + t('PROFIL_TUJUAN', 'Tujuan (satu per baris)', '', true, 5) + t('PROFIL_VISI', 'Visi', '', true, 3) + '</div><div class="col gap-lg">' + t('PROFIL_SEJARAH', 'Sejarah', '', true, 9) + t('PROFIL_MISI', 'Misi (satu per baris)', '', true, 6) + '</div></div></div>' +
         '<div class="card-b" data-p="sambutan"><div class="grid" style="grid-template-columns:220px minmax(0,1fr);align-items:start"><div class="col"><div style="aspect-ratio:4/5;border-radius:14px;background:#E9EDF3 center/cover no-repeat;' + (st.SAMBUTAN_FOTO_ID ? 'background-image:url(\'' + img(st.SAMBUTAN_FOTO_ID, 500) + '\')' : '') + '"></div><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + 'Ganti Foto Ketua<input type="file" accept="image/*" class="hide" id="up-samb"></label></div>' +
         '<div class="col gap-lg">' + t('SAMBUTAN_JUDUL', 'Judul') + t('SAMBUTAN_ISI', 'Isi sambutan', 'Nama & jabatan ketua diambil dari Pengaturan.', true, 12) + '</div></div></div>' +
-        '<div class="card-b" data-p="struktur"><div class="row between wrap mb"><div><h4 class="mb-0">Bagan Struktur (opsional)</h4><div class="hint">Gambar bagan organisasi, tampil di halaman Profil.</div></div><div class="row"><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + (st.STRUKTUR_BAGAN_ID ? 'Ganti' : 'Unggah') + ' Bagan<input type="file" accept="image/*" class="hide" id="up-bagan"></label>' + (st.STRUKTUR_BAGAN_ID ? '<button class="btn btn-text btn-sm" id="del-bagan">Hapus</button>' : '') + '</div></div>' +
+        '<div class="card-b" data-p="struktur"><div class="row between wrap mb"><div><h4 class="mb-0 row">' + ic('account_tree') + 'Bagan Otomatis</h4><div class="hint">Disusun sendiri dari <b>Jabatan</b>, <b>Bidang</b> & <b>Urutan</b> di tabel Pengurus di bawah, lalu tampil di halaman Profil. Pembina/Penasehat → Ketua → Wakil Ketua → Sekretaris & Bendahara → satu kolom per Bidang (isi kolom Bidang, mis. "Bidang Humas"; jabatan berisi Ketua/Koordinator menjadi kepala kolom).</div></div>' +
+          '<button class="btn btn-ghost btn-sm" id="kb-bagan-png">' + ic('download', 'sm') + 'Unduh PNG</button></div><div class="bagan card card-b mb" id="kb-bagan" style="background:#fff">' + UI.skel(4) + '</div>' +
+          '<hr class="sep"><div class="row between wrap mb"><div><h4 class="mb-0">Bagan Gambar (opsional)</h4><div class="hint">Bila diunggah, tampil di bawah bagan otomatis pada halaman Profil.</div></div><div class="row"><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + (st.STRUKTUR_BAGAN_ID ? 'Ganti' : 'Unggah') + ' Bagan<input type="file" accept="image/*" class="hide" id="up-bagan"></label>' + (st.STRUKTUR_BAGAN_ID ? '<button class="btn btn-text btn-sm" id="del-bagan">Hapus</button>' : '') + '</div></div>' +
         (st.STRUKTUR_BAGAN_ID ? '<img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 900)) + '" alt="Bagan" style="max-height:220px;border-radius:10px;border:1px solid var(--border)">' : '') +
         '<hr class="sep"><div class="row between mb"><h4 class="mb-0">Pengurus</h4><button class="btn btn-primary btn-sm" data-baru="struktur">' + ic('person_add', 'sm') + 'Tambah Pengurus</button></div><div id="kb-str">' + UI.skel(3) + '</div></div>' +
         '<div class="card-b" data-p="berita"><div class="row between mb"><h4 class="mb-0">Berita & Pengumuman</h4><button class="btn btn-primary btn-sm" data-baru="berita">' + ic('add', 'sm') + 'Tulis Berita</button></div><div id="kb-brt">' + UI.skel(3) + '</div></div>' +
@@ -90,6 +92,17 @@
         { k: 'jabatan', label: 'Jabatan', render: (s) => esc(s.jabatan) + '<div class="small muted">' + esc(s.bidang || '') + '</div>' }, { k: 'tampil', label: 'Tampil', render: (s) => s.tampil === 'TIDAK' ? '<span class="badge b-mute">Disembunyikan</span>' : '<span class="badge b-ok">Tampil</span>' },
         { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="ubah">' + ic('edit', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="hapus">' + ic('delete', 'sm') + '</button>' }],
       onAksi: (a, s) => a === 'ubah' ? formKonten('struktur', s) : hapusKonten('struktur', s) });
+    baganAdmin(k.struktur);
+  }
+  /** Pratinjau bagan otomatis (memakai pengurus yang ditandai Tampil) */
+  function baganAdmin(rows) {
+    const el = $('#kb-bagan'); if (!el) return;
+    IKH.muat(['js/bagan.js?v=' + IKH.VERSI]).then(() => {
+      if (!document.body.contains(el)) return;
+      const r = IKH.Bagan.pasang(el, rows);
+      const st = (Store.adm && Store.adm.setting) || {}, per = r && r.susun ? r.susun.periode : '';
+      const b = $('#kb-bagan-png'); if (b) b.onclick = (e) => UI.tombol(e.currentTarget, () => IKH.Bagan.unduh(rows, { judul: 'Struktur Organisasi ' + (st.ORG_NAMA || 'IKALLHUBDAT'), sub: per ? 'Periode ' + per : '', nama: 'Bagan-Struktur-' + (st.ORG_SINGKAT || 'IKALLHUBDAT').replace(/\s+/g, '-') }));
+    }, () => { el.innerHTML = UI.kosong('Bagan gagal dimuat. Periksa koneksi.', 'account_tree'); });
   }
   const PETA_K = { berita: { api: 'berita', kunci: 'berita', judul: 'Berita' }, galeri: { api: 'galeri', kunci: 'galeri', judul: 'Foto Galeri' }, struktur: { api: 'struktur', kunci: 'struktur', judul: 'Pengurus' } };
   function formKonten(jenis, item) {

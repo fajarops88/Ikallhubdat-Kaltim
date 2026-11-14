@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.2.0';
+  const VERSI = '1.3.0';
   const RILIS = '2026-11-15';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});

@@ -119,6 +119,7 @@
       sorot: (k, on) => $$('#pb-list li[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on))
     });
   }
+  const periodeStr = (str) => { const n = {}; (str || []).forEach((r) => { if (r.periode) n[r.periode] = (n[r.periode] || 0) + 1; }); return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || ''; };
   const potong = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n).replace(/\s\S*$/, '') + '…' : s; };
   function kartuBerita(b) {
     return '<a class="news-c" href="#/berita/' + esc(b.id) + '"><div class="im" ' + (b.gambar_id ? bg(b.gambar_id, 800) : '') + '>' + (b.gambar_id ? '' : ic('newspaper', 'xl')) + '</div>' +
@@ -160,15 +161,21 @@
         '<section class="form-sec" id="s-sejarah"><div class="card card-b"><div class="kicker gold">Sejarah</div><h2 class="mt">Perjalanan Organisasi</h2><div class="prose">' + esc(st.PROFIL_SEJARAH) + '</div></div></section>' +
         '<section class="sec form-sec" id="s-visimisi" style="padding-bottom:0"><div class="grid g2"><div class="card navy card-b"><div class="kicker" style="color:var(--gold)">Visi</div><div class="quote mt" style="color:#fff">' + esc(st.PROFIL_VISI) + '</div></div>' +
         '<div class="card card-b"><div class="kicker gold">Misi</div><ul class="misi mt">' + daftar(st.PROFIL_MISI).map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div></div></section>' +
-        '<section class="sec form-sec" id="s-sambutan" style="padding-bottom:0"><div class="card card-b sambutan" style="grid-template-columns:240px 1fr"><div class="foto" ' + (st.SAMBUTAN_FOTO_ID ? bg(st.SAMBUTAN_FOTO_ID, 600) : '') + '>' + (st.SAMBUTAN_FOTO_ID ? '' : ic('person', 'xl')) + '</div>' +
+        '<section class="sec form-sec" id="s-sambutan" style="padding-bottom:0"><div class="card card-b sambutan samb-profil"><div class="foto" ' + (st.SAMBUTAN_FOTO_ID ? bg(st.SAMBUTAN_FOTO_ID, 600) : '') + '>' + (st.SAMBUTAN_FOTO_ID ? '' : ic('person', 'xl')) + '</div>' +
         '<div><div class="kicker gold">' + esc(st.SAMBUTAN_JUDUL || 'Sambutan Ketua') + '</div><div class="prose mt">' + esc(st.SAMBUTAN_ISI) + '</div><div class="mt"><b>' + esc(st.KETUA_NAMA || '') + '</b><div class="muted small">' + esc(st.KETUA_JABATAN || '') + '</div></div></div></div></section>' +
         '<section class="sec form-sec" id="s-struktur" style="padding-bottom:0"><div class="sec-h"><div><div class="kicker gold">Kepengurusan</div><h2>Struktur Organisasi</h2></div></div>' +
-        (st.STRUKTUR_BAGAN_ID ? '<div class="card card-b mb"><img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 1600)) + '" alt="Bagan struktur organisasi" style="width:100%;border-radius:8px;cursor:zoom-in" id="bagan"></div>' : '') +
-        (str.length ? '<div class="org">' + str.map((s, i) => '<div class="p ' + (i === 0 ? 'top' : '') + '"><div class="ft" ' + (s.foto_id ? bg(s.foto_id, 300) : '') + '>' + (s.foto_id ? '' : esc(IKH.inisial(s.nama))) + '</div><b>' + esc(s.nama) + '</b><div class="small" style="color:var(--navy);font-weight:600">' + esc(s.jabatan) + '</div>' + (s.bidang ? '<div class="tiny muted">' + esc(s.bidang) + '</div>' : '') + '</div>').join('') + '</div>' : UI.kosong('Struktur organisasi belum diisi.', 'account_tree')) + '</section>' +
+        (str.length ? '<div class="card card-b mb"><div class="row between wrap mb"><span class="small muted">' + ic('account_tree', 'sm') + ' Bagan disusun otomatis dari data kepengurusan' + (periodeStr(str) ? ' • Periode ' + esc(periodeStr(str)) : '') + '</span>' +
+          '<button class="btn btn-ghost btn-xs" id="bagan-png">' + ic('download', 'sm') + 'Unduh PNG</button></div><div class="bagan" id="bagan-oto">' + UI.skel(4) + '</div></div>' : UI.kosong('Struktur organisasi belum diisi.', 'account_tree')) +
+        (st.STRUKTUR_BAGAN_ID ? '<div class="card card-b mb"><div class="small muted mb">Bagan resmi (gambar)</div><img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 1600)) + '" alt="Bagan struktur organisasi" style="width:100%;border-radius:8px;cursor:zoom-in" id="bagan"></div>' : '') + '</section>' +
         '<section class="sec form-sec" id="s-pengurus" style="padding-bottom:0"><div class="sec-h"><div><div class="kicker gold">Mengenal Lebih Dekat</div><h2>Profil Pengurus</h2></div></div>' +
         (str.filter((s) => s.profil_singkat).length ? '<div class="grid g2">' + str.filter((s) => s.profil_singkat).map((s) => '<div class="card card-b row top gap-lg"><div class="ava lg" ' + (s.foto_id ? bg(s.foto_id, 200) : '') + '>' + (s.foto_id ? '' : esc(IKH.inisial(s.nama))) + '</div><div><b>' + esc(s.nama) + '</b><div class="small" style="color:var(--navy);font-weight:600">' + esc(s.jabatan) + (s.periode ? ' • ' + esc(s.periode) : '') + '</div><p class="small muted mt mb-0" style="white-space:pre-line">' + esc(s.profil_singkat) + '</p></div></div>').join('') + '</div>' : UI.kosong('Profil pengurus belum diisi.', 'groups')) + '</section></div>';
       $$('[data-s]', main).forEach((b) => b.onclick = () => { const el = $('#s-' + b.dataset.s); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
       const bag = $('#bagan', main); if (bag) bag.onclick = () => UI.lightbox(bag.src, 'Bagan struktur organisasi');
+      if (str.length) IKH.muat(['js/bagan.js?v=' + IKH.VERSI]).then(() => {
+        const el = $('#bagan-oto'); if (!el || !document.body.contains(el)) return;
+        IKH.Bagan.pasang(el, str);
+        $('#bagan-png').onclick = (e) => UI.tombol(e.currentTarget, () => IKH.Bagan.unduh(str, { judul: 'Struktur Organisasi ' + (st.ORG_NAMA || 'IKALLHUBDAT'), sub: periodeStr(str) ? 'Periode ' + periodeStr(str) : '', nama: 'Bagan-Struktur-' + (st.ORG_SINGKAT || 'IKALLHUBDAT').replace(/\s+/g, '-') }));
+      }, () => { const el = $('#bagan-oto'); if (el) el.innerHTML = UI.kosong('Bagan gagal dimuat. Periksa koneksi.', 'account_tree'); });
       if (q && q.get('s')) setTimeout(() => { const el = $('#s-' + q.get('s')); if (el) el.scrollIntoView({ block: 'start' }); }, 60);
     });
   }
