@@ -188,6 +188,15 @@
     const f = (k, label, inp, hint, full) => '<div class="fld ' + (full ? 'full' : '') + '" data-f="' + k + '"><label for="f-' + k + '">' + label + (WAJIB.indexOf(k) > -1 && !o.tanpaWajib ? '<span class="req">*</span>' : '') + '</label>' + inp + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
     const t = (k, ph, type, extra) => '<input class="inp" id="f-' + k + '" name="' + k + '" type="' + (type || 'text') + '" value="' + esc(v[k] || '') + '" placeholder="' + esc(ph || '') + '" ' + (extra || '') + '>';
     const s = (k, list) => '<select class="inp" id="f-' + k + '" name="' + k + '">' + opsi(list, v[k]) + (v[k] && list.indexOf(v[k]) === -1 ? '<option selected>' + esc(v[k]) + '</option>' : '') + '</select>';
+    // Pilihan + isian bebas: bila daftar memuat "Lainnya", memilihnya memunculkan kotak isian.
+    // Nilai yang tidak ada di daftar (isian bebas sebelumnya) tampil sebagai "Lainnya" + teksnya.
+    const sLain = (k, list, ph) => {
+      const lain = list.find((x) => POLA_LAIN.test(x));
+      if (!lain) return s(k, list);
+      const isi = v[k] || '', bebas = !!isi && list.indexOf(isi) === -1, pilih = bebas ? lain : isi;
+      return '<select class="inp" id="f-' + k + '" name="' + k + '" data-lain="' + esc(lain) + '"' + (isi === lain && v.id_record ? ' data-awal="' + esc(lain) + '"' : '') + '>' + opsi(list, pilih) + '</select>' +
+        '<input class="inp inp-lain' + (pilih === lain ? '' : ' hide') + '" id="f-' + k + '_lain" type="text" maxlength="150" value="' + esc(bebas ? isi : '') + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">';
+    };
     const tahun = new Date().getFullYear();
     return {
       identitas: '<div class="form-grid">' + f('nama', 'Nama lengkap & gelar', t('nama', 'Sesuai ijazah, beserta gelar', 'text', 'autocomplete="name" maxlength="150"'), 'Nama ini dicetak pada KTA.', true) +
@@ -196,21 +205,40 @@
         f('email', 'Email aktif', t('email', 'nama@email.com', 'email', 'autocomplete="email"'), 'Akun & KTA digital dikirim ke email ini.') + f('kota_domisili', 'Domisili (kab/kota)', s('kota_domisili', daftar(st.DAFTAR_KOTA))) +
         f('alamat', 'Alamat lengkap', '<textarea class="inp" id="f-alamat" name="alamat" rows="2" maxlength="300" placeholder="Jalan, RT, kelurahan, kecamatan">' + esc(v.alamat || '') + '</textarea>', '', true) + '</div>',
       akademik: '<div class="form-grid">' + f('nomor_taruna', 'Nomor Induk Taruna (NIT)', t('nomor_taruna', 'Contoh: 1902044', 'text', 'maxlength="30"')) + f('angkatan', 'Angkatan', t('angkatan', 'Contoh: 38', 'text', 'maxlength="10"')) +
-        f('prodi', 'Program studi', s('prodi', daftar(st.DAFTAR_PRODI))) + f('tahun_kelulusan', 'Tahun lulus', t('tahun_kelulusan', 'TTTT', 'text', 'inputmode="numeric" maxlength="4"')) + '</div>',
+        f('prodi', 'Program studi', sLain('prodi', daftar(st.DAFTAR_PRODI), 'Tulis nama program studi')) + f('tahun_kelulusan', 'Tahun lulus', t('tahun_kelulusan', 'TTTT', 'text', 'inputmode="numeric" maxlength="4"')) + '</div>',
       kepegawaian: '<div class="form-grid">' + f('status_kepegawaian', 'Status kepegawaian', s('status_kepegawaian', daftar(st.DAFTAR_KEPEGAWAIAN))) + f('instansi', 'Instansi / unit kerja', t('instansi', 'Contoh: Dinas Perhubungan Kota …')) +
         f('jabatan_terakhir', 'Jabatan terakhir', t('jabatan_terakhir', 'Contoh: Analis Lalu Lintas'), '', true) + '</div>'
     };
   };
-  IKH.ambilForm = function (el, fields) { const o = {}; fields.forEach((k) => { const x = $('[name="' + k + '"]', el); if (x) o[k] = x.value.trim(); }); return o; };
+  /* "Lainnya" → isian bebas. Teks yang sama dengan salah satu pilihan memakai ejaan resmi pilihan itu. */
+  const POLA_LAIN = /^(lainnya|lain-lain|lain lain)$/i;
+  const rapi = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+  function nilaiLain(sel) {
+    const t = rapi(($('#' + sel.id + '_lain') || {}).value);
+    if (!t || POLA_LAIN.test(t)) return sel.dataset.awal || '';           // data lama bernilai "Lainnya" dibiarkan
+    const sama = Array.from(sel.options).find((op) => op.value && !POLA_LAIN.test(op.value) && op.value.toLowerCase() === t.toLowerCase());
+    return sama ? sama.value : t;
+  }
+  const pilihLain = (sel) => !!sel && sel.tagName === 'SELECT' && !!sel.dataset.lain && sel.value === sel.dataset.lain;
+  document.addEventListener('change', (e) => {
+    const sel = e.target;
+    if (!sel || !sel.matches || !sel.matches('select[data-lain]')) return;
+    const inp = $('#' + sel.id + '_lain'); if (!inp) return;
+    const on = pilihLain(sel);
+    inp.classList.toggle('hide', !on);
+    if (on && !inp.value) inp.focus();
+  });
+  IKH.ambilForm = function (el, fields) { const o = {}; fields.forEach((k) => { const x = $('[name="' + k + '"]', el); if (x) o[k] = pilihLain(x) ? nilaiLain(x) : x.value.trim(); }); return o; };
   IKH.validasiForm = function (el, o, wajib) {
     $$('.fld.err', el).forEach((x) => { x.classList.remove('err'); const m = $('.msg-err', x); if (m) m.remove(); });
     const salah = [];
     const tanda = (k, msg) => { const f = $('[data-f="' + k + '"]', el); if (f) { f.classList.add('err'); f.insertAdjacentHTML('beforeend', '<span class="msg-err">' + esc(msg) + '</span>'); } salah.push(k); };
-    (wajib || []).forEach((k) => { if (!o[k]) tanda(k, 'Wajib diisi.'); });
+    $$('select[data-lain]', el).forEach((sel) => { if (pilihLain(sel) && !nilaiLain(sel)) tanda(sel.name, 'Anda memilih "' + sel.dataset.lain + '": ' + ($('#' + sel.id + '_lain').placeholder || 'isi kotak di bawahnya').toLowerCase() + '.'); });
+    (wajib || []).forEach((k) => { if (!o[k] && salah.indexOf(k) === -1) tanda(k, 'Wajib diisi.'); });
     if (o.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(o.email)) tanda('email', 'Format email tidak valid.');
     if (o.no_hp && !/^08\d{8,12}$/.test(IKH.hp08(o.no_hp))) tanda('no_hp', 'Nomor tidak valid (contoh 081234567890).');
     if (o.tahun_kelulusan && !/^\d{4}$/.test(o.tahun_kelulusan)) tanda('tahun_kelulusan', 'Isi 4 digit tahun.');
-    if (salah.length) { const f = $('[data-f="' + salah[0] + '"] .inp', el); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } }
+    if (salah.length) { const f = $('[data-f="' + salah[0] + '"] .inp-lain:not(.hide)', el) || $('[data-f="' + salah[0] + '"] .inp', el); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } }
     return !salah.length;
   };
 

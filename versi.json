@@ -1,9 +1,21 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.4.0",
+  "versi": "1.4.1",
   "tanggal": "2026-11-15",
   "server_min": "1.2.0",
   "riwayat": [
+    {
+      "versi": "1.4.1",
+      "tanggal": "2026-11-15",
+      "judul": "Program studi \"Lainnya\" bisa diisi sendiri",
+      "poin": [
+        "Formulir Pendaftaran, Ajukan Perubahan Data, dan Tambah/Ubah Data Alumni: memilih \"Lainnya\" pada Program studi memunculkan kotak isian untuk menulis nama program studi.",
+        "Yang disimpan adalah nama yang diketik (bukan kata \"Lainnya\"), sehingga tercetak di KTA dan muncul di filter & rekap.",
+        "Ketikan yang sama dengan pilihan di daftar (beda huruf besar/spasi) otomatis memakai ejaan resmi pilihan itu.",
+        "Data lama yang sudah bernilai \"Lainnya\" tetap bisa disimpan tanpa diketik ulang.",
+        "Fitur aktif selama daftar Program studi (Pengaturan) memuat baris \"Lainnya\". Backend tidak berubah (tetap v1.2.0)."
+      ]
+    },
     {
       "versi": "1.4.0",
       "tanggal": "2026-11-15",
