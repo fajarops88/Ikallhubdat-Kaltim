@@ -41,7 +41,7 @@
   }
   function bingkai(aktif, judul) {
     const x = D(), st = x.st, me = Sesi.me || {};
-    $('#s-top').innerHTML = (st.LOGO_ID ? '<span class="lg" ' + bg(st.LOGO_ID, 160) + '></span>' : '<span class="lg">' + ic('shield', 'lg') + '</span>') + '<div><div class="t1">SIM ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Panel Pengurus</div></div>';
+    $('#s-top').innerHTML = '<span class="lg" ' + IKH.logoBg(st, 160) + '></span>' + '<div><div class="t1">SIM ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Panel Pengurus ' + IKH.chipVersi('gelap') + '</div></div>';
     const n = { reg: x.menunggu.length, chg: x.chg.length };
     $('#s-nav').innerHTML = MENU.map((m) => m.length === 1 ? '<div class="grp">' + m[0] + '</div>' : '<a href="#' + m[0] + '" class="' + (m[0] === aktif ? 'on' : '') + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (m[3] && n[m[3]] ? '<span class="count">' + n[m[3]] + '</span>' : '') + '</a>').join('');
     $('#s-bot').innerHTML = UI.ava(me.nama || 'P', '', '') + '<div class="grow" style="min-width:0"><div class="nm trunc">' + esc(me.nama || me.email) + '</div><div class="rl">' + (me.darurat ? 'Akses Darurat' : 'Pengurus') + '</div></div><button id="s-out" aria-label="Keluar" title="Keluar">' + ic('logout') + '</button>';
@@ -97,6 +97,7 @@
         kpi('', 'edit_note', 'Pembaruan Mandiri', 'Perubahan Data', x.chg.length, 'pengajuan', 'Menunggu persetujuan', '#/admin/perubahan') +
         kpi('o', 'groups', 'Basis Data', 'Alumni Terverifikasi', x.alumni.length, 'orang', aktif + ' KTA aktif', '#/admin/alumni') +
         kpi('g', 'event_busy', 'Siklus Keanggotaan', 'KTA ≤ 30 Hari', ak.length, 'anggota', 'Perlu pengingat', '#/admin/kta?f=30') + '</div>' +
+        kartuPeta() +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1fr) 340px;align-items:start" id="dg">' +
         '<div class="col gap-lg"><section class="card"><div class="card-h"><div><h3 class="row"><span class="dot"></span>Antrean Verifikasi Pendaftaran</h3><div class="sub">Pendaftar terlama tampil lebih dulu</div></div><a class="btn btn-ghost btn-sm" href="#/admin/verifikasi">Lihat semua' + ic('arrow_forward', 'sm') + '</a></div>' +
         (x.menunggu.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nama alumni</th><th>NIT</th><th>Prodi & angkatan</th><th>Tanggal daftar</th><th></th></tr></thead><tbody>' +
@@ -114,16 +115,98 @@
       if (window.innerWidth < 1180) $('#dg').style.gridTemplateColumns = '1fr';
       $$('[data-go]', main).forEach((tr) => tr.onclick = () => Router.go(tr.dataset.go));
       $$('.kpi', main).forEach((k) => k.onclick = () => Router.go(k.dataset.href));
+      gambarPeta();
       IKH.ambil('notifr', 'notif.ringkas', {}, 60000, { tanpaLokal: true }).then((n) => {
         const b = $('#int-b'); if (!b || !n) return;
         $('#int-st').className = 'badge ' + (n.emailAktif ? 'b-ok' : 'b-wait'); $('#int-st').textContent = n.emailAktif ? 'Normal' : 'Email nonaktif';
         b.innerHTML = '<div class="kv"><div>Database</div><div><span class="badge b-ok">Google Sheets aktif</span></div><div>Sisa kuota email hari ini</div><div class="tnum">' + n.kuotaEmail + '</div>' +
-          '<div>Notifikasi email</div><div>' + (n.emailAktif ? 'Aktif' : 'Nonaktif') + '</div><div>WhatsApp (Fonnte)</div><div>' + (n.waAktif ? 'Aktif' : 'Nonaktif') + '</div><div>Antrean notifikasi</div><div>' + (n.antrianAda ? '<span class="badge b-wait">ada antrean</span>' : 'kosong') + '</div></div>' +
+          '<div>Notifikasi email</div><div>' + (n.emailAktif ? 'Aktif' : 'Nonaktif') + '</div><div>WhatsApp (Fonnte)</div><div>' + (n.waAktif ? 'Aktif' : 'Nonaktif') + '</div><div>Antrean notifikasi</div><div>' + (n.antrianAda ? '<span class="badge b-wait">ada antrean</span>' : 'kosong') + '</div>' +
+          '<div>Versi aplikasi / server</div><div>' + IKH.chipVersi() + ' <span class="small muted">server v' + esc(IKH.Versi.server || '-') + '</span></div></div>' +
           '<a class="btn btn-ghost btn-sm btn-block mt" href="#/admin/notifikasi">' + ic('campaign', 'sm') + 'Kelola Notifikasi</a>';
       });
     });
   }
   const kpi = (k, ikon, t, h, n, sat, ft, href) => '<div class="card kpi ' + k + '" data-href="' + href.slice(1) + '" role="link" tabindex="0"><span class="ico">' + ic(ikon) + '</span><div class="t">' + t + '</div><div class="h">' + h + '</div><div class="n tnum">' + fmt.angka(n) + '<small>' + sat + '</small></div><div class="ft"><span>' + ft + '</span>' + ic('chevron_right', 'sm') + '</div></div>';
+
+  /* ======================= PETA SEBARAN DOMISILI ======================= */
+  const DOM = [['6472', 'Kota Samarinda'], ['6471', 'Kota Balikpapan'], ['6474', 'Kota Bontang'], ['6402', 'Kabupaten Kutai Kartanegara'], ['6408', 'Kabupaten Kutai Timur'],
+    ['6407', 'Kabupaten Kutai Barat'], ['6411', 'Kabupaten Mahakam Ulu'], ['6401', 'Kabupaten Paser'], ['6409', 'Kabupaten Penajam Paser Utara'], ['6403', 'Kabupaten Berau']];
+  const NAMA_DOM = {}; DOM.forEach((d) => { NAMA_DOM[d[0]] = d[1]; });
+  NAMA_DOM.LUAR = 'Luar Kalimantan Timur'; NAMA_DOM.KOSONG = 'Domisili belum diisi'; NAMA_DOM['?'] = 'Tidak dikenali';
+  const ALIAS_DOM = { samarinda: '6472', smd: '6472', balikpapan: '6471', bpp: '6471', bontang: '6474', kutaikartanegara: '6402', kukar: '6402', tenggarong: '6402',
+    kutaitimur: '6408', kutim: '6408', sangatta: '6408', sangata: '6408', kutaibarat: '6407', kubar: '6407', sendawar: '6407', mahakamulu: '6411', mahulu: '6411',
+    paser: '6401', pasir: '6401', tanahgrogot: '6401', penajampaserutara: '6409', ppu: '6409', penajam: '6409', berau: '6403', tanjungredeb: '6403' };
+  const ALIAS_PANJANG = Object.keys(ALIAS_DOM).filter((k) => k.length >= 5).sort((a, b) => b.length - a.length);
+  /** Teks domisili bebas (data lama/impor) → kode kab/kota BPS, 'LUAR', '?' atau '' */
+  function kodeDomisili(v) {
+    const s = String(v || '').toLowerCase().replace(/\b(kabupaten|kab|kota|kotamadya|kodya)\b\.?/g, '').replace(/[^a-z]/g, '');
+    if (!s) return '';
+    if (ALIAS_DOM[s]) return ALIAS_DOM[s];
+    if (/luar(kaltim|kalimantantimur|provinsi|daerah)/.test(s) || /^luar/.test(s)) return 'LUAR';
+    for (const k of ALIAS_PANJANG) if (s.indexOf(k) > -1) return ALIAS_DOM[k];
+    return '?';
+  }
+  IKH.kodeDomisili = kodeDomisili; IKH.NAMA_DOM = NAMA_DOM; IKH.DOM = DOM;
+  const PT = { mode: 'alumni', sel: '' };
+  const SKALA = ['#DAE2FF', '#A9BCEB', '#6F8DD1', '#2E4F95', '#0A2A63'];
+  const warnaPeta = (v, maks) => !v ? '#EEF1F5' : SKALA[Math.min(4, Math.floor((v / maks) * 5 - 1e-9))];
+  function kartuPeta() {
+    return '<section class="card mt-lg" id="pt-card"><div class="card-h"><div><h3 class="row">' + ic('map') + 'Peta Sebaran Alumni per Domisili</h3><div class="sub">Jumlah per kabupaten/kota di Kalimantan Timur • klik wilayah untuk melihat daftar alumninya</div></div>' +
+      '<div class="seg" id="pt-mode" role="tablist" aria-label="Data yang dipetakan"><button data-m="alumni" class="' + (PT.mode === 'alumni' ? 'on' : '') + '">Alumni terverifikasi</button><button data-m="semua" class="' + (PT.mode === 'semua' ? 'on' : '') + '">Semua data</button></div></div>' +
+      '<div class="card-b peta-wrap"><div class="peta" id="pt-peta">' + UI.skel(6) + '</div><div id="pt-list"></div></div></section>';
+  }
+  function hitungPeta() {
+    const x = D();
+    const src = PT.mode === 'alumni' ? x.alumni : x.d.anggota.filter((a) => a.status_verifikasi !== 'Ditolak');
+    const n = {}, tak = {};
+    src.forEach((a) => { const k = kodeDomisili(a.kota_domisili) || 'KOSONG'; n[k] = (n[k] || 0) + 1; if (k === '?') tak[a.kota_domisili] = (tak[a.kota_domisili] || 0) + 1; });
+    return { n, tak, total: src.length };
+  }
+  async function gambarPeta() {
+    const box = $('#pt-peta'); if (!box) return;
+    $$('#pt-mode [data-m]').forEach((b) => b.onclick = () => { PT.mode = b.dataset.m; $$('#pt-mode [data-m]').forEach((y) => y.classList.toggle('on', y === b)); gambarPeta(); });
+    try { await IKH.muat(['js/peta-kaltim.js?v=' + IKH.VERSI]); } catch (e) { box.innerHTML = UI.kosong('Peta gagal dimuat. Periksa koneksi.', 'map'); return; }
+    if (!$('#pt-peta')) return;
+    const P = window.PETA_KALTIM, h = hitungPeta(), n = h.n;
+    const nilai = P.wilayah.map((w) => n[w.kode] || 0), maks = Math.max(1, ...nilai), dalam = nilai.reduce((a, b) => a + b, 0);
+    const persen = (v) => h.total ? Math.round(v / h.total * 1000) / 10 : 0;
+    box.innerHTML = '<svg viewBox="0 0 ' + P.w + ' ' + P.h + '" role="img" aria-label="Peta sebaran ' + (PT.mode === 'alumni' ? 'alumni terverifikasi' : 'seluruh data') + ' per kabupaten/kota di Kalimantan Timur">' +
+      '<g class="wil">' + P.wilayah.map((w) => '<path d="' + w.d + '" fill="' + warnaPeta(n[w.kode] || 0, maks) + '" data-k="' + w.kode + '" tabindex="0" role="button" aria-label="' + esc(w.nama + ': ' + (n[w.kode] || 0) + ' orang') + '"><title>' + esc(w.nama + ': ' + (n[w.kode] || 0)) + '</title></path>').join('') + '</g>' +
+      '<g class="lbl" aria-hidden="true">' + P.wilayah.filter((w) => !w.kota).map((w) => '<text x="' + w.x + '" y="' + (w.y + ((n[w.kode] || 0) ? 30 : 4)) + '" text-anchor="middle">' + esc(w.singkat) + '</text>').join('') + '</g>' +
+      '<g class="gel" aria-hidden="true">' + P.wilayah.filter((w) => n[w.kode]).map((w) => { const r = 11 + 9 * Math.sqrt(n[w.kode] / maks); return '<g data-k="' + w.kode + '"><circle cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '"/><text x="' + w.x + '" y="' + (w.y + 4.5) + '" text-anchor="middle">' + n[w.kode] + '</text></g>'; }).join('') + '</g></svg>' +
+      '<div class="pt-tip hide" id="pt-tip" role="status"></div>' +
+      '<div class="pt-leg" aria-hidden="true"><span>0</span><i style="background:#EEF1F5"></i>' + SKALA.map((c) => '<i style="background:' + c + '"></i>').join('') + '<span>' + fmt.angka(maks) + '</span></div>';
+    const rows = P.wilayah.map((w) => ({ k: w.kode, nama: w.nama, v: n[w.kode] || 0 })).sort((a, b) => b.v - a.v || a.nama.localeCompare(b.nama));
+    const baris = (k, nama, v, cls) => '<tr class="clk ' + (cls || '') + '" data-k="' + k + '"><td>' + esc(nama) + '</td><td class="right tnum b">' + fmt.angka(v) + '</td><td style="width:34%"><div class="progress"><i style="width:' + (h.total ? Math.max(v ? 3 : 0, v / h.total * 100) : 0) + '%"></i></div></td><td class="right tnum muted small">' + persen(v) + '%</td></tr>';
+    $('#pt-list').innerHTML = '<div class="row between mb"><span class="small muted">' + fmt.angka(h.total) + ' orang • ' + fmt.angka(dalam) + ' di Kaltim (' + persen(dalam) + '%)</span><button class="btn btn-ghost btn-xs" id="pt-xls">' + ic('table_view', 'sm') + 'Ekspor</button></div>' +
+      '<div class="tbl-wrap"><table class="tbl pt-tbl"><thead><tr><th>Kabupaten / Kota</th><th class="right">Jumlah</th><th></th><th class="right">%</th></tr></thead><tbody>' +
+      rows.map((r) => baris(r.k, r.nama, r.v)).join('') +
+      (n.LUAR ? baris('LUAR', NAMA_DOM.LUAR, n.LUAR, 'pt-x') : '') + (n.KOSONG ? baris('KOSONG', NAMA_DOM.KOSONG, n.KOSONG, 'pt-x') : '') + (n['?'] ? baris('?', NAMA_DOM['?'], n['?'], 'pt-x') : '') + '</tbody></table></div>' +
+      (n['?'] ? '<p class="tiny muted mt mb-0">Tidak dikenali: ' + Object.keys(h.tak).slice(0, 8).map((t) => '"' + esc(t) + '" (' + h.tak[t] + ')').join(', ') + (Object.keys(h.tak).length > 8 ? ', …' : '') + '. Perbaiki isian domisili di Data Alumni.</p>' : '') +
+      (n.KOSONG && h.total && n.KOSONG / h.total > 0.3 ? '<div class="alert warn small mt">' + ic('info', 'sm') + '<div>' + persen(n.KOSONG) + '% data belum mengisi domisili, sehingga peta belum mewakili seluruh anggota.</div></div>' : '');
+    const tip = $('#pt-tip'), svg = $('#pt-peta svg');
+    const sorot = (k, on) => { $$('[data-k="' + k + '"]', box).forEach((el) => el.classList.toggle('on', on)); $$('#pt-list tr[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on)); };
+    const tampilTip = (k, e) => {
+      const v = n[k] || 0, r = box.getBoundingClientRect();
+      tip.innerHTML = '<b>' + esc(NAMA_DOM[k]) + '</b><br>' + fmt.angka(v) + ' orang • ' + persen(v) + '%';
+      tip.classList.remove('hide');
+      const px = (e && e.clientX ? e.clientX - r.left : r.width / 2) + 12, py = (e && e.clientY ? e.clientY - r.top : 20) + 12;
+      tip.style.left = Math.min(px, r.width - 190) + 'px'; tip.style.top = py + 'px';
+    };
+    const buka = (k) => Router.go('/admin/alumni?dom=' + encodeURIComponent(k) + (PT.mode === 'alumni' ? '&st=terverifikasi' : ''));
+    $$('[data-k]', svg).forEach((el) => {
+      const k = el.dataset.k;
+      el.addEventListener('mousemove', (e) => { sorot(k, true); tampilTip(k, e); });
+      el.addEventListener('mouseleave', () => { sorot(k, false); tip.classList.add('hide'); });
+      el.addEventListener('focus', () => { sorot(k, true); tampilTip(k); });
+      el.addEventListener('blur', () => { sorot(k, false); tip.classList.add('hide'); });
+      el.addEventListener('click', () => buka(k));
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(k); } });
+    });
+    $$('#pt-list tr[data-k]').forEach((tr) => { tr.onclick = () => buka(tr.dataset.k); tr.onmouseenter = () => sorot(tr.dataset.k, true); tr.onmouseleave = () => sorot(tr.dataset.k, false); });
+    $('#pt-xls').onclick = () => IKH.Ekspor.excel(rows.concat(['LUAR', 'KOSONG', '?'].filter((k) => n[k]).map((k) => ({ k, nama: NAMA_DOM[k], v: n[k] })))
+      .map((r) => ({ 'Kabupaten/Kota': r.nama, Jumlah: r.v, 'Persen (%)': persen(r.v) })), 'Sebaran-Domisili-' + hariIni(), 'Sebaran');
+  }
 
   /* ======================= VERIFIKASI PENDAFTARAN ======================= */
   const VS = { sel: null, q: '', prodi: '', tab: 'menunggu' };
@@ -286,15 +369,16 @@
   }
 
   /* ======================= DATA ALUMNI ======================= */
-  const AS = { q: '', prodi: '', angkatan: '', status: '', tbl: null };
+  const AS = { q: '', prodi: '', angkatan: '', status: '', dom: '', tbl: null };
   function alumni(p, q) {
     const buka = q && q.get('id');
+    if (q && q.get('dom') !== null) { AS.dom = q.get('dom'); AS.status = q.get('st') === 'terverifikasi' ? '' : AS.status; AS.hanyaVer = q.get('st') === 'terverifikasi'; } else AS.hanyaVer = false;
     return halaman('/admin/alumni', 'Data Alumni', (main, x, awal) => {
       const data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a) }));
       if (awal || !AS.tbl || !$('#al-tbl')) {
         main.innerHTML = ph('groups', 'Data Alumni', fmt.angka(x.alumni.length) + ' terverifikasi • ' + fmt.angka(x.d.anggota.length) + ' total data', '<button class="btn btn-ghost btn-sm" id="al-xls">' + ic('table_view', 'sm') + 'Ekspor Excel</button><button class="btn btn-primary btn-sm" id="al-add">' + ic('person_add', 'sm') + 'Tambah Manual</button>') +
           '<section class="card"><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="al-q" placeholder="Cari nama, NIT, nomor anggota, instansi, email…" value="' + esc(AS.q) + '"></div>' +
-          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select></div><div id="al-tbl"></div></section>';
+          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-dom" style="width:auto" aria-label="Domisili"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select></div><div id="al-tbl"></div></section>';
         AS.tbl = IKH.Tabel($('#al-tbl'), {
           data, idKey: 'id_record', per: 25, cari: (a) => [a.nama, a.nomor_taruna, a.id_member, a.instansi, a.email, a.no_hp, a.prodi].join(' '),
           kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member || '-') + '</span>' },
@@ -305,18 +389,20 @@
           onRow: (a) => drawerAlumni(a.id_record), onAksi: (act, a) => act === 'ubah' ? formAlumni(a.id_record) : drawerAlumni(a.id_record)
         });
         $('#al-q').oninput = IKH.debounce((e) => { AS.q = e.target.value; AS.tbl.cari(AS.q); }, 200);
-        ['al-prodi', 'al-angk', 'al-st'].forEach((id) => $('#' + id).onchange = () => { AS.prodi = $('#al-prodi').value; AS.angkatan = $('#al-angk').value; AS.status = $('#al-st').value; saringA(); });
+        ['al-prodi', 'al-angk', 'al-st', 'al-dom'].forEach((id) => $('#' + id).onchange = () => { AS.prodi = $('#al-prodi').value; AS.angkatan = $('#al-angk').value; AS.status = $('#al-st').value; AS.dom = $('#al-dom').value; AS.hanyaVer = false; saringA(); });
         $('#al-add').onclick = () => formAlumni(null);
         $('#al-xls').onclick = () => IKH.Ekspor.excel(AS.tbl.hasil().map(baris), 'Data-Alumni-' + hariIni(), 'Alumni');
         if (AS.q) AS.tbl.cari(AS.q);
       } else AS.tbl.set(data);
       $('#al-prodi').innerHTML = opsi(uniq(x.d.anggota.map((a) => a.prodi)), AS.prodi, 'Semua prodi');
       $('#al-angk').innerHTML = opsi(uniq(x.d.anggota.map((a) => a.angkatan)), AS.angkatan, 'Semua angkatan');
+      $('#al-dom').innerHTML = '<option value="">Semua domisili</option>' + DOM.concat([['LUAR', NAMA_DOM.LUAR], ['KOSONG', NAMA_DOM.KOSONG], ['?', NAMA_DOM['?']]]).map((d) => '<option value="' + d[0] + '" ' + (AS.dom === d[0] ? 'selected' : '') + '>' + esc(d[1]) + '</option>').join('');
+      $('#al-st').value = AS.status;
       saringA();
       if (buka && awal) drawerAlumni(buka);
     });
   }
-  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status)); }
+  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom)); }
   const baris = (a) => ({ 'No. Anggota': a.id_member, Nama: a.nama, NIT: a.nomor_taruna, Angkatan: a.angkatan, 'Program Studi': a.prodi, 'Tahun Lulus': a.tahun_kelulusan, 'Status Kepegawaian': a.status_kepegawaian, Instansi: a.instansi, Jabatan: a.jabatan_terakhir, 'No. WhatsApp': a.no_hp, Email: a.email, 'Jenis Kelamin': a.jenis_kelamin, Domisili: a.kota_domisili, Status: statusKartu(a), 'Berlaku s.d.': a.masa_berlaku_kartu, 'ID Registrasi': a.id_record });
   IKH.barisAlumni = baris;
   function drawerAlumni(id) {
@@ -610,7 +696,7 @@
           '<form class="card card-b col gap-lg" id="f-dar"><h4>Ganti Sandi Akses Darurat</h4><p class="small muted mb-0">Wajib dirotasi setelah pemakaian pertama. Minimal 12 karakter, huruf dan angka.</p><div class="fld"><label for="dar-b">Sandi darurat baru</label><input class="inp" id="dar-b" type="password" autocomplete="new-password"></div><button class="btn btn-primary" type="submit">Simpan Sandi Darurat</button></form>'
           : '<form class="card card-b col gap-lg" id="f-pw"><h4>Ganti Kata Sandi Saya</h4><div class="fld"><label for="pw-l">Kata sandi saat ini</label><input class="inp" id="pw-l" type="password" autocomplete="current-password"></div><div class="fld"><label for="pw-b">Kata sandi baru</label><input class="inp" id="pw-b" type="password" autocomplete="new-password"><span class="hint">Min. 8 karakter, huruf & angka.</span></div><button class="btn btn-primary" type="submit">Simpan</button></form>') +
         '<div class="col gap-lg"><div class="card card-b"><h4>Sesi</h4><p class="small muted">Keluar dari semua perangkat bila Anda curiga akun dipakai orang lain.</p><button class="btn btn-danger" id="out-all">' + ic('logout', 'sm') + 'Keluar dari Semua Perangkat</button></div>' +
-        '<div class="card card-b"><h4>Info Sistem</h4><div class="kv"><div>Versi frontend</div><div>' + IKH.VERSI + '</div><div>Data panel dibuat</div><div>' + fmt.waktu(x.d.dibuat) + '</div><div>Sinkron terakhir</div><div>' + fmt.relatif(new Date(Store.admAt).toISOString()) + '</div></div><p class="small muted mt mb-0">Rahasia (token Fonnte, secret sesi, sandi darurat) disimpan di Script Properties Apps Script — tidak di spreadsheet maupun di browser.</p></div></div></div></div>' +
+        '<div class="card card-b"><h4>Info Sistem</h4><div class="kv"><div>Versi aplikasi</div><div>' + IKH.chipVersi() + '</div><div>Versi server (Apps Script)</div><div>' + (IKH.Versi.server ? 'v' + esc(IKH.Versi.server) : '-') + '</div><div>Data panel dibuat</div><div>' + fmt.waktu(x.d.dibuat) + '</div><div>Sinkron terakhir</div><div>' + fmt.relatif(new Date(Store.admAt).toISOString()) + '</div></div><p class="small muted mt mb-0">Rahasia (token Fonnte, secret sesi, sandi darurat) disimpan di Script Properties Apps Script — tidak di spreadsheet maupun di browser.</p></div></div></div></div>' +
         '<div class="card-f row between wrap ' + (PG.tab === 'org' || PG.tab === 'kta' ? '' : 'hide') + '" id="s-foot"><span class="small muted" id="s-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="s-simpan">' + ic('check_circle') + 'Simpan Pengaturan</button></div></section>';
       $$('[data-tab]', main).forEach((b) => b.onclick = () => { PG.tab = b.dataset.tab; $$('[data-tab]', main).forEach((y) => y.classList.toggle('on', y === b)); $$('[data-p]', main).forEach((p) => p.classList.toggle('hide', p.dataset.p !== PG.tab)); $('#s-foot').classList.toggle('hide', !(PG.tab === 'org' || PG.tab === 'kta')); });
       const kartu = $('section.card', main);

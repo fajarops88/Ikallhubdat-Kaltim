@@ -1,0 +1,31 @@
+{
+  "app": "SIM IKALLHUBDAT Kaltim",
+  "versi": "1.1.0",
+  "tanggal": "2026-11-15",
+  "server_min": "1.0.0",
+  "riwayat": [
+    {
+      "versi": "1.1.0",
+      "tanggal": "2026-11-15",
+      "judul": "Logo resmi, peta sebaran & info versi",
+      "poin": [
+        "Logo resmi IKALLHUBDAT Kaltim dipakai sebagai ikon aplikasi (PWA), favicon, dan logo bawaan header/sidebar/KTA.",
+        "Dasbor Pengurus: Peta Sebaran Alumni per Domisili (10 kabupaten/kota Kaltim) + tabel peringkat, ekspor Excel, klik wilayah membuka daftar alumninya.",
+        "Data Alumni: filter Domisili (termasuk Luar Kaltim, belum diisi, tidak dikenali).",
+        "Label versi di footer & sidebar: klik untuk melihat versi aplikasi, versi server, dan riwayat perubahan.",
+        "Pemberitahuan otomatis bila ada versi baru, dengan tombol Muat ulang.",
+        "Halaman selalu dicek ke server sehingga hasil git push lebih cepat terlihat; pesan konfigurasi GAS_URL lebih jelas."
+      ]
+    },
+    {
+      "versi": "1.0.0",
+      "tanggal": "2026-11-14",
+      "judul": "Rilis perdana",
+      "poin": [
+        "Portal publik, pendaftaran mandiri, cek status & verifikasi keaslian KTA ber-QR.",
+        "Portal Anggota: profil, KTA digital, pengajuan perubahan data.",
+        "Panel Pengurus: verifikasi, data alumni, KTA, rekap, notifikasi WA/Email, CRM, impor data lama, log audit."
+      ]
+    }
+  ]
+}

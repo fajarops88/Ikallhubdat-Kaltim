@@ -5,10 +5,11 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.0.0';
+  const VERSI = '1.1.0';
+  const RILIS = '2026-11-15';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
-  IKH.VERSI = VERSI;
+  IKH.VERSI = VERSI; IKH.RILIS = RILIS;
 
   /* ---------------- Utilitas ---------------- */
   const $ = (s, el) => (el || document).querySelector(s);
@@ -17,6 +18,8 @@
   const ic = (n, cls) => '<svg class="ic ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + n + '"></use></svg>';
   const img = (id, w) => (id ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + (w || 600) : '');
   const bg = (id, w) => (id ? 'style="background-image:url(\'' + img(id, w) + '\')"' : '');
+  /* Logo: hasil unggahan Pengurus (Drive) bila ada, selain itu logo bawaan img/logo.png */
+  const logoBg = (st, w) => 'style="background-image:url(\'' + (st && st.LOGO_ID ? img(st.LOGO_ID, w || 160) : 'img/logo.png') + '\')"';
   const inisial = (n) => String(n || '?').replace(/[,.].*$/, '').trim().split(/\s+/).slice(0, 2).map((x) => x[0] || '').join('').toUpperCase() || '?';
   const warnaAva = (n) => 'c' + ((String(n || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 5) + 1);
   const debounce = (fn, ms) => { let t; return function () { const a = arguments; clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; };
@@ -37,7 +40,7 @@
     angka(n) { return Number(n || 0).toLocaleString('id-ID'); },
     sisaHari(v) { const d = tglObj(v); if (!d) return null; return Math.ceil((d.getTime() - tglObj(hariIni()).getTime()) / 864e5); }
   };
-  Object.assign(IKH, { $, $$, esc, ic, img, bg, inisial, warnaAva, debounce, daftar, hp08, hariIni, fmt });
+  Object.assign(IKH, { $, $$, esc, ic, img, bg, logoBg, inisial, warnaAva, debounce, daftar, hp08, hariIni, fmt });
 
   /* ---------------- Penyimpanan lokal (aman) ---------------- */
   const LS = {
@@ -73,22 +76,33 @@
   window.Perf = Perf;
 
   /* ---------------- API ---------------- */
-  const KONFIG_OK = CFG.GAS_URL && /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(CFG.GAS_URL) && !/GANTI|XXXX/.test(CFG.GAS_URL);
-  IKH.KONFIG_OK = KONFIG_OK;
+  /* GAS_URL dirapikan (spasi/kutip tersisa dibuang) lalu diperiksa; alasan ditampilkan bila salah */
+  const GAS_URL = String(CFG.GAS_URL || '').trim().replace(/^['"]+|['"]+$/g, '').replace(/\?.*$/, '').replace(/\/+$/, '');
+  function alasanUrl(u) {
+    if (!u) return 'GAS_URL kosong / js/config.js tidak terbaca';
+    if (/GANTI|XXXX/.test(u)) return 'GAS_URL masih berisi contoh "GANTI_DENGAN_ID_DEPLOYMENT"';
+    if (/\/dev$/.test(u)) return 'URL berakhiran /dev (mode uji). Pakai URL /exec dari Deploy → Kelola deployment';
+    if (!/^https:\/\/script\.google\.com\/(a\/macros\/[^/]+\/|macros\/)s\/[A-Za-z0-9_-]{20,}\/exec$/.test(u)) return 'format URL tidak dikenali (harus https://script.google.com/macros/s/…/exec)';
+    return '';
+  }
+  const ALASAN_CFG = alasanUrl(GAS_URL);
+  const KONFIG_OK = !ALASAN_CFG;
+  IKH.KONFIG_OK = KONFIG_OK; IKH.GAS_URL = GAS_URL;
   const BACA = /^(pub\.(boot|cekStatus|verifikasi)|auth\.me|agt\.boot|adm\.(boot|konten|log|akun\.list|arsip\.list)|notif\.(config|queue|ringkas)|wa\.(audience|blastList)|crm\.(list|stats|detail)|imp\.inspect)$/;
   const _inflight = {}; let _epoch = 0;
   async function apiRun(action, data, extra) {
     const t0 = performance.now();
-    if (!KONFIG_OK) return { ok: false, msg: 'Konfigurasi GAS_URL di js/config.js belum diisi.', code: 'CFG' };
+    if (!KONFIG_OK) return { ok: false, msg: 'Konfigurasi belum lengkap: ' + ALASAN_CFG + '.', code: 'CFG' };
     const body = Object.assign({ action: action, data: data || {}, token: Sesi.token || undefined }, extra || {});
     let res;
     try {
-      const r = await fetch(CFG.GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', cache: 'no-store' });
+      const r = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', cache: 'no-store' });
       res = await r.json();
     } catch (e) {
       res = { ok: false, code: 'NET', msg: navigator.onLine ? 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.' : 'Anda sedang offline.' };
     }
     Perf.add(action, t0, res);
+    if (res && res.v) Versi.catatServer(res.v);
     if (res && res.nq > 0) scheduleDrain();
     if (res && res.code === 'AUTH' && Sesi.data) setTimeout(() => Sesi.keluar(true), 0);
     if (res && res.code === 'GANTI') setTimeout(() => Router.go('/ganti-sandi'), 0);
@@ -144,7 +158,7 @@
     const k = 'warm_' + scope, last = Number(sessionStorage.getItem(k) || 0);
     if (Date.now() - last < 240000) return;
     sessionStorage.setItem(k, String(Date.now()));
-    fetch(CFG.GAS_URL + '?w=' + scope, { mode: 'no-cors', cache: 'no-store' }).catch(() => { });
+    fetch(GAS_URL + '?w=' + scope, { mode: 'no-cors', cache: 'no-store' }).catch(() => { });
   }
   IKH.warmUp = warmUp;
 
@@ -416,7 +430,7 @@
       st = st || {};
       const s = Kta.statusTeks(a);
       return '<div class="kta depan" role="img" aria-label="KTA sisi depan ' + esc(a.nama) + '">' +
-        '<div class="hd"><div class="lg" ' + (st.LOGO_ID ? bg(st.LOGO_ID, 160) : '') + '>' + (st.LOGO_ID ? '' : ic('shield')) + '</div><div><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2">' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</div></div></div>' +
+        '<div class="hd"><div class="lg" ' + logoBg(st, 160) + '></div><div><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2">' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</div></div></div>' +
         '<div class="chipg"></div><div class="garis"></div>' +
         '<div class="ft" ' + (a.foto_id ? bg(a.foto_id, 400) : '') + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
         '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm">' + esc(String(a.nama || 'NAMA ANGGOTA').toUpperCase()) + '</div></div>' +
@@ -511,15 +525,119 @@
     return $('#main', app);
   };
 
+  /* ---------------- Versi aplikasi: info, riwayat, deteksi pembaruan ----------------
+     • versi.json (dibuat skrip build) = versi terbaru di GitHub Pages + riwayat perubahan
+     • diperiksa tanpa cache saat aplikasi dibuka, saat tab aktif lagi (maks 1×/15 mnt) & tiap 30 mnt
+     • versi server diambil dari field "v" pada setiap respons API Apps Script */
+  const cmpVer = (a, b) => { const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; } return 0; };
+  const lsGet = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+  const Versi = {
+    info: null, cekAt: 0, gagal: false, server: lsGet('ikh_vsrv'),
+    catatServer(v) { v = String(v || ''); if (!v || v === this.server) return; this.server = v; lsSet('ikh_vsrv', v); },
+    async cek(paksa) {
+      if (!paksa && Date.now() - this.cekAt < 15 * 60e3) return this.info;
+      this.cekAt = Date.now();
+      try {
+        const r = await fetch('./versi.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        this.info = await r.json(); this.gagal = false;
+      } catch (e) { this.gagal = true; return null; }
+      if (this.info && cmpVer(this.info.versi, VERSI) > 0) this.bar(this.info.versi);
+      return this.info;
+    },
+    bar(v) {
+      if ($('.update-bar')) return;
+      const b = document.createElement('div'); b.className = 'update-bar'; b.setAttribute('role', 'status');
+      b.innerHTML = ic('update') + '<span>Versi baru <b>v' + esc(v) + '</b> tersedia — Anda masih memakai v' + VERSI + '.</span><button class="btn btn-gold btn-xs" type="button" data-perbarui>Muat ulang</button><button class="x" type="button" aria-label="Nanti saja" title="Nanti saja">' + ic('close', 'sm') + '</button>';
+      document.body.appendChild(b); document.body.classList.add('ada-update');
+      $('[data-perbarui]', b).onclick = () => this.perbarui();
+      $('.x', b).onclick = () => { b.remove(); document.body.classList.remove('ada-update'); };
+    },
+    async cacheSw() { try { return window.caches ? (await caches.keys()).filter((n) => /^ikh-v/.test(n)) : []; } catch (e) { return []; } },
+    /** Ambil versi terbaru: perbarui service worker, kosongkan cache aplikasi, segarkan cache HTTP halaman, lalu muat ulang */
+    async perbarui() {
+      UI.muat('Memperbarui aplikasi…');
+      const batas = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))]);
+      try {
+        if (navigator.serviceWorker) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) {
+            await batas(reg.update().catch(() => { }), 4000);
+            const sw = reg.installing || reg.waiting;
+            if (sw) await batas(new Promise((r) => { if (sw.state === 'activated') return r(); sw.addEventListener('statechange', () => { if (sw.state === 'activated' || sw.state === 'redundant') r(); }); }), 5000);
+          }
+        }
+        const nama = await this.cacheSw(); await Promise.all(nama.map((n) => caches.delete(n)));
+        const hal = location.href.split('#')[0];
+        await batas(Promise.all([fetch(hal, { cache: 'reload' }), fetch('./index.html', { cache: 'reload' })]).catch(() => { }), 4000);
+      } catch (e) { }
+      location.reload();
+    },
+    isi(st) {
+      const i = this.info, srv = this.server, riwayat = (i && Array.isArray(i.riwayat) && i.riwayat.length) ? i.riwayat : [];
+      let status;
+      if (st === 'cek') status = '<div class="alert info">' + ic('sync', 'sm') + '<div>Memeriksa pembaruan…</div></div>';
+      else if (!i) status = '<div class="alert warn">' + ic('cloud_off', 'sm') + '<div>Tidak dapat memeriksa pembaruan (offline, atau berkas <code>versi.json</code> belum ter-upload).</div></div>';
+      else if (cmpVer(i.versi, VERSI) > 0) status = '<div class="alert gold">' + ic('update', 'sm') + '<div class="grow">Versi baru <b>v' + esc(i.versi) + '</b> sudah tersedia. Muat ulang untuk memakainya.</div><button class="btn btn-gold btn-xs" type="button" data-perbarui>Muat ulang</button></div>';
+      else if (cmpVer(i.versi, VERSI) < 0) status = '<div class="alert info">' + ic('schedule', 'sm') + '<div>Server GitHub Pages masih menyajikan v' + esc(i.versi) + ' — biasanya selesai diproses 1–10 menit setelah <i>git push</i>.</div></div>';
+      else status = '<div class="alert ok">' + ic('verified', 'sm') + '<div>Anda memakai versi terbaru.</div></div>';
+      const kurang = i && i.server_min && srv && cmpVer(srv, i.server_min) < 0;
+      const sw = this._sw;
+      return '<div class="ver-head"><span class="lg" style="background-image:url(\'img/logo.png\')"></span><div><div class="t1">SIM IKALLHUBDAT Kaltim</div><div class="small muted">Versi <b>v' + VERSI + '</b> • rilis ' + fmt.tgl(RILIS, true) + '</div></div></div>' + status +
+        (kurang ? '<div class="alert bad mt">' + ic('warning', 'sm') + '<div>Backend Apps Script masih <b>v' + esc(srv) + '</b>, sedangkan versi ini membutuhkan minimal <b>v' + esc(i.server_min) + '</b>. Tempel kode backend terbaru lalu deploy ulang.</div></div>' : '') +
+        '<div class="kv mt-lg"><div>Versi aplikasi (tampilan)</div><div>v' + VERSI + '</div>' +
+        '<div>Versi terbaru di server web</div><div>' + (i ? 'v' + esc(i.versi) : '-') + '</div>' +
+        '<div>Versi server (Apps Script)</div><div>' + (srv ? 'v' + esc(srv) : '<span class="muted">belum terhubung</span>') + '</div>' +
+        '<div>Cache offline (PWA)</div><div>' + (sw && sw.length ? esc(sw.join(', ')) : '<span class="muted">tidak aktif</span>') + '</div>' +
+        '<div>Diperiksa</div><div>' + (this.cekAt ? fmt.relatif(new Date(this.cekAt).toISOString()) : '-') + '</div></div>' +
+        (riwayat.length ? '<h4 class="mt-lg mb">Riwayat Perubahan</h4><div class="ver-log">' + riwayat.slice(0, 12).map((r) =>
+          '<div class="it ' + (r.versi === VERSI ? 'kini' : '') + '"><div class="row between"><b>v' + esc(r.versi) + (r.versi === VERSI ? ' <span class="badge b-gold">dipakai</span>' : '') + '</b><span class="small muted">' + esc(r.tanggal ? fmt.tgl(r.tanggal) : '') + '</span></div>' +
+          (r.judul ? '<div class="small b mt">' + esc(r.judul) + '</div>' : '') + (Array.isArray(r.poin) && r.poin.length ? '<ul>' + r.poin.map((p) => '<li>' + esc(p) + '</li>').join('') + '</ul>' : '') + '</div>').join('') + '</div>' : '');
+    },
+    async tampil() {
+      this._sw = await this.cacheSw();
+      UI.modal({ judul: 'Informasi Versi Aplikasi', isi: '<div id="vr-b">' + this.isi('cek') + '</div>',
+        tombol: [{ teks: 'Muat ulang paksa', ikon: 'refresh', aksi: () => { this.perbarui(); return false; } }, { teks: 'Tutup', kelas: 'btn-primary', nilai: null }],
+        onBuka: async (md) => {
+          const pasang = () => { const b = $('[data-perbarui]', md); if (b) b.onclick = () => this.perbarui(); };
+          await this.cek(true);
+          const el = $('#vr-b', md); if (el) { el.innerHTML = this.isi(); pasang(); }
+        } });
+    },
+    /** Sekali setelah versi berganti: beri tahu pengguna bahwa pembaruan sudah terpasang */
+    sambut() {
+      const lama = lsGet('ikh_versi'); lsSet('ikh_versi', VERSI);
+      if (lama && lama !== VERSI) setTimeout(() => UI.toast('Aplikasi diperbarui ke v' + VERSI + '. Ketuk label versi untuk melihat yang baru.', 'ok', 6500), 1500);
+    }
+  };
+  document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('[data-versi]'); if (t) { e.preventDefault(); Versi.tampil(); } });
+  IKH.Versi = Versi; IKH.cmpVer = cmpVer;
+  IKH.chipVersi = (kelas) => '<button type="button" class="ver-chip ' + (kelas || '') + '" data-versi title="Informasi & riwayat versi aplikasi">v' + VERSI + '</button>';
+
   /* ---------------- Status jaringan & init ---------------- */
   function barOffline() { let b = $('.offline-bar'); if (!navigator.onLine) { if (!b) { b = document.createElement('div'); b.className = 'offline-bar'; b.textContent = 'Anda sedang offline — data yang tampil adalah salinan terakhir.'; document.body.appendChild(b); } } else if (b) b.remove(); }
   window.addEventListener('online', barOffline); window.addEventListener('offline', barOffline);
   IKH.mulai = function () {
-    if (!KONFIG_OK) { const d = document.createElement('div'); d.className = 'cfg-bar'; d.textContent = 'Konfigurasi belum lengkap: isi GAS_URL di js/config.js dengan URL /exec dari Apps Script.'; document.body.prepend(d); }
+    if (!KONFIG_OK) {
+      const tampil = GAS_URL.length > 70 ? GAS_URL.slice(0, 48) + '…' + GAS_URL.slice(-14) : GAS_URL;
+      const d = document.createElement('div'); d.className = 'cfg-bar'; d.setAttribute('role', 'alert');
+      d.innerHTML = 'Konfigurasi belum lengkap: ' + esc(ALASAN_CFG) + '.' + (GAS_URL ? ' <span style="font-weight:400">Terbaca: <code>' + esc(tampil) + '</code></span>' : '') +
+        ' <span style="font-weight:400">— periksa js/config.js, push, lalu tekan Ctrl+Shift+R.</span>';
+      document.body.prepend(d);
+      console.warn('[IKALLHUBDAT] GAS_URL ditolak:', ALASAN_CFG, JSON.stringify(CFG.GAS_URL));
+    }
     barOffline();
     window.addEventListener('hashchange', () => Router.jalan());
     Router.jalan();
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => { });
+    console.info('%cSIM IKALLHUBDAT v' + VERSI + ' (' + RILIS + ')', 'color:#0A2A63;font-weight:700');
+    Versi.sambut();
+    if (/^https?:$/.test(location.protocol)) {
+      (window.requestIdleCallback || ((f) => setTimeout(f, 3000)))(() => Versi.cek(true), { timeout: 6000 });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Versi.cek(); });
+      setInterval(() => { if (document.visibilityState === 'visible') Versi.cek(true); }, 30 * 60e3);
+    }
   };
   /* Pasang aplikasi (PWA) */
   let _install = null;

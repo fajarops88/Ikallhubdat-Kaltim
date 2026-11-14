@@ -8,7 +8,7 @@
   /* ---------------- Bingkai publik ---------------- */
   const NAV = [['/', 'Beranda'], ['/profil', 'Profil Organisasi'], ['/berita', 'Berita'], ['/daftar', 'Pendaftaran Alumni'], ['/verifikasi', 'Verifikasi KTA']];
   function logoHtml(st, kelas) {
-    return st.LOGO_ID ? '<span class="lg img ' + (kelas || '') + '" ' + bg(st.LOGO_ID, 160) + ' role="img" aria-label="Logo"></span>' : '<span class="lg ' + (kelas || '') + '">' + ic('shield', 'lg') + '</span>';
+    return '<span class="lg img ' + (kelas || '') + '" ' + IKH.logoBg(st, 160) + ' role="img" aria-label="Logo ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '"></span>';
   }
   function layoutPub() {
     return '<header class="pub-top"><div class="wrap"><a class="brand" href="#/" id="brand"></a>' +
@@ -35,7 +35,7 @@
       (st.ORG_WA ? '<div class="ln">' + ic('chat', 'sm') + '<a href="https://wa.me/' + esc(IKH.hp08(st.ORG_WA).replace(/^0/, '62')) + '" target="_blank" rel="noopener" style="display:inline;padding:0">WhatsApp ' + esc(st.ORG_WA) + '</a></div>' : '') +
       (st.ORG_JAM_LAYANAN ? '<div class="ln">' + ic('schedule', 'sm') + '<span>' + esc(st.ORG_JAM_LAYANAN) + '</span></div>' : '') +
       (!st.ORG_ALAMAT && !st.ORG_EMAIL ? '<div class="ln small">Kontak sekretariat belum diisi Pengurus.</div>' : '') +
-      '</div></div><div class="bawah"><div class="wrap"><span>© ' + tahun + ' ' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</span><span>SIM v' + IKH.VERSI + '</span></div></div>';
+      '</div></div><div class="bawah"><div class="wrap"><span>© ' + tahun + ' ' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</span><span>SIM IKALLHUBDAT ' + IKH.chipVersi('gelap') + '</span></div></div>';
     if (IKH.bisaPasang()) $$('[data-install]').forEach((b) => b.classList.remove('hide'));
     $$('[data-install]').forEach((b) => b.onclick = () => IKH.pasangApp());
     const bg2 = $('#burger'), nav = $('#pubnav');

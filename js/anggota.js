@@ -11,11 +11,11 @@
     return '<header class="agt-top"><div class="wrap"><a class="brand" href="#/" id="a-brand"></a><nav class="agt-nav" id="a-nav" aria-label="Menu anggota"></nav>' +
       '<div class="who"><div class="tx"><div class="nm" id="a-nm"></div><div class="st" id="a-st"></div></div><span id="a-ava"></span><button class="btn btn-ghost btn-icon btn-sm" id="a-out" aria-label="Keluar" title="Keluar">' + ic('logout') + '</button></div></div></header>' +
       '<nav class="agt-tabs" id="a-tabs" aria-label="Menu anggota"></nav><main id="main" class="agt-main"><div class="wrap" id="a-isi"></div></main>' +
-      '<footer class="pub-foot" style="margin-top:0"><div class="bawah"><div class="wrap"><span id="a-foot"></span><span>SIM v' + IKH.VERSI + '</span></div></div></footer>';
+      '<footer class="pub-foot" style="margin-top:0"><div class="bawah"><div class="wrap"><span id="a-foot"></span><span>SIM IKALLHUBDAT ' + IKH.chipVersi('gelap') + '</span></div></div></footer>';
   }
   function bingkai(d) {
     const path = Router.parse().path, st = (d && d.setting) || IKH.setPub(), a = (d && d.anggota) || {};
-    $('#a-brand').innerHTML = (st.LOGO_ID ? '<span class="lg img" ' + bg(st.LOGO_ID, 160) + '></span>' : '<span class="lg">' + ic('shield', 'lg') + '</span>') + '<div><div class="t1">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Ruang Anggota</div></div>';
+    $('#a-brand').innerHTML = '<span class="lg img" ' + IKH.logoBg(st, 160) + '></span>' + '<div><div class="t1">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Ruang Anggota</div></div>';
     const links = MENU.map((m) => '<a href="#' + m[0] + '" class="' + (path === m[0] ? 'on' : '') + '">' + m[1] + '</a>').join('');
     $('#a-nav').innerHTML = links; $('#a-tabs').innerHTML = links;
     $('#a-nm').textContent = a.nama || (Sesi.me && Sesi.me.nama) || '';
