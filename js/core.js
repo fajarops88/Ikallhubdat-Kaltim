@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.3.0';
+  const VERSI = '1.4.0';
   const RILIS = '2026-11-15';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -187,6 +187,9 @@
     setAdm(d) {
       const b = { anggota: this.urai(d.anggota), pengajuan: this.urai(d.pengajuan), akun: this.urai(d.akun), setting: d.setting || {}, log: this.urai(d.log), dibuat: d.dibuat, antrianAda: d.antrianAda };
       this.adm = b; this.admAt = Date.now();
+      if (d.me && Sesi.data && Sesi.data.me && d.me.email === Sesi.data.me.email && (d.me.id_record !== Sesi.data.me.id_record || d.me.nama !== Sesi.data.me.nama)) {
+        Sesi.data.me = Object.assign({}, Sesi.data.me, { id_record: d.me.id_record || '', nama: d.me.nama || Sesi.data.me.nama }); LS.set('sesi', Sesi.data);
+      }
       LS.set('adm_' + (Sesi.me ? Sesi.me.email : ''), { d: d, at: this.admAt });
       document.dispatchEvent(new CustomEvent('ikh:adm'));
       return b;
@@ -203,7 +206,7 @@
     async agtBoot(paksa) {
       if (!this.agt) { const x = LS.get('agt_' + (Sesi.me ? Sesi.me.email : ''), null); if (x) { this.agt = x.d; this.agtAt = x.at; } }
       if (this.agt && !paksa && Date.now() - this.agtAt < 60000) return this.agt;
-      const p = api('agt.boot', {}).then((r) => { if (r.ok) this.setAgt(r.data); return this.agt; });
+      const p = api('agt.boot', {}).then((r) => { this.agtErr = r.ok ? null : r; if (r.ok) this.setAgt(r.data); return this.agt; });
       return this.agt && !paksa ? this.agt : p;
     },
     /* ganti satu baris anggota di cache admin (hasil optimistic/server) */
@@ -496,7 +499,8 @@
           const me = Sesi.me;
           if (!me) { LS.set('balik', location.hash); return this.go('/masuk'); }
           if (me.wajib && path !== '/ganti-sandi') return this.go('/ganti-sandi');
-          if (r.o.peran !== me.peran) return this.go(me.peran === 'pengurus' ? '/admin' : '/anggota');
+          const ganda = r.o.pengurusBoleh && me.peran === 'pengurus' && !me.darurat;
+          if (r.o.peran !== me.peran && !ganda) return this.go(me.peran === 'pengurus' ? '/admin' : '/anggota');
         }
         try { await r.fn(p, q); } catch (e) { console.error(e); UI.toast('Gagal membuka halaman: ' + e.message, 'bad'); }
         document.dispatchEvent(new CustomEvent('ikh:rute', { detail: path }));
@@ -671,6 +675,12 @@
   };
   document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('[data-versi]'); if (t) { e.preventDefault(); Versi.tampil(); } });
   IKH.Versi = Versi; IKH.cmpVer = cmpVer;
+  /** true (dan beri tahu) bila backend Apps Script yang terpasang lebih lama dari versi minimal fitur ini */
+  IKH.butuhServer = (min, fitur) => {
+    if (!Versi.server || cmpVer(Versi.server, min) >= 0) return false;
+    UI.toast((fitur || 'Fitur ini') + ' butuh backend Apps Script v' + min + ' (server Anda masih v' + Versi.server + '). Tempel kode backend terbaru lalu deploy ulang.', 'bad', 8000);
+    return true;
+  };
   IKH.chipVersi = (kelas) => '<button type="button" class="ver-chip ' + (kelas || '') + '" data-versi title="Informasi & riwayat versi aplikasi">v' + VERSI + '</button>';
 
   /* ---------------- Status jaringan & init ---------------- */

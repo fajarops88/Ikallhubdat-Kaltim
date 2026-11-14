@@ -43,7 +43,9 @@
     const x = D(), st = x.st, me = Sesi.me || {};
     $('#s-top').innerHTML = '<span class="lg" ' + IKH.logoBg(st, 160) + '></span>' + '<div><div class="t1">SIM ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Panel Pengurus ' + IKH.chipVersi('gelap') + '</div></div>';
     const n = { reg: x.menunggu.length, chg: x.chg.length };
-    $('#s-nav').innerHTML = MENU.map((m) => m.length === 1 ? '<div class="grp">' + m[0] + '</div>' : '<a href="#' + m[0] + '" class="' + (m[0] === aktif ? 'on' : '') + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (m[3] && n[m[3]] ? '<span class="count">' + n[m[3]] + '</span>' : '') + '</a>').join('');
+    // Peran ganda: Pengurus juga bisa membuka data alumni & KTA miliknya (bukan untuk akses darurat)
+    const menu = me.darurat ? MENU : MENU.concat([['AKUN SAYA'], ['/anggota', 'Data & KTA Saya', 'badge']]);
+    $('#s-nav').innerHTML = menu.map((m) => m.length === 1 ? '<div class="grp">' + m[0] + '</div>' : '<a href="#' + m[0] + '" class="' + (m[0] === aktif ? 'on' : '') + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (m[3] && n[m[3]] ? '<span class="count">' + n[m[3]] + '</span>' : '') + '</a>').join('');
     $('#s-bot').innerHTML = UI.ava(me.nama || 'P', '', '') + '<div class="grow" style="min-width:0"><div class="nm trunc">' + esc(me.nama || me.email) + '</div><div class="rl">' + (me.darurat ? 'Akses Darurat' : 'Pengurus') + '</div></div><button id="s-out" aria-label="Keluar" title="Keluar">' + ic('logout') + '</button>';
     $('#s-crumb').innerHTML = '<span>' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</span>' + ic('chevron_right', 'sm') + '<b>' + esc(judul) + '</b>';
     $('#s-out').onclick = async () => { if (!(await UI.konfirmasi('Keluar dari Panel Pengurus?', { ya: 'Keluar' })).ok) return; api('auth.logout', {}); Sesi.keluar(); };
@@ -352,7 +354,7 @@
   /* ======================= DATA ALUMNI ======================= */
   const AS = { q: '', prodi: '', angkatan: '', status: '', dom: '', tbl: null };
   function alumni(p, q) {
-    const buka = q && q.get('id');
+    const buka = q && q.get('id'), tambahSaya = q && q.get('tambah') === '1';
     if (q && q.get('dom') !== null) { AS.dom = q.get('dom'); AS.status = q.get('st') === 'terverifikasi' ? '' : AS.status; AS.hanyaVer = q.get('st') === 'terverifikasi'; } else AS.hanyaVer = false;
     return halaman('/admin/alumni', 'Data Alumni', (main, x, awal) => {
       const data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a) }));
@@ -381,6 +383,7 @@
       $('#al-st').value = AS.status;
       saringA();
       if (buka && awal) drawerAlumni(buka);
+      if (tambahSaya && awal) { const me = Sesi.me || {}; formAlumni(null, { email: me.email || '', nama: me.nama || '' }); }
     });
   }
   function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom)); }
@@ -388,11 +391,11 @@
   IKH.barisAlumni = baris;
   function drawerAlumni(id) {
     const x = D(), a = x.cari(id); if (!a) return UI.toast('Data tidak ditemukan.', 'bad');
-    const akun = x.d.akun.find((k) => k.email === String(a.email || '').toLowerCase());
+    const akun = x.d.akun.find((k) => k.email === String(a.email || '').toLowerCase()) || x.d.akun.find((k) => k.id_record && k.id_record === a.id_record);
     const sc = document.createElement('div'); sc.className = 'scrim'; sc.style.placeItems = 'stretch end'; sc.style.padding = '0';
     const s = statusKartu(a);
     sc.innerHTML = '<aside class="drawer" role="dialog" aria-modal="true" aria-label="Detail alumni"><div class="modal-h"><h3>Detail Alumni</h3><button class="btn btn-ghost btn-icon btn-sm" data-x aria-label="Tutup">' + ic('close') + '</button></div>' +
-      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row mt">' + UI.badgeStatus(s) + (akun ? '<span class="badge b-info">Akun ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
+      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row mt">' + UI.badgeStatus(s) + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
       (a.status_verifikasi === 'Disetujui' ? '<div class="mt-lg" style="max-width:420px">' + Kta.depan(a, x.st) + '</div>' : '') +
       '<h4 class="mt-lg">Data Lengkap</h4><div class="kv">' + FIELD.map((k) => '<div>' + LABEL[k] + '</div><div>' + esc(a[k] || '-') + '</div>').join('') +
       '<div>Masa berlaku</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
@@ -435,8 +438,8 @@
       tombol: [{ teks: 'Salin', ikon: 'content_copy', aksi: () => { UI.salin(sandi); return false; } }, { teks: 'Selesai', kelas: 'btn-primary' }] });
   }
   IKH.tampilSandi = tampilSandi;
-  function formAlumni(id) {
-    const x = D(), a = id ? x.cari(id) : {};
+  function formAlumni(id, awalIsi) {
+    const x = D(), a = id ? x.cari(id) : (awalIsi || {}), me = Sesi.me || {};
     if (id && !a) return;
     const F = IKH.formAlumni(x.st, a);
     let foto = null;
@@ -446,7 +449,8 @@
       '<div class="col">' + (id ? '<div class="fld"><label for="fa-st">Status anggota</label><select class="inp" id="fa-st">' + opsi(['Aktif', 'Nonaktif', 'Kedaluwarsa'], a.status_anggota, false) + '</select></div>' : '') +
       '<div class="fld"><label for="fa-masa">Berlaku s.d.</label><input class="inp" type="date" id="fa-masa" value="' + esc(a.masa_berlaku_kartu || '') + '"><span class="hint">' + (id ? '' : 'Kosongkan untuk default ' + esc(x.st.MASA_BERLAKU_TAHUN || 3) + ' tahun.') + '</span></div>' +
       '<div class="fld"><label for="fa-idm">Nomor anggota</label><input class="inp mono" id="fa-idm" value="' + esc(a.id_member || '') + '" placeholder="Otomatis bila kosong"></div></div></div>' +
-      (!id ? '<div class="col mt"><label class="cek"><input type="checkbox" id="fa-aktif" checked><span>Langsung aktif (terbitkan nomor anggota tanpa antrean verifikasi)</span></label><label class="cek"><input type="checkbox" id="fa-akun" checked><span>Buat akun login & kirim email berisi kata sandi awal + KTA (bila email diisi)</span></label></div>' : '') + '</form>',
+      (!id ? '<div class="col mt"><label class="cek"><input type="checkbox" id="fa-aktif" checked><span>Langsung aktif (terbitkan nomor anggota tanpa antrean verifikasi)</span></label><label class="cek"><input type="checkbox" id="fa-akun" checked><span>Buat akun login & kirim email berisi kata sandi awal + KTA (bila email diisi)</span></label></div>' +
+        (me.darurat ? '' : '<div class="alert info small mt">' + ic('link', 'sm') + '<div>Data Anda sendiri? Isi email dengan email akun Pengurus Anda (<b>' + esc(me.email || '') + '</b>). Data ini otomatis terhubung ke akun Anda dan bisa dibuka di menu <b>Data & KTA Saya</b> — tanpa akun atau kata sandi kedua.</div></div>') : '') + '</form>',
       tombol: [{ teks: 'Batal' }, { teks: id ? 'Simpan Perubahan' : 'Tambah Alumni', kelas: 'btn-primary', aksi: async (md) => {
         const frm = $('#fa', md), o = IKH.ambilForm(frm, FIELD);
         if (!IKH.validasiForm(frm, o, ['nama'])) return false;
@@ -459,7 +463,8 @@
         const r = await api('adm.alumni.simpan', body);
         if (!UI.hasil(r)) return false;
         Store.patchAnggota(r.data.anggota); document.dispatchEvent(new CustomEvent('ikh:adm'));
-        if (!id) Store.admBoot(true);
+        if (!id || r.data.taut) Store.admBoot(true);
+        if (r.data.taut && r.data.taut === me.email) { LS.del('agt_' + me.email); Store.agt = null; }
         return true;
       } }],
       onBuka: (md) => { $('#fa-foto', md).onchange = async (e) => { try { foto = await IKH.bacaGambar(e.target.files[0], 800, 0.86); $('#fa-pv', md).style.backgroundImage = 'url(' + foto.data + ')'; $('#fa-pv', md).innerHTML = ''; } catch (er) { UI.toast(er.message, 'bad'); } }; }
@@ -710,18 +715,23 @@
   function tabelAkun(main) {
     const x = D(), me = Sesi.me || {};
     const rows = x.d.akun.filter((a) => a.peran === 'pengurus');
+    const alumniDari = (a) => a.id_record ? x.cari(a.id_record) : null;
     IKH.Tabel($('#ak-tbl', main), { data: rows, idKey: 'email', per: 20, kosong: 'Belum ada akun Pengurus. Tambahkan sekarang agar tidak bergantung pada akses darurat.',
-      kolom: [{ k: 'nama', label: 'Pengurus', render: (a) => '<div class="person">' + UI.ava(a.nama) + '<div><div class="nm">' + esc(a.nama) + (a.email === me.email ? ' <span class="badge b-navy">Anda</span>' : '') + '</div><div class="sb">' + esc(a.email) + '</div></div></div>' },
+      kolom: [{ k: 'nama', label: 'Pengurus', render: (a) => { const al = alumniDari(a); return '<div class="person">' + UI.ava(a.nama, al ? al.foto_id : '') + '<div><div class="nm">' + esc(a.nama) + (a.email === me.email ? ' <span class="badge b-navy">Anda</span>' : '') + '</div><div class="sb">' + esc(a.email) + '</div>' +
+          (al ? '<div class="tiny" style="color:var(--ok)">' + ic('link', 'sm') + ' Terhubung data alumni ' + esc(al.id_member || al.id_record) + '</div>' : '<div class="tiny muted">Belum terhubung data alumni</div>') + '</div></div>'; } },
         { k: 'no_hp', label: 'WhatsApp' }, { k: 'status', label: 'Status', render: (a) => UI.badgeStatus(a.status) + (a.wajib ? ' <span class="badge b-wait">sandi awal</span>' : '') }, { k: 'login_terakhir', label: 'Login terakhir', render: (a) => a.login_terakhir ? fmt.relatif(a.login_terakhir) : '-' },
-        { label: '', kelas: 'act', sort: false, render: (a) => a.email === me.email ? '' : '<button class="btn btn-ghost btn-xs" data-act="reset">' + ic('lock_reset', 'sm') + 'Reset</button> <button class="btn btn-ghost btn-xs" data-act="status">' + (a.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan') + '</button>' }],
+        { label: '', kelas: 'act', sort: false, render: (a) => (a.email === me.email ? '' : '<button class="btn btn-ghost btn-xs" data-act="reset">' + ic('lock_reset', 'sm') + 'Reset</button> <button class="btn btn-ghost btn-xs" data-act="status">' + (a.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan') + '</button> ') +
+          (a.status === 'Aktif' ? '<button class="btn btn-ghost btn-xs" data-act="lepas" title="Kembalikan menjadi akun anggota biasa (data alumni & KTA tetap)">' + ic('person_remove', 'sm') + 'Lepas peran</button>' : '') }],
       onAksi: async (act, a) => {
         if (act === 'reset') return resetSandi(a.email);
+        if (act === 'lepas') return lepasPeran(a, main);
         const st = a.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
-        if (!(await UI.konfirmasi((st === 'Nonaktif' ? 'Nonaktifkan' : 'Aktifkan') + ' akun <b>' + esc(a.email) + '</b>?', { bahaya: st === 'Nonaktif' })).ok) return;
+        if (!(await UI.konfirmasi((st === 'Nonaktif' ? 'Nonaktifkan' : 'Aktifkan') + ' akun <b>' + esc(a.email) + '</b>?' + (st === 'Nonaktif' ? '<p class="small muted mt mb-0">Akun nonaktif tidak bisa masuk sama sekali. Bila orang ini tetap anggota, pakai <b>Lepas peran</b> agar ia masih bisa membuka KTA-nya.</p>' : ''), { bahaya: st === 'Nonaktif' })).ok) return;
         const r = await api('adm.akun.status', { email: a.email, status: st });
         if (UI.hasil(r)) { a.status = st; Store.simpanAdmLokal(); tabelAkun(main); }
       } });
-    $('#ak-add', main).onclick = () => UI.modal({ judul: 'Tambah Akun Pengurus', isi: '<div class="col gap-lg"><div class="fld"><label for="ak-n">Nama</label><input class="inp" id="ak-n"></div><div class="fld"><label for="ak-e">Email</label><input class="inp" id="ak-e" type="email"></div><div class="fld"><label for="ak-h">WhatsApp (untuk notifikasi Pengurus)</label><input class="inp" id="ak-h" type="tel"></div><label class="cek"><input type="checkbox" id="ak-m" checked><span>Kirim kata sandi awal ke email ini</span></label></div>',
+    $('#ak-add', main).onclick = () => UI.modal({ judul: 'Tambah Akun Pengurus', isi: '<div class="col gap-lg"><div class="fld"><label for="ak-n">Nama</label><input class="inp" id="ak-n"></div><div class="fld"><label for="ak-e">Email</label><input class="inp" id="ak-e" type="email"></div><div class="fld"><label for="ak-h">WhatsApp (untuk notifikasi Pengurus)</label><input class="inp" id="ak-h" type="tel"></div><label class="cek"><input type="checkbox" id="ak-m" checked><span>Kirim kata sandi awal ke email ini</span></label>' +
+      '<div class="alert info small">' + ic('info', 'sm') + '<div>Bila email ini milik alumni yang sudah terdata, akun otomatis <b>terhubung ke data alumninya</b>. Bila ia sudah punya akun anggota, akun itu <b>dinaikkan menjadi Pengurus</b> — kata sandinya tetap, tidak ada kata sandi baru.</div></div></div>',
       tombol: [{ teks: 'Batal' }, { teks: 'Buat Akun', kelas: 'btn-primary', aksi: async (md) => {
         const r = await api('adm.akun.simpan', { nama: $('#ak-n', md).value.trim(), email: $('#ak-e', md).value.trim(), no_hp: $('#ak-h', md).value.trim(), kirimEmail: $('#ak-m', md).checked });
         if (!UI.hasil(r)) return false;
@@ -729,6 +739,22 @@
         if (r.data.sandi) setTimeout(() => tampilSandi(r.data.email, r.data.sandi, r.msg), 150);
         return true;
       } }] });
+  }
+  /** Serah terima: akun Pengurus kembali menjadi akun anggota biasa (data alumni & KTA tetap) */
+  async function lepasPeran(a, main) {
+    if (IKH.butuhServer('1.2.0', 'Lepas peran pengurus')) return;
+    const x = D(), me = Sesi.me || {}, diri = a.email === me.email;
+    const lain = x.d.akun.filter((k) => k.peran === 'pengurus' && k.status === 'Aktif' && k.email !== a.email).length;
+    if (!lain) return UI.toast('Minimal harus ada satu akun Pengurus aktif lain. Buat akun Pengurus pengganti dulu, baru lepas peran ini.', 'warn', 7000);
+    const k = await UI.konfirmasi('Lepas peran Pengurus dari <b>' + esc(a.nama || a.email) + '</b>?' +
+      '<ul class="small mt mb-0"><li>Akses ke Panel Pengurus dicabut.</li><li>Akun kembali menjadi akun anggota biasa: data alumni, KTA, dan kata sandinya tetap.</li>' +
+      (a.id_record ? '' : '<li><b>Akun ini belum terhubung ke data alumni</b> — server akan menolak. Pakai Nonaktifkan bila orang ini tidak perlu masuk lagi.</li>') +
+      (diri ? '<li><b>Ini akun Anda sendiri</b> — Anda akan langsung keluar dan masuk lagi sebagai anggota.</li>' : '') + '</ul>', { bahaya: true, ya: 'Lepas Peran' });
+    if (!k.ok) return;
+    const r = await api('adm.akun.lepas', { email: a.email });
+    if (!UI.hasil(r)) return;
+    if (r.data && r.data.diriSendiri) return setTimeout(() => Sesi.keluar(), 1200);
+    Store.admBoot(true).then(() => { if (Router.parse().path === '/admin/pengaturan') pengaturan(); });
   }
 
   IKH.Admin = { hal: { dasbor, verifikasi, perubahan, alumni, kta, rekap, log, arsip, pengaturan } };

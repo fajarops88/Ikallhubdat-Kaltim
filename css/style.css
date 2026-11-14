@@ -451,3 +451,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .kta { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; width: 85.6mm !important; }
   .print-sheet { display: grid; grid-template-columns: 85.6mm 85.6mm; gap: 6mm; }
 }
+
+/* ---------- v1.4.0: pilih alumni untuk struktur & tautan kembali ke Panel Pengurus ---------- */
+.seg button { display: inline-flex; align-items: center; gap: 5px; }
+select.inp.pilih-al { height: auto; min-height: 172px; padding: .3rem; background-image: none; }
+select.inp.pilih-al option { padding: .45rem .55rem; border-radius: 6px; white-space: normal; }
+select.inp.pilih-al option:checked { background: var(--navy-soft) linear-gradient(0deg, rgba(10, 42, 99, .12), rgba(10, 42, 99, .12)); color: var(--navy); font-weight: 600; }
+.agt-nav a.ke-panel, .agt-tabs a.ke-panel { display: inline-flex; align-items: center; gap: 4px; color: var(--navy); border: 1px solid var(--border-2); }
+.agt-nav a.ke-panel:hover { background: var(--gold-soft); }

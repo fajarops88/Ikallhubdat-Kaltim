@@ -43,7 +43,7 @@
         '<div class="card-b" data-p="profil"><div class="grid g2"><div class="col gap-lg">' + t('PROFIL_TENTANG', 'Tentang organisasi', '', true, 6) + t('PROFIL_TUJUAN', 'Tujuan (satu per baris)', '', true, 5) + t('PROFIL_VISI', 'Visi', '', true, 3) + '</div><div class="col gap-lg">' + t('PROFIL_SEJARAH', 'Sejarah', '', true, 9) + t('PROFIL_MISI', 'Misi (satu per baris)', '', true, 6) + '</div></div></div>' +
         '<div class="card-b" data-p="sambutan"><div class="grid" style="grid-template-columns:220px minmax(0,1fr);align-items:start"><div class="col"><div style="aspect-ratio:4/5;border-radius:14px;background:#E9EDF3 center/cover no-repeat;' + (st.SAMBUTAN_FOTO_ID ? 'background-image:url(\'' + img(st.SAMBUTAN_FOTO_ID, 500) + '\')' : '') + '"></div><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + 'Ganti Foto Ketua<input type="file" accept="image/*" class="hide" id="up-samb"></label></div>' +
         '<div class="col gap-lg">' + t('SAMBUTAN_JUDUL', 'Judul') + t('SAMBUTAN_ISI', 'Isi sambutan', 'Nama & jabatan ketua diambil dari Pengaturan.', true, 12) + '</div></div></div>' +
-        '<div class="card-b" data-p="struktur"><div class="row between wrap mb"><div><h4 class="mb-0 row">' + ic('account_tree') + 'Bagan Otomatis</h4><div class="hint">Disusun sendiri dari <b>Jabatan</b>, <b>Bidang</b> & <b>Urutan</b> di tabel Pengurus di bawah, lalu tampil di halaman Profil. Pembina/Penasehat → Ketua → Wakil Ketua → Sekretaris & Bendahara → satu kolom per Bidang (isi kolom Bidang, mis. "Bidang Humas"; jabatan berisi Ketua/Koordinator menjadi kepala kolom).</div></div>' +
+        '<div class="card-b" data-p="struktur"><div class="row between wrap mb"><div><h4 class="mb-0 row">' + ic('account_tree') + 'Bagan Otomatis</h4><div class="hint">Disusun sendiri dari <b>Jabatan</b>, <b>Bidang</b> & <b>Urutan</b> di tabel Pengurus di bawah, lalu tampil di halaman Profil. Pembina/Penasehat → Ketua → Wakil Ketua → Sekretaris & Bendahara → satu kolom per Bidang (isi kolom Bidang, mis. "Bidang Humas"; jabatan berisi Ketua/Koordinator menjadi kepala kolom). Pengurus yang <b>terhubung ke data alumni</b> memakai nama & pas foto resmi dan hanya tampil bila datanya terverifikasi.</div></div>' +
           '<button class="btn btn-ghost btn-sm" id="kb-bagan-png">' + ic('download', 'sm') + 'Unduh PNG</button></div><div class="bagan card card-b mb" id="kb-bagan" style="background:#fff">' + UI.skel(4) + '</div>' +
           '<hr class="sep"><div class="row between wrap mb"><div><h4 class="mb-0">Bagan Gambar (opsional)</h4><div class="hint">Bila diunggah, tampil di bawah bagan otomatis pada halaman Profil.</div></div><div class="row"><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + (st.STRUKTUR_BAGAN_ID ? 'Ganti' : 'Unggah') + ' Bagan<input type="file" accept="image/*" class="hide" id="up-bagan"></label>' + (st.STRUKTUR_BAGAN_ID ? '<button class="btn btn-text btn-sm" id="del-bagan">Hapus</button>' : '') + '</div></div>' +
         (st.STRUKTUR_BAGAN_ID ? '<img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 900)) + '" alt="Bagan" style="max-height:220px;border-radius:10px;border:1px solid var(--border)">' : '') +
@@ -87,18 +87,103 @@
       onAksi: (a, b) => a === 'ubah' ? formKonten('berita', b) : hapusKonten('berita', b) });
     $('#kb-gal').innerHTML = k.galeri.length ? '<div class="gal">' + k.galeri.map((g) => '<div class="g" ' + bg(g.gambar_id, 500) + ' style="cursor:default"><span class="cap">' + esc(g.judul) + '<span class="row" style="margin-top:4px"><button class="btn btn-ghost btn-xs" data-g="' + esc(g.id) + '" data-a="ubah">' + ic('edit', 'sm') + '</button><button class="btn btn-ghost btn-xs" data-g="' + esc(g.id) + '" data-a="hapus">' + ic('delete', 'sm') + '</button></span></span></div>').join('') + '</div>' : UI.kosong('Belum ada foto.', 'photo_library');
     $$('[data-g]', $('#kb-gal')).forEach((b) => b.onclick = () => { const g = k.galeri.find((y) => y.id === b.dataset.g); b.dataset.a === 'ubah' ? formKonten('galeri', g) : hapusKonten('galeri', g); });
-    IKH.Tabel($('#kb-str'), { data: k.struktur, idKey: 'id', per: 30, kosong: 'Belum ada data pengurus.',
-      kolom: [{ k: 'urutan', label: '#', w: '50px' }, { k: 'nama', label: 'Nama', render: (s) => '<div class="person">' + UI.ava(s.nama, s.foto_id) + '<div><div class="nm">' + esc(s.nama) + '</div><div class="sb">' + esc(s.periode || '') + '</div></div></div>' },
-        { k: 'jabatan', label: 'Jabatan', render: (s) => esc(s.jabatan) + '<div class="small muted">' + esc(s.bidang || '') + '</div>' }, { k: 'tampil', label: 'Tampil', render: (s) => s.tampil === 'TIDAK' ? '<span class="badge b-mute">Disembunyikan</span>' : '<span class="badge b-ok">Tampil</span>' },
+    IKH.Tabel($('#kb-str'), { data: k.struktur, idKey: 'id', per: 30, kosong: 'Belum ada data pengurus.', cari: (s) => [strTampil(s).nama, s.jabatan, s.bidang].join(' '),
+      kolom: [{ k: 'urutan', label: '#', w: '50px' }, { k: 'nama', label: 'Nama', render: (s) => { const t = strTampil(s); return '<div class="person">' + UI.ava(t.nama, t.foto) + '<div style="min-width:0"><div class="nm">' + esc(t.nama) + '</div><div class="sb row" style="gap:6px;flex-wrap:wrap">' + LABEL_TAUT[t.status] + (s.periode ? '<span>' + esc(s.periode) + '</span>' : '') + '</div></div></div>'; } },
+        { k: 'jabatan', label: 'Jabatan', render: (s) => esc(s.jabatan) + '<div class="small muted">' + esc(s.bidang || '') + '</div>' },
+        { k: 'tampil', label: 'Tampil', render: (s) => { const t = strTampil(s); return s.tampil === 'TIDAK' ? '<span class="badge b-mute">Disembunyikan</span>' : (t.status === 'belum' || t.status === 'hilang') ? '<span class="badge b-wait" title="Data alumninya belum terverifikasi atau sudah dihapus">Tidak tampil</span>' : '<span class="badge b-ok">Tampil</span>'; } },
         { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="ubah">' + ic('edit', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="hapus">' + ic('delete', 'sm') + '</button>' }],
-      onAksi: (a, s) => a === 'ubah' ? formKonten('struktur', s) : hapusKonten('struktur', s) });
+      onAksi: (a, s) => a === 'ubah' ? formStruktur(s) : hapusKonten('struktur', s) });
     baganAdmin(k.struktur);
+  }
+  /* ---- Struktur ↔ data alumni (v1.4.0): nama & foto yang tampil sama dengan situs publik ---- */
+  const LABEL_TAUT = { ok: '<span class="badge b-ok">' + ic('link', 'sm') + 'Alumni</span>', manual: '<span class="badge b-mute">Manual</span>',
+    belum: '<span class="badge b-wait">Alumni belum terverifikasi</span>', hilang: '<span class="badge b-bad">Data alumni terhapus</span>' };
+  function strTampil(s) {
+    const al = s.alumni;
+    if (!s.id_record) return { nama: s.nama, foto: s.foto_id || '', status: 'manual' };
+    if (!al) return { nama: s.nama, foto: s.foto_id || '', status: al === null ? 'hilang' : 'manual' };
+    return { nama: al.nama || s.nama, foto: s.foto_id || al.foto_id || '', status: al.status_verifikasi === 'Disetujui' ? 'ok' : 'belum' };
+  }
+  /** Baris yang benar-benar tampil di bagan publik (pengurus terhubung yang belum terverifikasi/terhapus tidak ikut) */
+  const strukturTampil = (rows) => (rows || []).map((s) => ({ s, t: strTampil(s) })).filter((o) => o.t.status === 'ok' || o.t.status === 'manual')
+    .map((o) => Object.assign({}, o.s, { nama: o.t.nama, foto_id: o.t.foto }));
+  function formStruktur(item) {
+    const v = item || {}, x = IKH.adm.D(), t0 = strTampil(v);
+    const daftarAl = x.alumni.slice().sort((a, b) => String(a.nama).localeCompare(String(b.nama), 'id'));
+    const S = { mode: v.id ? (v.id_record ? 'alumni' : 'manual') : 'alumni', pilih: v.id_record || '', gbr: null, hapus: false };
+    const f = (k, l, inp, hint) => '<div class="fld"><label for="fs-' + k + '">' + l + '</label>' + inp + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
+    const t = (k, ph, type) => '<input class="inp" id="fs-' + k + '" value="' + esc(v[k] || '') + '" placeholder="' + esc(ph || '') + '" type="' + (type || 'text') + '">';
+    const label = (a) => a.nama + ' — ' + [a.angkatan ? 'Angk. ' + a.angkatan : '', a.prodi, a.id_member].filter(Boolean).join(' • ');
+    const isi = '<div class="seg mb" role="tablist" id="fs-mode"><button type="button" data-m="alumni">' + ic('link', 'sm') + 'Alumni terdaftar</button><button type="button" data-m="manual">' + ic('edit', 'sm') + 'Bukan alumni (ketik manual)</button></div>' +
+      '<div id="fs-al" class="col gap-lg"><div class="fld"><label for="fs-q">Cari alumni terverifikasi</label><div class="inp-ic">' + ic('search') + '<input class="inp" id="fs-q" placeholder="Ketik nama, NIT, angkatan, atau nomor anggota…" autocomplete="off"></div></div>' +
+      '<select class="inp pilih-al" id="fs-sel" size="6" aria-label="Pilih alumni"></select><div id="fs-info" class="small muted"></div>' +
+      '<div class="hint">Nama & pas foto mengikuti data alumni. Perubahan data alumni yang disetujui otomatis ikut tampil di bagan.</div></div>' +
+      '<div id="fs-man" class="hide">' + f('nama', 'Nama & gelar', t('nama'), 'Untuk Pembina/Penasehat atau pengurus yang bukan alumni.') + '</div>' +
+      '<hr class="sep"><div class="grid g2">' + f('jabatan', 'Jabatan', t('jabatan', 'Ketua / Sekretaris / …')) + f('bidang', 'Bidang', t('bidang', 'mis. Bidang Humas & Publikasi')) + f('periode', 'Periode', t('periode', '2025–2029')) + f('urutan', 'Urutan tampil', t('urutan', '1', 'number')) +
+      f('tampil', 'Tampil di situs', '<select class="inp" id="fs-tampil">' + opsi(['YA', 'TIDAK'], v.tampil || 'YA', false) + '</select>') + '</div>' +
+      '<div class="fld mt-lg"><label id="fs-flabel">Foto</label><div class="row gap-lg wrap"><label class="upload"><input type="file" accept="image/*" id="fs-gbr"><span class="pv" id="fs-pv" style="width:96px;height:96px"></span><span class="small" id="fs-fket"></span></label>' +
+      '<button type="button" class="btn btn-text btn-sm hide" id="fs-pakai">' + ic('undo', 'sm') + 'Pakai pas foto alumni</button></div></div>';
+    UI.modal({ judul: (item ? 'Ubah' : 'Tambah') + ' Pengurus', lebar: 'lg', isi,
+      onBuka: (md) => {
+        const alDipilih = () => daftarAl.find((a) => a.id_record === S.pilih) || null;
+        const isiSel = (q) => {
+          const kata = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+          const cocok = daftarAl.filter((a) => { const h = [a.nama, a.nomor_taruna, a.angkatan, a.id_member, a.prodi, a.instansi].join(' ').toLowerCase(); return kata.every((w) => h.indexOf(w) > -1); });
+          $('#fs-sel', md).innerHTML = cocok.slice(0, 300).map((a) => '<option value="' + esc(a.id_record) + '"' + (a.id_record === S.pilih ? ' selected' : '') + '>' + esc(label(a)) + '</option>').join('') ||
+            '<option disabled>' + (daftarAl.length ? 'Tidak ada alumni terverifikasi yang cocok.' : 'Belum ada alumni terverifikasi.') + '</option>';
+        };
+        const foto = () => {
+          const al = S.mode === 'alumni' ? alDipilih() : null, sendiri = S.gbr ? S.gbr.data : (!S.hapus && v.foto_id ? img(v.foto_id, 240) : '');
+          const tampil = sendiri || (al && al.foto_id ? img(al.foto_id, 240) : '');
+          const pv = $('#fs-pv', md); pv.style.backgroundImage = tampil ? 'url(\'' + tampil + '\')' : ''; pv.innerHTML = tampil ? '' : ic('image', 'lg');
+          $('#fs-flabel', md).textContent = S.mode === 'alumni' ? 'Foto khusus bagan (opsional)' : 'Foto';
+          $('#fs-fket', md).textContent = S.mode === 'alumni' ? (sendiri ? 'Memakai foto khusus bagan. Klik untuk mengganti.' : 'Memakai pas foto alumni. Klik untuk memakai foto lain khusus bagan.') : 'Pilih foto (dikompres otomatis)';
+          $('#fs-pakai', md).classList.toggle('hide', !(S.mode === 'alumni' && sendiri));
+        };
+        const info = () => {
+          const al = alDipilih(), el = $('#fs-info', md);
+          if (al) el.innerHTML = '<span style="color:var(--ok)">' + ic('check_circle', 'sm') + '</span> Terpilih: <b>' + esc(al.nama) + '</b> (' + esc(al.id_member || al.id_record) + ')';
+          else if (S.pilih && t0.status === 'belum') el.innerHTML = '<span class="badge b-wait">Data alumni yang terhubung belum terverifikasi</span> — baris ini tidak tampil di bagan sampai diverifikasi.';
+          else if (S.pilih && t0.status === 'hilang') el.innerHTML = '<span class="badge b-bad">Data alumni yang terhubung sudah dihapus</span> — pilih alumni lain atau ubah ke ketik manual.';
+          else el.textContent = 'Belum ada alumni dipilih.';
+          foto();
+        };
+        const mode = (m) => { S.mode = m; $$('[data-m]', md).forEach((b) => b.classList.toggle('on', b.dataset.m === m)); $('#fs-al', md).classList.toggle('hide', m !== 'alumni'); $('#fs-man', md).classList.toggle('hide', m !== 'manual');
+          if (m === 'manual' && !$('#fs-nama', md).value) $('#fs-nama', md).value = t0.nama || ''; info(); };
+        $$('[data-m]', md).forEach((b) => b.onclick = () => mode(b.dataset.m));
+        $('#fs-q', md).oninput = IKH.debounce((e) => isiSel(e.target.value), 120);
+        $('#fs-sel', md).onchange = (e) => { S.pilih = e.target.value; info(); };
+        $('#fs-gbr', md).onchange = async (e) => { try { S.gbr = await IKH.bacaGambar(e.target.files[0], 600, 0.84); S.hapus = false; foto(); } catch (er) { UI.toast(er.message, 'bad'); } };
+        $('#fs-pakai', md).onclick = () => { S.gbr = null; S.hapus = true; $('#fs-gbr', md).value = ''; foto(); };
+        isiSel(''); mode(S.mode);
+      },
+      tombol: [{ teks: 'Batal' }, { teks: 'Simpan', kelas: 'btn-primary', aksi: async (md) => {
+        const d = { id: v.id || '' };
+        ['jabatan', 'bidang', 'periode', 'urutan', 'tampil'].forEach((k) => { d[k] = $('#fs-' + k, md).value.trim(); });
+        if (S.mode === 'alumni') {
+          if (!S.pilih) { UI.toast('Pilih alumni dari daftar, atau ubah ke "Bukan alumni (ketik manual)".', 'warn'); return false; }
+          if (S.pilih !== v.id_record && !daftarAl.some((a) => a.id_record === S.pilih)) { UI.toast('Alumni terpilih belum terverifikasi.', 'warn'); return false; }
+          if (IKH.butuhServer('1.2.0', 'Menghubungkan pengurus ke data alumni')) return false;
+          d.id_record = S.pilih;
+        } else {
+          d.nama = $('#fs-nama', md).value.trim();
+          if (!d.nama) { UI.toast('Isi nama pengurus.', 'warn'); return false; }
+          if (v.id_record) d.id_record = '';
+        }
+        if (S.gbr) d.gambar = S.gbr; else if (S.hapus && v.foto_id) d.hapusGambar = true;
+        const r = await api('adm.struktur.simpan', d);
+        if (!UI.hasil(r)) return false;
+        const k = Store.menu.konten && Store.menu.konten.d; if (k) { const arr = k.struktur; const i = arr.findIndex((y) => y.id === r.data.item.id); if (i > -1) arr[i] = r.data.item; else arr.push(r.data.item);
+          arr.sort((p, q) => (Number(p.urutan) || 999) - (Number(q.urutan) || 999)); gambarKonten(k); }
+        Store.pubBoot(true); return true;
+      } }] });
   }
   /** Pratinjau bagan otomatis (memakai pengurus yang ditandai Tampil) */
   function baganAdmin(rows) {
     const el = $('#kb-bagan'); if (!el) return;
     IKH.muat(['js/bagan.js?v=' + IKH.VERSI]).then(() => {
       if (!document.body.contains(el)) return;
+      rows = strukturTampil(rows);
       const r = IKH.Bagan.pasang(el, rows);
       const st = (Store.adm && Store.adm.setting) || {}, per = r && r.susun ? r.susun.periode : '';
       const b = $('#kb-bagan-png'); if (b) b.onclick = (e) => UI.tombol(e.currentTarget, () => IKH.Bagan.unduh(rows, { judul: 'Struktur Organisasi ' + (st.ORG_NAMA || 'IKALLHUBDAT'), sub: per ? 'Periode ' + per : '', nama: 'Bagan-Struktur-' + (st.ORG_SINGKAT || 'IKALLHUBDAT').replace(/\s+/g, '-') }));
@@ -106,6 +191,7 @@
   }
   const PETA_K = { berita: { api: 'berita', kunci: 'berita', judul: 'Berita' }, galeri: { api: 'galeri', kunci: 'galeri', judul: 'Foto Galeri' }, struktur: { api: 'struktur', kunci: 'struktur', judul: 'Pengurus' } };
   function formKonten(jenis, item) {
+    if (jenis === 'struktur') return formStruktur(item);
     const v = item || {}, P = PETA_K[jenis];
     let gbr = null;
     const f = (k, l, inp) => '<div class="fld"><label for="fk-' + k + '">' + l + '</label>' + inp + '</div>';
@@ -128,7 +214,9 @@
       } }] });
   }
   async function hapusKonten(jenis, item) {
-    if (!(await UI.konfirmasi('Hapus <b>' + esc(item.judul || item.nama) + '</b>? Gambar terkait ikut dihapus.', { bahaya: true, ya: 'Hapus' })).ok) return;
+    const pesan = jenis === 'struktur' ? 'Hapus <b>' + esc(strTampil(item).nama) + '</b> dari struktur? Foto khusus bagan (bila ada) ikut dihapus; data alumni & pas fotonya tidak terpengaruh.'
+      : 'Hapus <b>' + esc(item.judul || item.nama) + '</b>? Gambar terkait ikut dihapus.';
+    if (!(await UI.konfirmasi(pesan, { bahaya: true, ya: 'Hapus' })).ok) return;
     const r = await api('adm.' + PETA_K[jenis].api + '.hapus', { id: item.id });
     if (!UI.hasil(r)) return;
     const k = Store.menu.konten && Store.menu.konten.d; if (k) { k[PETA_K[jenis].kunci] = k[PETA_K[jenis].kunci].filter((y) => y.id !== item.id); gambarKonten(k); }

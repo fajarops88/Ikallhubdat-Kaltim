@@ -152,7 +152,7 @@
   function profil(p, q) {
     return halamanPub('Profil Organisasi', (main, d) => {
       const st = d.setting || {}, str = d.struktur || [];
-      const sub = [['tentang', 'Tentang & Tujuan'], ['sejarah', 'Sejarah'], ['visimisi', 'Visi & Misi'], ['sambutan', 'Sambutan Ketua'], ['struktur', 'Struktur Organisasi'], ['pengurus', 'Profil Pengurus']];
+      const sub = [['tentang', 'Tentang & Tujuan'], ['sejarah', 'Sejarah'], ['visimisi', 'Visi & Misi'], ['sambutan', 'Sambutan Ketua'], ['struktur', 'Struktur Organisasi']];
       main.innerHTML = pageHead('Profil Organisasi', 'Profil ' + (st.ORG_NAMA || 'Organisasi'), st.ORG_NAMA_PANJANG) +
         '<div class="wrap" style="position:sticky;top:68px;z-index:5;background:var(--bg)"><div class="tabs" style="padding:0;border:0">' + sub.map((s) => '<button data-s="' + s[0] + '">' + s[1] + '</button>').join('') + '</div></div>' +
         '<div class="wrap" style="padding-bottom:3rem">' +
@@ -167,8 +167,7 @@
         (str.length ? '<div class="card card-b mb"><div class="row between wrap mb"><span class="small muted">' + ic('account_tree', 'sm') + ' Bagan disusun otomatis dari data kepengurusan' + (periodeStr(str) ? ' • Periode ' + esc(periodeStr(str)) : '') + '</span>' +
           '<button class="btn btn-ghost btn-xs" id="bagan-png">' + ic('download', 'sm') + 'Unduh PNG</button></div><div class="bagan" id="bagan-oto">' + UI.skel(4) + '</div></div>' : UI.kosong('Struktur organisasi belum diisi.', 'account_tree')) +
         (st.STRUKTUR_BAGAN_ID ? '<div class="card card-b mb"><div class="small muted mb">Bagan resmi (gambar)</div><img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 1600)) + '" alt="Bagan struktur organisasi" style="width:100%;border-radius:8px;cursor:zoom-in" id="bagan"></div>' : '') + '</section>' +
-        '<section class="sec form-sec" id="s-pengurus" style="padding-bottom:0"><div class="sec-h"><div><div class="kicker gold">Mengenal Lebih Dekat</div><h2>Profil Pengurus</h2></div></div>' +
-        (str.filter((s) => s.profil_singkat).length ? '<div class="grid g2">' + str.filter((s) => s.profil_singkat).map((s) => '<div class="card card-b row top gap-lg"><div class="ava lg" ' + (s.foto_id ? bg(s.foto_id, 200) : '') + '>' + (s.foto_id ? '' : esc(IKH.inisial(s.nama))) + '</div><div><b>' + esc(s.nama) + '</b><div class="small" style="color:var(--navy);font-weight:600">' + esc(s.jabatan) + (s.periode ? ' • ' + esc(s.periode) : '') + '</div><p class="small muted mt mb-0" style="white-space:pre-line">' + esc(s.profil_singkat) + '</p></div></div>').join('') + '</div>' : UI.kosong('Profil pengurus belum diisi.', 'groups')) + '</section></div>';
+        '</div>';
       $$('[data-s]', main).forEach((b) => b.onclick = () => { const el = $('#s-' + b.dataset.s); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
       const bag = $('#bagan', main); if (bag) bag.onclick = () => UI.lightbox(bag.src, 'Bagan struktur organisasi');
       if (str.length) IKH.muat(['js/bagan.js?v=' + IKH.VERSI]).then(() => {
@@ -495,8 +494,10 @@
   R.add('/', beranda); R.add('/profil', profil); R.add('/berita', beritaList); R.add('/berita/:id', beritaDetail);
   R.add('/daftar', daftarPage); R.add('/status', statusPage); R.add('/verifikasi', verifikasiPage); R.add('/v/:kode', verifikasiPage);
   R.add('/masuk', masuk); R.add('/lupa', lupa); R.add('/reset', reset); R.add('/ganti-sandi', gantiSandiWajib);
-  R.add('/anggota', IKH.modul('Anggota', 'dasbor'), { peran: 'anggota' }); R.add('/anggota/kta', IKH.modul('Anggota', 'kta'), { peran: 'anggota' });
-  R.add('/anggota/profil', IKH.modul('Anggota', 'profil'), { peran: 'anggota' }); R.add('/anggota/keamanan', IKH.modul('Anggota', 'keamanan'), { peran: 'anggota' });
+  // pengurusBoleh: Pengurus yang akunnya terhubung ke data alumni membuka "Data & KTA Saya" (peran ganda)
+  const AG = { peran: 'anggota', pengurusBoleh: true };
+  R.add('/anggota', IKH.modul('Anggota', 'dasbor'), AG); R.add('/anggota/kta', IKH.modul('Anggota', 'kta'), AG);
+  R.add('/anggota/profil', IKH.modul('Anggota', 'profil'), AG); R.add('/anggota/keamanan', IKH.modul('Anggota', 'keamanan'), AG);
   [['', 'dasbor'], ['/verifikasi', 'verifikasi'], ['/perubahan', 'perubahan'], ['/alumni', 'alumni'], ['/kta', 'kta'], ['/rekap', 'rekap'], ['/log', 'log'], ['/pengaturan', 'pengaturan'], ['/arsip', 'arsip']]
     .forEach((x) => R.add('/admin' + x[0], IKH.modul('Admin', x[1]), { peran: 'pengurus' }));
   [['/beranda', 'beranda'], ['/notifikasi', 'notifikasi'], ['/crm', 'crm'], ['/impor', 'impor']]

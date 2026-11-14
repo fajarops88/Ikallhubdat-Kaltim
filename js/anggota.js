@@ -5,6 +5,10 @@
   'use strict';
   const { $, $$, esc, ic, img, bg, fmt, UI, api, Store, Sesi, Router, Kta, LS } = IKH;
   const MENU = [['/anggota', 'Dasbor Saya', 'dashboard'], ['/anggota/kta', 'KTA Digital', 'badge'], ['/anggota/profil', 'Profil & Pengajuan', 'edit_note'], ['/anggota/keamanan', 'Keamanan Akun', 'lock']];
+  /* Peran ganda: Pengurus yang terhubung ke data alumninya membuka ruang ini sebagai "Data & KTA Saya".
+     Kata sandi Pengurus diatur di Panel Pengurus → Pengaturan, jadi menu Keamanan diganti tautan kembali ke panel. */
+  const pengurus = () => !!(Sesi.me && Sesi.me.peran === 'pengurus');
+  const menuKini = () => pengurus() ? [['/admin', 'Panel Pengurus', 'admin_panel_settings']].concat(MENU.filter((m) => m[0] !== '/anggota/keamanan')) : MENU;
   const LABEL = { nama: 'Nama lengkap', nomor_taruna: 'NIT', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan terakhir', no_hp: 'Nomor WhatsApp', email: 'Email', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Pas foto' };
 
   function layout() {
@@ -15,8 +19,8 @@
   }
   function bingkai(d) {
     const path = Router.parse().path, st = (d && d.setting) || IKH.setPub(), a = (d && d.anggota) || {};
-    $('#a-brand').innerHTML = '<span class="lg img" ' + IKH.logoBg(st, 160) + '></span>' + '<div><div class="t1">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">Ruang Anggota</div></div>';
-    const links = MENU.map((m) => '<a href="#' + m[0] + '" class="' + (path === m[0] ? 'on' : '') + '">' + m[1] + '</a>').join('');
+    $('#a-brand').innerHTML = '<span class="lg img" ' + IKH.logoBg(st, 160) + '></span>' + '<div><div class="t1">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '</div><div class="t2">' + (pengurus() ? 'Data & KTA Saya' : 'Ruang Anggota') + '</div></div>';
+    const links = menuKini().map((m) => '<a href="#' + m[0] + '" class="' + (path === m[0] ? 'on' : '') + (m[0] === '/admin' ? ' ke-panel' : '') + '">' + (m[0] === '/admin' ? ic('arrow_back', 'sm') : '') + m[1] + '</a>').join('');
     $('#a-nav').innerHTML = links; $('#a-tabs').innerHTML = links;
     $('#a-nm').textContent = a.nama || (Sesi.me && Sesi.me.nama) || '';
     $('#a-st').innerHTML = '● ' + esc(a.status_kartu === 'Aktif' ? 'Anggota Terverifikasi' : (a.status_kartu || ''));
@@ -25,7 +29,7 @@
     $('#a-foot').textContent = '© ' + new Date().getFullYear() + ' ' + (st.ORG_NAMA || '');
   }
   async function keluar() {
-    if (!(await UI.konfirmasi('Keluar dari Ruang Anggota?', { ya: 'Keluar' })).ok) return;
+    if (!(await UI.konfirmasi(pengurus() ? 'Keluar dari akun Anda (Panel Pengurus juga ikut keluar)?' : 'Keluar dari Ruang Anggota?', { ya: 'Keluar' })).ok) return;
     api('auth.logout', {}); Sesi.keluar();
   }
   let _rid = 0;
@@ -33,6 +37,7 @@
     IKH.judul(judul);
     const rid = ++_rid;
     IKH.pasangLayout('agt', layout);
+    const sc = $('.side-scrim'); if (sc) sc.remove();            // sisa latar gelap sidebar Panel Pengurus (HP)
     const isi = $('#a-isi');
     const hidup = () => rid === _rid && document.body.contains(isi);
     const gambar = () => { if (!hidup() || !Store.agt) return; bingkai(Store.agt); render(isi, Store.agt); };
@@ -41,7 +46,15 @@
     const ev = () => { if (hidup()) gambar(); else document.removeEventListener('ikh:agt', ev); };
     document.addEventListener('ikh:agt', ev);
     await p;
-    if (!Store.agt && rid === _rid) isi.innerHTML = '<div class="alert bad">' + ic('error') + '<div>Data keanggotaan tidak dapat dimuat. Periksa koneksi lalu muat ulang halaman.</div></div>';
+    if (!Store.agt && rid === _rid) isi.innerHTML = pesanGagal(Store.agtErr);
+  }
+  function pesanGagal(e) {
+    const kode = e && e.code;
+    if (kode === 'BELUM_TAUT') return '<section class="card card-b" style="max-width:760px"><div class="row top gap-lg"><span class="ava lg sq">' + ic('link_off') + '</span><div><h3 class="mb-0">Akun Anda belum terhubung ke data alumni</h3>' +
+      '<p class="muted mt">' + esc(e.msg) + '</p><p class="small muted">Setelah tersimpan dengan email yang sama, menu ini otomatis menampilkan data & KTA Anda — tanpa kata sandi kedua.</p>' +
+      '<div class="row wrap mt"><a class="btn btn-primary" href="#/admin/alumni?tambah=1">' + ic('person_add', 'sm') + 'Tambah Data Saya</a><a class="btn btn-ghost" href="#/admin">' + ic('arrow_back', 'sm') + 'Kembali ke Panel</a></div></div></div></section>';
+    if (kode === 'FORBID' && pengurus()) return '<div class="alert warn">' + ic('warning') + '<div>Menu Data & KTA Saya butuh backend Apps Script <b>v1.2.0</b>. Tempel kode backend terbaru lalu deploy ulang. <a href="#/admin"><b>Kembali ke Panel</b></a></div></div>';
+    return '<div class="alert bad">' + ic('error') + '<div>' + esc((e && e.msg) || 'Data keanggotaan tidak dapat dimuat. Periksa koneksi lalu muat ulang halaman.') + '</div></div>';
   }
 
   /* ---------------- Dasbor ---------------- */
@@ -64,7 +77,8 @@
         svc('edit_note', 'Ajukan Pembaruan Data', 'Mutasi instansi, jabatan, nomor WhatsApp, email, atau foto. Berlaku setelah disetujui Pengurus.', pending ? '1 menunggu' : 'Buat pengajuan', '#/anggota/profil') +
         svc('badge', 'KTA Digital', 'Lihat kartu sisi depan & belakang, unduh PDF, atau cetak.', 'Buka kartu', '#/anggota/kta') +
         svc('qr_code_scanner', 'Verifikasi KTA', 'Periksa keaslian KTA anggota lain dengan memindai QR.', 'Pindai sekarang', '#/verifikasi') +
-        svc('lock', 'Keamanan Akun', 'Ganti kata sandi dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan') + '</div>' +
+        (pengurus() ? svc('admin_panel_settings', 'Panel Pengurus', 'Kembali ke panel. Kata sandi akun diatur di Pengaturan → Keamanan.', 'Buka panel', '#/admin')
+          : svc('lock', 'Keamanan Akun', 'Ganti kata sandi dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan')) + '</div>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:start" id="g2"><section class="card"><div class="card-h"><div><h3>Data Profil Resmi</h3><div class="sub">Data yang terverifikasi Pengurus</div></div><a class="btn btn-ghost btn-sm" href="#/anggota/profil">' + ic('edit', 'sm') + 'Ajukan Perubahan</a></div>' +
         '<div class="card-b grid g2"><div><h4 class="row">' + ic('school', 'sm') + 'Akademik Kedinasan</h4><div class="kv box">' + kv([['NIT', a.nomor_taruna], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div></div>' +
         '<div><h4 class="row">' + ic('work', 'sm') + 'Kepegawaian & Kontak</h4><div class="kv box">' + kv([['Status', a.status_kepegawaian], ['Instansi', a.instansi], ['Jabatan', a.jabatan_terakhir], ['WhatsApp', a.no_hp], ['Email', a.email]]) + '</div></div></div></section>' +
@@ -173,6 +187,7 @@
 
   /* ---------------- Keamanan ---------------- */
   function keamanan() {
+    if (pengurus()) { PG_AMAN(); return; }
     return halaman('Keamanan Akun', (el, d) => {
       const me = Sesi.me || {};
       el.innerHTML = '<div class="ph"><div class="ttl"><span class="ico">' + ic('lock') + '</span><div><h1>Keamanan Akun</h1><div class="sub">' + esc(me.email || '') + '</div></div></div></div>' +
@@ -198,6 +213,9 @@
       };
     });
   }
+
+  /* Pengurus mengganti kata sandi di Panel Pengurus (respons auth.ganti untuk Pengurus berisi data panel) */
+  function PG_AMAN() { UI.toast('Kata sandi akun Pengurus diatur di Pengaturan → Keamanan.', 'warn'); Router.go('/admin/pengaturan'); }
 
   IKH.Anggota = { hal: { dasbor, kta, profil, keamanan } };
 })();
