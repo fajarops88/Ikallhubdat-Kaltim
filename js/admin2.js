@@ -9,17 +9,37 @@
 
   /* ======================= KELOLA BERANDA ======================= */
   const KB = { tab: 'hero' };
+  /* ---- Tab "Menu & Tampilan": menu situs publik + bagian beranda ---- */
+  const kunciMenu = () => Object.keys(IKH.MENU_PUB);
+  const saklarAwal = (st) => { const sem = IKH.menuTersembunyi(st); return { TAMPIL_STATISTIK: st.TAMPIL_STATISTIK === 'TIDAK' ? 'TIDAK' : 'YA', TAMPIL_PETA: st.TAMPIL_PETA === 'TIDAK' ? 'TIDAK' : 'YA', MENU_SEMBUNYI: kunciMenu().filter(sem).join(',') }; };
+  const saklarKini = (el) => ({ TAMPIL_STATISTIK: $('#kb-stat', el).checked ? 'YA' : 'TIDAK', TAMPIL_PETA: $('#kb-peta', el).checked ? 'YA' : 'TIDAK',
+    MENU_SEMBUNYI: kunciMenu().filter((k) => { const c = $('[data-menu="' + k + '"]', el); return c && !c.checked; }).join(',') });
+  const KET_MENU = { beranda: 'Tautan Beranda di menu atas & footer (logo tetap mengarah ke beranda).', profil: 'Menu Profil Organisasi & tautan "Baca selengkapnya" sambutan.', berita: 'Menu Berita + bagian Berita & Pengumuman di beranda.',
+    daftar: 'Menu & tombol Pendaftaran / "Daftar Sekarang". Untuk menutup formulirnya, matikan "Formulir pendaftaran publik dibuka" di Pengaturan.', status: 'Tautan Cek Status Pendaftaran di footer.', verifikasi: 'Menu & tombol Verifikasi KTA. Pindai QR pada KTA tetap berfungsi.', masuk: 'Tombol Masuk di menu atas, beranda & footer.' };
+  function panelTampilan(st) {
+    const sem = IKH.menuTersembunyi(st);
+    const sakl = (id, on, label, ket, attr) => '<label class="saklar-baris"><span class="switch"><input type="checkbox" ' + (id ? 'id="' + id + '" ' : '') + (attr || '') + (on ? ' checked' : '') + '><span class="tr"></span></span><span><b>' + label + '</b><span class="hint">' + ket + '</span></span></label>';
+    return '<div class="card-b" data-p="tampilan"><div class="grid g2" style="align-items:start">' +
+      '<div><h4 class="row">' + ic('menu_open') + 'Menu situs publik</h4><p class="small muted">Matikan untuk menyembunyikan dari menu atas (termasuk menu HP), footer, dan tombol di beranda. Halamannya tetap bisa dibuka lewat tautan langsung.</p><div class="col">' +
+      kunciMenu().map((k) => sakl('', !sem(k), IKH.MENU_PUB[k], KET_MENU[k] || '', 'data-menu="' + k + '"')).join('') + '</div>' +
+      '<div class="alert warn small mt hide" id="kb-warn-masuk">' + ic('info', 'sm') + '<div>Tombol Masuk disembunyikan. Pengurus & anggota tetap bisa masuk lewat <b class="mono">' + esc(location.href.split('#')[0]) + '#/masuk</b> — simpan alamat ini.</div></div></div>' +
+      '<div><h4 class="row">' + ic('home') + 'Bagian beranda</h4><p class="small muted">Bagian yang ditampilkan di halaman depan situs publik.</p><div class="col">' +
+      sakl('kb-stat', st.TAMPIL_STATISTIK !== 'TIDAK', 'Statistik jumlah alumni', 'Alumni terverifikasi, KTA aktif, angkatan, instansi.') +
+      sakl('kb-peta', st.TAMPIL_PETA !== 'TIDAK', 'Peta sebaran alumni', 'Jumlah alumni terverifikasi per kabupaten/kota (angka saja, tanpa nama). Perlu backend v1.1.0.') + '</div></div></div></div>';
+  }
+  const peringatanMenu = (el) => { const c = $('[data-menu="masuk"]', el), w = $('#kb-warn-masuk', el); if (c && w) w.classList.toggle('hide', c.checked); };
   function beranda() {
     return halaman('/admin/beranda', 'Kelola Beranda', async (main, x, awal) => {
       if (!awal && KB.edit) return;
       const st = x.st;
-      const tabs = [['hero', 'Beranda', 'home'], ['profil', 'Profil Organisasi', 'domain'], ['sambutan', 'Sambutan Ketua', 'person'], ['struktur', 'Struktur & Pengurus', 'account_tree'], ['berita', 'Berita', 'newspaper'], ['galeri', 'Galeri', 'photo_library']];
+      const tabs = [['hero', 'Beranda', 'home'], ['tampilan', 'Menu & Tampilan', 'tune'], ['profil', 'Profil Organisasi', 'domain'], ['sambutan', 'Sambutan Ketua', 'person'], ['struktur', 'Struktur & Pengurus', 'account_tree'], ['berita', 'Berita', 'newspaper'], ['galeri', 'Galeri', 'photo_library']];
       const t = (k, label, hint, area, rows) => '<div class="fld"><label for="kb-' + k + '">' + label + '</label>' + (area ? '<textarea class="inp" id="kb-' + k + '" data-k="' + k + '" rows="' + (rows || 5) + '">' + esc(st[k] || '') + '</textarea>' : '<input class="inp" id="kb-' + k + '" data-k="' + k + '" value="' + esc(st[k] || '') + '">') + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
       KB.edit = false;
       main.innerHTML = ph('newspaper', 'Kelola Konten Beranda & Profil Organisasi', 'Semua perubahan langsung tampil di situs publik.', '<a class="btn btn-ghost btn-sm" href="#/" target="_blank">' + ic('open_in_new', 'sm') + 'Lihat situs</a>') +
         '<section class="card"><div class="tabs">' + tabs.map((tb) => '<button data-tab="' + tb[0] + '" class="' + (KB.tab === tb[0] ? 'on' : '') + '">' + ic(tb[2], 'sm') + tb[1] + '</button>').join('') + '</div>' +
         '<div class="card-b" data-p="hero"><div class="col gap-lg" style="max-width:820px">' + t('HERO_LABEL', 'Label kecil') + t('HERO_JUDUL', 'Judul besar beranda', 'Bagian setelah kata "Ikatan" otomatis tampil sebagai sub-baris.') + t('HERO_SUBJUDUL', 'Sub-judul', '', true, 3) +
-        '<label class="switch"><input type="checkbox" id="kb-stat" ' + (st.TAMPIL_STATISTIK !== 'TIDAK' ? 'checked' : '') + '><span class="tr"></span>Tampilkan statistik jumlah alumni di beranda</label></div></div>' +
+        '<p class="small muted mb-0">' + ic('tune', 'sm') + ' Menu navigasi, statistik & peta sebaran di beranda diatur di tab <b>Menu &amp; Tampilan</b>.</p></div></div>' +
+        panelTampilan(st) +
         '<div class="card-b" data-p="profil"><div class="grid g2"><div class="col gap-lg">' + t('PROFIL_TENTANG', 'Tentang organisasi', '', true, 6) + t('PROFIL_TUJUAN', 'Tujuan (satu per baris)', '', true, 5) + t('PROFIL_VISI', 'Visi', '', true, 3) + '</div><div class="col gap-lg">' + t('PROFIL_SEJARAH', 'Sejarah', '', true, 9) + t('PROFIL_MISI', 'Misi (satu per baris)', '', true, 6) + '</div></div></div>' +
         '<div class="card-b" data-p="sambutan"><div class="grid" style="grid-template-columns:220px minmax(0,1fr);align-items:start"><div class="col"><div style="aspect-ratio:4/5;border-radius:14px;background:#E9EDF3 center/cover no-repeat;' + (st.SAMBUTAN_FOTO_ID ? 'background-image:url(\'' + img(st.SAMBUTAN_FOTO_ID, 500) + '\')' : '') + '"></div><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + 'Ganti Foto Ketua<input type="file" accept="image/*" class="hide" id="up-samb"></label></div>' +
         '<div class="col gap-lg">' + t('SAMBUTAN_JUDUL', 'Judul') + t('SAMBUTAN_ISI', 'Isi sambutan', 'Nama & jabatan ketua diambil dari Pengaturan.', true, 12) + '</div></div></div>' +
@@ -28,19 +48,24 @@
         '<hr class="sep"><div class="row between mb"><h4 class="mb-0">Pengurus</h4><button class="btn btn-primary btn-sm" data-baru="struktur">' + ic('person_add', 'sm') + 'Tambah Pengurus</button></div><div id="kb-str">' + UI.skel(3) + '</div></div>' +
         '<div class="card-b" data-p="berita"><div class="row between mb"><h4 class="mb-0">Berita & Pengumuman</h4><button class="btn btn-primary btn-sm" data-baru="berita">' + ic('add', 'sm') + 'Tulis Berita</button></div><div id="kb-brt">' + UI.skel(3) + '</div></div>' +
         '<div class="card-b" data-p="galeri"><div class="row between mb"><h4 class="mb-0">Galeri Kegiatan</h4><button class="btn btn-primary btn-sm" data-baru="galeri">' + ic('add_photo_alternate', 'sm') + 'Tambah Foto</button></div><div id="kb-gal">' + UI.skel(3) + '</div></div>' +
-        '<div class="card-f row between wrap" id="kb-foot"><span class="small muted" id="kb-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="kb-simpan">' + ic('check_circle') + 'Simpan Teks</button></div></section>';
+        '<div class="card-f row between wrap" id="kb-foot"><span class="small muted" id="kb-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="kb-simpan">' + ic('check_circle') + 'Simpan Perubahan</button></div></section>';
       const tampilTab = () => { $$('[data-tab]', main).forEach((y) => y.classList.toggle('on', y.dataset.tab === KB.tab)); $$('[data-p]', main).forEach((p) => p.classList.toggle('hide', p.dataset.p !== KB.tab)); $('#kb-foot').classList.toggle('hide', ['struktur', 'berita', 'galeri'].indexOf(KB.tab) > -1); };
       $$('[data-tab]', main).forEach((b) => b.onclick = () => { KB.tab = b.dataset.tab; tampilTab(); });
       tampilTab();
       const kartu = $('section.card', main);
-      const ubah = () => { if (!$('#kb-stat')) return; const n = $$('[data-k]', kartu).filter((i) => i.value !== String(st[i.dataset.k] || '')).length + (($('#kb-stat').checked ? 'YA' : 'TIDAK') !== (st.TAMPIL_STATISTIK === 'TIDAK' ? 'TIDAK' : 'YA') ? 1 : 0); $('#kb-ubah').textContent = n ? n + ' isian berubah — belum disimpan.' : 'Tidak ada perubahan.'; KB.edit = n > 0; };
-      kartu.addEventListener('input', ubah); $('#kb-stat').onchange = ubah;
+      const saklarBeda = () => { const a = saklarAwal(st), b = saklarKini(kartu); return Object.keys(a).filter((k) => a[k] !== b[k]); };
+      const jumlahSaklarBeda = () => { const a = saklarAwal(st), b = saklarKini(kartu), A = a.MENU_SEMBUNYI.split(','), B = b.MENU_SEMBUNYI.split(',');
+        return ['TAMPIL_STATISTIK', 'TAMPIL_PETA'].filter((k) => a[k] !== b[k]).length + kunciMenu().filter((k) => (A.indexOf(k) > -1) !== (B.indexOf(k) > -1)).length; };
+      const ubah = () => { if (!$('#kb-stat')) return; const n = $$(IKH.ISIAN, kartu).filter((i) => i.value !== String(st[i.dataset.k] || '')).length + jumlahSaklarBeda(); $('#kb-ubah').textContent = n ? n + ' isian berubah — belum disimpan.' : 'Tidak ada perubahan.'; KB.edit = n > 0; peringatanMenu(kartu); };
+      kartu.addEventListener('input', ubah); kartu.addEventListener('change', ubah); peringatanMenu(kartu);
       $('#kb-simpan').onclick = (e) => UI.tombol(e.currentTarget, async () => {
-        const pairs = {}; $$('[data-k]', kartu).forEach((i) => { if (i.value !== String(st[i.dataset.k] || '')) pairs[i.dataset.k] = i.value; });
-        const s2 = $('#kb-stat').checked ? 'YA' : 'TIDAK'; if (s2 !== (st.TAMPIL_STATISTIK === 'TIDAK' ? 'TIDAK' : 'YA')) pairs.TAMPIL_STATISTIK = s2;
+        const pairs = {}; $$(IKH.ISIAN, kartu).forEach((i) => { if (i.value !== String(st[i.dataset.k] || '')) pairs[i.dataset.k] = String(i.value); });
+        const kini = saklarKini(kartu); saklarBeda().forEach((k) => { pairs[k] = kini[k]; });
         if (!Object.keys(pairs).length) return UI.toast('Tidak ada perubahan.', 'warn');
+        if ((pairs.MENU_SEMBUNYI !== undefined || pairs.TAMPIL_PETA !== undefined) && IKH.Versi.server && IKH.cmpVer(IKH.Versi.server, '1.1.0') < 0)
+          return UI.toast('Pengaturan menu & peta butuh backend Apps Script v1.1.0 (server Anda masih v' + IKH.Versi.server + '). Tempel kode backend terbaru lalu deploy ulang.', 'bad', 8000);
         const r = await api('adm.setting.simpan', { pairs });
-        if (UI.hasil(r)) { Store.adm.setting = r.data.setting; Store.simpanAdmLokal(); KB.edit = false; Store.pubBoot(true); ubah(); }
+        if (UI.hasil(r)) { Object.assign(st, r.data.setting); Store.adm.setting = r.data.setting; Store.simpanAdmLokal(); KB.edit = false; Store.pubBoot(true); ubah(); }
       });
       const unggah = (sel, tujuan) => { const el = $(sel, main); if (el) el.onchange = async (e) => { try { const f = await IKH.bacaGambar(e.target.files[0], tujuan === 'bagan' ? 1800 : 900, 0.86); const m = UI.muat('Mengunggah…'); const r = await api('adm.upload', { tujuan, file: f }); m.tutup(); if (UI.hasil(r)) { Store.adm.setting = r.data.setting; Store.simpanAdmLokal(); Store.pubBoot(true); beranda(); } } catch (er) { UI.toast(er.message, 'bad'); } }; };
       unggah('#up-samb', 'sambutan'); unggah('#up-bagan', 'bagan');

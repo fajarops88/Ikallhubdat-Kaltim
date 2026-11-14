@@ -6,7 +6,8 @@
   const { $, $$, esc, ic, img, bg, fmt, UI, api, Store, Sesi, Router, Kta, daftar, LS, hariIni } = IKH;
 
   /* ---------------- Bingkai publik ---------------- */
-  const NAV = [['/', 'Beranda'], ['/profil', 'Profil Organisasi'], ['/berita', 'Berita'], ['/daftar', 'Pendaftaran Alumni'], ['/verifikasi', 'Verifikasi KTA']];
+  const NAV = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi', 'profil'], ['/berita', 'Berita', 'berita'], ['/daftar', 'Pendaftaran Alumni', 'daftar'], ['/verifikasi', 'Verifikasi KTA', 'verifikasi']];
+  const TAUTAN_FOOT = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi & Kepengurusan', 'profil'], ['/berita', 'Berita & Pengumuman', 'berita'], ['/daftar', 'Pendaftaran Alumni Baru', 'daftar'], ['/status', 'Cek Status Pendaftaran', 'status'], ['/verifikasi', 'Verifikasi Keaslian KTA', 'verifikasi'], ['/masuk', 'Masuk Anggota / Pengurus', 'masuk']];
   function logoHtml(st, kelas) {
     return '<span class="lg img ' + (kelas || '') + '" ' + IKH.logoBg(st, 160) + ' role="img" aria-label="Logo ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '"></span>';
   }
@@ -17,17 +18,17 @@
       '<main id="main" class="pub-main" tabindex="-1"></main><footer class="pub-foot" id="foot"></footer>';
   }
   function bingkai() {
-    const st = IKH.setPub(), path = Router.parse().path, me = Sesi.me;
+    const st = IKH.setPub(), path = Router.parse().path, me = Sesi.me, sem = IKH.menuTersembunyi(st);
     const brand = $('#brand'); if (!brand) return;
     brand.innerHTML = logoHtml(st) + '<div class="grow"><div class="t1">SIM IKALLHUBDAT</div><div class="t2">' + esc((st.ORG_NAMA || 'DPD Kalimantan Timur').replace(/^DPD IKALLHUBDAT\s*/i, 'DPD ')) + '</div></div>';
-    $('#pubnav').innerHTML = NAV.map((n) => '<a href="#' + n[0] + '" class="' + ((n[0] === '/' ? path === '/' : path.indexOf(n[0]) === 0) ? 'on' : '') + '">' + n[1] + '</a>').join('') +
+    $('#pubnav').innerHTML = NAV.filter((n) => !sem(n[2])).map((n) => '<a href="#' + n[0] + '" class="' + ((n[0] === '/' ? path === '/' : path.indexOf(n[0]) === 0) ? 'on' : '') + '">' + n[1] + '</a>').join('') +
       (me ? '<a class="btn btn-primary btn-sm" href="#' + (me.peran === 'pengurus' ? '/admin' : '/anggota') + '">' + ic('person', 'sm') + (me.peran === 'pengurus' ? 'Panel Pengurus' : 'Ruang Anggota') + '</a>'
-        : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a><a class="btn btn-gold btn-sm" href="#/daftar">Daftar Sekarang</a>');
+        : (sem('masuk') ? '' : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a>') + (sem('daftar') ? '' : '<a class="btn btn-gold btn-sm" href="#/daftar">Daftar Sekarang</a>'));
     const tahun = new Date().getFullYear();
     $('#foot').innerHTML = '<div class="wrap"><div><a class="brand" href="#/" style="color:#fff">' + logoHtml(st) + '<div><div class="t1" style="color:#fff">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</div><div class="t2" style="color:#93A6D4">' + esc(st.ORG_NAMA_PANJANG || '') + '</div></div></a>' +
       '<p class="mt" style="font-size:13.5px;max-width:420px">Portal resmi keanggotaan alumni: pendaftaran mandiri, verifikasi berjenjang oleh Pengurus, dan KTA digital ber-QR yang dapat diperiksa keasliannya.</p>' +
       '<button class="btn btn-gold btn-sm hide" data-install>' + ic('download', 'sm') + 'Pasang Aplikasi</button></div>' +
-      '<div><h4>Tautan Cepat</h4><a href="#/">Beranda</a><a href="#/profil">Profil Organisasi & Kepengurusan</a><a href="#/daftar">Pendaftaran Alumni Baru</a><a href="#/status">Cek Status Pendaftaran</a><a href="#/verifikasi">Verifikasi Keaslian KTA</a><a href="#/masuk">Masuk Anggota / Pengurus</a></div>' +
+      '<div><h4>Tautan Cepat</h4>' + TAUTAN_FOOT.filter((t) => !sem(t[2])).map((t) => '<a href="#' + t[0] + '">' + t[1] + '</a>').join('') + '</div>' +
       '<div><h4>Sekretariat</h4>' +
       (st.ORG_ALAMAT ? '<div class="ln">' + ic('location_on', 'sm') + '<span>' + esc(st.ORG_ALAMAT) + '</span></div>' : '') +
       (st.ORG_EMAIL ? '<div class="ln">' + ic('mail', 'sm') + '<a href="mailto:' + esc(st.ORG_EMAIL) + '" style="display:inline;padding:0">' + esc(st.ORG_EMAIL) + '</a></div>' : '') +
@@ -65,30 +66,57 @@
   /* ---------------- Beranda ---------------- */
   function beranda() {
     return halamanPub('Beranda', (main, d) => {
-      const st = d.setting || {}, berita = (d.berita || []).slice(0, 3), gal = (d.galeri || []).slice(0, 8), stat = d.stat;
+      const st = d.setting || {}, berita = (d.berita || []).slice(0, 3), gal = (d.galeri || []).slice(0, 8), stat = d.stat, sem = IKH.menuTersembunyi(st);
+      const sb = st.TAMPIL_PETA !== 'TIDAK' && d.sebaran && d.sebaran.n ? d.sebaran : null;
+      const ctaDaftar = st.PENDAFTARAN_DIBUKA !== 'TIDAK' && !sem('daftar');
       const judul = String(st.HERO_JUDUL || 'Sistem Informasi Manajemen Ikatan Alumni Lalu Lintas & Perhubungan Darat');
       const pisah = judul.indexOf(' Ikatan') > 0 ? [judul.slice(0, judul.indexOf(' Ikatan')), judul.slice(judul.indexOf(' Ikatan') + 1)] : [judul, ''];
       main.innerHTML =
         '<section class="hero"><div class="wrap"><div><span class="pill">' + ic('verified', 'sm') + esc(st.HERO_LABEL || 'Portal Resmi Keanggotaan') + '</span>' +
         '<h1 class="mt">' + esc(pisah[0]) + (pisah[1] ? '<span>' + esc(pisah[1]) + '</span>' : '') + '</h1><p class="lead">' + esc(st.HERO_SUBJUDUL || '') + '</p>' +
-        '<div class="row wrap">' + (st.PENDAFTARAN_DIBUKA !== 'TIDAK' ? '<a class="btn btn-primary" href="#/daftar">' + ic('how_to_reg') + 'Daftar Jadi Anggota</a>' : '') +
-        '<a class="btn btn-outline" href="#/verifikasi">' + ic('qr_code_scanner') + 'Verifikasi KTA</a><a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk</a></div>' +
+        '<div class="row wrap">' + (ctaDaftar ? '<a class="btn btn-primary" href="#/daftar">' + ic('how_to_reg') + 'Daftar Jadi Anggota</a>' : '') +
+        (sem('verifikasi') ? '' : '<a class="btn btn-outline" href="#/verifikasi">' + ic('qr_code_scanner') + 'Verifikasi KTA</a>') + (sem('masuk') ? '' : '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk</a>') + '</div>' +
         '<div class="trust"><span>' + ic('verified_user', 'sm') + 'Diverifikasi Pengurus</span><span>' + ic('qr_code_2', 'sm') + 'KTA ber-QR bertanda tangan digital</span><span>' + ic('lock', 'sm') + 'Data tersimpan aman</span></div></div>' +
         '<div class="kartu-hero" aria-hidden="true"><div class="kicker center" style="margin-bottom:.5rem">Contoh tampilan KTA digital</div>' + Kta.depan(contohKta(st), st) + '</div></div></section>' +
         (stat ? '<div class="wrap"><div class="stats">' +
           [['groups', stat.alumni, 'Alumni terverifikasi'], ['badge', stat.aktif, 'KTA aktif'], ['school', stat.angkatan, 'Angkatan terdata'], ['domain', stat.instansi, 'Instansi penempatan']]
             .map((s) => '<div class="stat"><div class="ico">' + ic(s[0]) + '</div><div><div class="n tnum">' + fmt.angka(s[1]) + '</div><div class="l">' + s[2] + '</div></div></div>').join('') + '</div></div>' : '') +
-        '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Kabar Organisasi</div><h2>Berita & Pengumuman Terkini</h2></div><a class="btn btn-ghost btn-sm" href="#/berita">Semua berita' + ic('arrow_forward', 'sm') + '</a></div>' +
-        (berita.length ? '<div class="news">' + berita.map(kartuBerita).join('') + '</div>' : UI.kosong('Belum ada berita.', 'newspaper')) + '</div></section>' +
+        (sb ? '<section class="sec" id="sebaran" style="padding-top:' + (stat ? '1rem' : '3rem') + '"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Jejaring Alumni</div><h2>Sebaran Alumni di Kalimantan Timur</h2><p class="muted mb-0 mt">Jumlah alumni terverifikasi menurut domisili kabupaten/kota.</p></div></div>' +
+          '<div class="card card-b peta-wrap"><div class="peta" id="pb-peta">' + UI.skel(5) + '</div><div id="pb-list"></div></div></div></section>' : '') +
+        (sem('berita') ? '' : '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Kabar Organisasi</div><h2>Berita & Pengumuman Terkini</h2></div><a class="btn btn-ghost btn-sm" href="#/berita">Semua berita' + ic('arrow_forward', 'sm') + '</a></div>' +
+        (berita.length ? '<div class="news">' + berita.map(kartuBerita).join('') + '</div>' : UI.kosong('Belum ada berita.', 'newspaper')) + '</div></section>') +
         (st.SAMBUTAN_ISI ? '<section class="sec alt"><div class="wrap sambutan"><div class="foto" ' + (st.SAMBUTAN_FOTO_ID ? bg(st.SAMBUTAN_FOTO_ID, 600) : '') + '>' + (st.SAMBUTAN_FOTO_ID ? '' : ic('person', 'xl')) + '</div>' +
           '<div><div class="kicker gold">' + esc(st.SAMBUTAN_JUDUL || 'Sambutan Ketua') + '</div><div class="quote mt">' + esc(potong(st.SAMBUTAN_ISI, 420)) + '</div>' +
           '<div class="mt"><b>' + esc(st.KETUA_NAMA || '') + '</b><div class="muted small">' + esc(st.KETUA_JABATAN || '') + ' ' + esc(st.ORG_SINGKAT || '') + '</div></div>' +
-          '<a class="btn btn-text mt" href="#/profil?s=sambutan">Baca selengkapnya' + ic('arrow_forward', 'sm') + '</a></div></div></section>' : '') +
+          (sem('profil') ? '' : '<a class="btn btn-text mt" href="#/profil?s=sambutan">Baca selengkapnya' + ic('arrow_forward', 'sm') + '</a>') + '</div></div></section>' : '') +
         (gal.length ? '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Dokumentasi</div><h2>Galeri Kegiatan</h2></div></div><div class="gal">' +
           gal.map((g) => '<button class="g" ' + bg(g.gambar_id, 700) + ' data-src="' + esc(img(g.gambar_id, 1400)) + '" data-cap="' + esc(g.judul) + '" aria-label="Perbesar foto ' + esc(g.judul) + '"><span class="cap">' + esc(g.judul) + (g.lokasi ? '<br><span style="font-weight:400;opacity:.8">' + esc(g.lokasi) + '</span>' : '') + '</span></button>').join('') + '</div></div></section>' : '') +
-        '<section class="sec" style="padding-top:' + (gal.length ? '0' : '2rem') + '"><div class="wrap"><div class="cta"><div><div class="kicker" style="color:var(--gold)">Digitalisasi Keanggotaan</div><h2 class="mt">Belum terdata sebagai anggota?</h2><p>Daftar mandiri untuk memperoleh KTA digital ber-QR. Sudah menjadi anggota? Masuk untuk melihat kartu dan mengajukan pembaruan data.</p></div>' +
-        '<div class="row wrap">' + (st.PENDAFTARAN_DIBUKA !== 'TIDAK' ? '<a class="btn btn-gold" href="#/daftar">' + ic('person_add') + 'Daftar Sekarang</a>' : '') + '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk Anggota</a></div></div></div></section>';
+        (!ctaDaftar && sem('masuk') ? '' : '<section class="sec" style="padding-top:' + (gal.length ? '0' : '2rem') + '"><div class="wrap"><div class="cta"><div><div class="kicker" style="color:var(--gold)">Digitalisasi Keanggotaan</div><h2 class="mt">Belum terdata sebagai anggota?</h2><p>Daftar mandiri untuk memperoleh KTA digital ber-QR. Sudah menjadi anggota? Masuk untuk melihat kartu dan mengajukan pembaruan data.</p></div>' +
+        '<div class="row wrap">' + (ctaDaftar ? '<a class="btn btn-gold" href="#/daftar">' + ic('person_add') + 'Daftar Sekarang</a>' : '') + (sem('masuk') ? '' : '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk Anggota</a>') + '</div></div></div></section>');
       $$('.gal .g', main).forEach((b) => b.onclick = () => UI.lightbox(b.dataset.src, b.dataset.cap));
+      if (sb) petaBeranda(sb);
+    });
+  }
+  /** Peta sebaran di beranda: hanya angka agregat dari server (tanpa data pribadi) */
+  async function petaBeranda(sb) {
+    const box = $('#pb-peta'); if (!box) return;
+    let P;
+    try { P = await IKH.Peta.muat(); } catch (e) { const s = $('#sebaran'); if (s) s.remove(); return; }
+    if (!$('#pb-peta') || !document.body.contains(box)) return;
+    const n = sb.n || {}, total = sb.total || 0;
+    const dalam = P.wilayah.reduce((t, w) => t + (n[w.kode] || 0), 0);
+    const persen = (v) => total ? Math.round(v / total * 1000) / 10 : 0;
+    box.innerHTML = IKH.Peta.html(P, n, { aria: 'Peta sebaran alumni terverifikasi per kabupaten/kota di Kalimantan Timur' });
+    const rows = P.wilayah.map((w) => ({ k: w.kode, nama: w.nama, v: n[w.kode] || 0 })).sort((a, b) => b.v - a.v || a.nama.localeCompare(b.nama));
+    const isi = rows.filter((r) => r.v);
+    const maks = Math.max(1, ...rows.map((r) => r.v));
+    $('#pb-list').innerHTML = (dalam ? '<div class="pb-ring"><div><div class="n tnum">' + fmt.angka(dalam) + '</div><div class="l">alumni berdomisili di Kalimantan Timur</div></div><div><div class="n tnum">' + isi.length + '<small>/10</small></div><div class="l">kabupaten/kota terjangkau</div></div></div>' +
+      '<ol class="pb-list">' + isi.map((r) => '<li data-k="' + r.k + '"><span class="nm">' + esc(r.nama) + '</span><span class="br"><i style="width:' + Math.max(4, r.v / maks * 100) + '%"></i></span><b class="tnum">' + fmt.angka(r.v) + '</b></li>').join('') + '</ol>'
+      : UI.kosong('Belum ada data domisili alumni terverifikasi.', 'map')) +
+      ((sb.luar || sb.kosong || sb.lain) ? '<p class="small muted mt mb-0">' + [sb.luar ? fmt.angka(sb.luar) + ' alumni berdomisili di luar Kalimantan Timur' : '', (sb.kosong || 0) + (sb.lain || 0) ? fmt.angka((sb.kosong || 0) + (sb.lain || 0)) + ' belum tercatat domisilinya' : ''].filter(Boolean).join(' • ') + '.</p>' : '');
+    IKH.Peta.pasang(box, {
+      tip: (k) => { const w = P.wilayah.find((x) => x.kode === k); return '<b>' + esc(w ? w.nama : k) + '</b><br>' + fmt.angka(n[k] || 0) + ' alumni' + (total ? ' • ' + persen(n[k] || 0) + '%' : ''); },
+      sorot: (k, on) => $$('#pb-list li[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on))
     });
   }
   const potong = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n).replace(/\s\S*$/, '') + '…' : s; };

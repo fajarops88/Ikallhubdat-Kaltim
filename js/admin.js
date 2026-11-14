@@ -147,9 +147,7 @@
     return '?';
   }
   IKH.kodeDomisili = kodeDomisili; IKH.NAMA_DOM = NAMA_DOM; IKH.DOM = DOM;
-  const PT = { mode: 'alumni', sel: '' };
-  const SKALA = ['#DAE2FF', '#A9BCEB', '#6F8DD1', '#2E4F95', '#0A2A63'];
-  const warnaPeta = (v, maks) => !v ? '#EEF1F5' : SKALA[Math.min(4, Math.floor((v / maks) * 5 - 1e-9))];
+  const PT = { mode: 'alumni' };
   function kartuPeta() {
     return '<section class="card mt-lg" id="pt-card"><div class="card-h"><div><h3 class="row">' + ic('map') + 'Peta Sebaran Alumni per Domisili</h3><div class="sub">Jumlah per kabupaten/kota di Kalimantan Timur • klik wilayah untuk melihat daftar alumninya</div></div>' +
       '<div class="seg" id="pt-mode" role="tablist" aria-label="Data yang dipetakan"><button data-m="alumni" class="' + (PT.mode === 'alumni' ? 'on' : '') + '">Alumni terverifikasi</button><button data-m="semua" class="' + (PT.mode === 'semua' ? 'on' : '') + '">Semua data</button></div></div>' +
@@ -165,17 +163,13 @@
   async function gambarPeta() {
     const box = $('#pt-peta'); if (!box) return;
     $$('#pt-mode [data-m]').forEach((b) => b.onclick = () => { PT.mode = b.dataset.m; $$('#pt-mode [data-m]').forEach((y) => y.classList.toggle('on', y === b)); gambarPeta(); });
-    try { await IKH.muat(['js/peta-kaltim.js?v=' + IKH.VERSI]); } catch (e) { box.innerHTML = UI.kosong('Peta gagal dimuat. Periksa koneksi.', 'map'); return; }
+    let P;
+    try { P = await IKH.Peta.muat(); } catch (e) { box.innerHTML = UI.kosong('Peta gagal dimuat. Periksa koneksi.', 'map'); return; }
     if (!$('#pt-peta')) return;
-    const P = window.PETA_KALTIM, h = hitungPeta(), n = h.n;
-    const nilai = P.wilayah.map((w) => n[w.kode] || 0), maks = Math.max(1, ...nilai), dalam = nilai.reduce((a, b) => a + b, 0);
+    const h = hitungPeta(), n = h.n;
+    const dalam = P.wilayah.reduce((t, w) => t + (n[w.kode] || 0), 0);
     const persen = (v) => h.total ? Math.round(v / h.total * 1000) / 10 : 0;
-    box.innerHTML = '<svg viewBox="0 0 ' + P.w + ' ' + P.h + '" role="img" aria-label="Peta sebaran ' + (PT.mode === 'alumni' ? 'alumni terverifikasi' : 'seluruh data') + ' per kabupaten/kota di Kalimantan Timur">' +
-      '<g class="wil">' + P.wilayah.map((w) => '<path d="' + w.d + '" fill="' + warnaPeta(n[w.kode] || 0, maks) + '" data-k="' + w.kode + '" tabindex="0" role="button" aria-label="' + esc(w.nama + ': ' + (n[w.kode] || 0) + ' orang') + '"><title>' + esc(w.nama + ': ' + (n[w.kode] || 0)) + '</title></path>').join('') + '</g>' +
-      '<g class="lbl" aria-hidden="true">' + P.wilayah.filter((w) => !w.kota).map((w) => '<text x="' + w.x + '" y="' + (w.y + ((n[w.kode] || 0) ? 30 : 4)) + '" text-anchor="middle">' + esc(w.singkat) + '</text>').join('') + '</g>' +
-      '<g class="gel" aria-hidden="true">' + P.wilayah.filter((w) => n[w.kode]).map((w) => { const r = 11 + 9 * Math.sqrt(n[w.kode] / maks); return '<g data-k="' + w.kode + '"><circle cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '"/><text x="' + w.x + '" y="' + (w.y + 4.5) + '" text-anchor="middle">' + n[w.kode] + '</text></g>'; }).join('') + '</g></svg>' +
-      '<div class="pt-tip hide" id="pt-tip" role="status"></div>' +
-      '<div class="pt-leg" aria-hidden="true"><span>0</span><i style="background:#EEF1F5"></i>' + SKALA.map((c) => '<i style="background:' + c + '"></i>').join('') + '<span>' + fmt.angka(maks) + '</span></div>';
+    box.innerHTML = IKH.Peta.html(P, n, { klik: true, aria: 'Peta sebaran ' + (PT.mode === 'alumni' ? 'alumni terverifikasi' : 'seluruh data') + ' per kabupaten/kota di Kalimantan Timur' });
     const rows = P.wilayah.map((w) => ({ k: w.kode, nama: w.nama, v: n[w.kode] || 0 })).sort((a, b) => b.v - a.v || a.nama.localeCompare(b.nama));
     const baris = (k, nama, v, cls) => '<tr class="clk ' + (cls || '') + '" data-k="' + k + '"><td>' + esc(nama) + '</td><td class="right tnum b">' + fmt.angka(v) + '</td><td style="width:34%"><div class="progress"><i style="width:' + (h.total ? Math.max(v ? 3 : 0, v / h.total * 100) : 0) + '%"></i></div></td><td class="right tnum muted small">' + persen(v) + '%</td></tr>';
     $('#pt-list').innerHTML = '<div class="row between mb"><span class="small muted">' + fmt.angka(h.total) + ' orang • ' + fmt.angka(dalam) + ' di Kaltim (' + persen(dalam) + '%)</span><button class="btn btn-ghost btn-xs" id="pt-xls">' + ic('table_view', 'sm') + 'Ekspor</button></div>' +
@@ -184,24 +178,11 @@
       (n.LUAR ? baris('LUAR', NAMA_DOM.LUAR, n.LUAR, 'pt-x') : '') + (n.KOSONG ? baris('KOSONG', NAMA_DOM.KOSONG, n.KOSONG, 'pt-x') : '') + (n['?'] ? baris('?', NAMA_DOM['?'], n['?'], 'pt-x') : '') + '</tbody></table></div>' +
       (n['?'] ? '<p class="tiny muted mt mb-0">Tidak dikenali: ' + Object.keys(h.tak).slice(0, 8).map((t) => '"' + esc(t) + '" (' + h.tak[t] + ')').join(', ') + (Object.keys(h.tak).length > 8 ? ', …' : '') + '. Perbaiki isian domisili di Data Alumni.</p>' : '') +
       (n.KOSONG && h.total && n.KOSONG / h.total > 0.3 ? '<div class="alert warn small mt">' + ic('info', 'sm') + '<div>' + persen(n.KOSONG) + '% data belum mengisi domisili, sehingga peta belum mewakili seluruh anggota.</div></div>' : '');
-    const tip = $('#pt-tip'), svg = $('#pt-peta svg');
-    const sorot = (k, on) => { $$('[data-k="' + k + '"]', box).forEach((el) => el.classList.toggle('on', on)); $$('#pt-list tr[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on)); };
-    const tampilTip = (k, e) => {
-      const v = n[k] || 0, r = box.getBoundingClientRect();
-      tip.innerHTML = '<b>' + esc(NAMA_DOM[k]) + '</b><br>' + fmt.angka(v) + ' orang • ' + persen(v) + '%';
-      tip.classList.remove('hide');
-      const px = (e && e.clientX ? e.clientX - r.left : r.width / 2) + 12, py = (e && e.clientY ? e.clientY - r.top : 20) + 12;
-      tip.style.left = Math.min(px, r.width - 190) + 'px'; tip.style.top = py + 'px';
-    };
     const buka = (k) => Router.go('/admin/alumni?dom=' + encodeURIComponent(k) + (PT.mode === 'alumni' ? '&st=terverifikasi' : ''));
-    $$('[data-k]', svg).forEach((el) => {
-      const k = el.dataset.k;
-      el.addEventListener('mousemove', (e) => { sorot(k, true); tampilTip(k, e); });
-      el.addEventListener('mouseleave', () => { sorot(k, false); tip.classList.add('hide'); });
-      el.addEventListener('focus', () => { sorot(k, true); tampilTip(k); });
-      el.addEventListener('blur', () => { sorot(k, false); tip.classList.add('hide'); });
-      el.addEventListener('click', () => buka(k));
-      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); buka(k); } });
+    const sorot = IKH.Peta.pasang(box, {
+      tip: (k) => '<b>' + esc(NAMA_DOM[k]) + '</b><br>' + fmt.angka(n[k] || 0) + ' orang • ' + persen(n[k] || 0) + '%',
+      klik: buka,
+      sorot: (k, on) => $$('#pt-list tr[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on))
     });
     $$('#pt-list tr[data-k]').forEach((tr) => { tr.onclick = () => buka(tr.dataset.k); tr.onmouseenter = () => sorot(tr.dataset.k, true); tr.onmouseleave = () => sorot(tr.dataset.k, false); });
     $('#pt-xls').onclick = () => IKH.Ekspor.excel(rows.concat(['LUAR', 'KOSONG', '?'].filter((k) => n[k]).map((k) => ({ k, nama: NAMA_DOM[k], v: n[k] })))
@@ -700,10 +681,10 @@
         '<div class="card-f row between wrap ' + (PG.tab === 'org' || PG.tab === 'kta' ? '' : 'hide') + '" id="s-foot"><span class="small muted" id="s-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="s-simpan">' + ic('check_circle') + 'Simpan Pengaturan</button></div></section>';
       $$('[data-tab]', main).forEach((b) => b.onclick = () => { PG.tab = b.dataset.tab; $$('[data-tab]', main).forEach((y) => y.classList.toggle('on', y === b)); $$('[data-p]', main).forEach((p) => p.classList.toggle('hide', p.dataset.p !== PG.tab)); $('#s-foot').classList.toggle('hide', !(PG.tab === 'org' || PG.tab === 'kta')); });
       const kartu = $('section.card', main);
-      const ubah = () => { if (!$('#s-daftar')) return; const n = $$('[data-k]', kartu).filter((i) => i.value !== String(st[i.dataset.k] || '')).length + (($('#s-daftar').checked ? 'YA' : 'TIDAK') !== (st.PENDAFTARAN_DIBUKA === 'TIDAK' ? 'TIDAK' : 'YA') ? 1 : 0); $('#s-ubah').textContent = n ? n + ' isian berubah — belum disimpan.' : 'Tidak ada perubahan.'; PG.edit = n > 0; };
+      const ubah = () => { if (!$('#s-daftar')) return; const n = $$(IKH.ISIAN, kartu).filter((i) => i.value !== String(st[i.dataset.k] || '')).length + (($('#s-daftar').checked ? 'YA' : 'TIDAK') !== (st.PENDAFTARAN_DIBUKA === 'TIDAK' ? 'TIDAK' : 'YA') ? 1 : 0); $('#s-ubah').textContent = n ? n + ' isian berubah — belum disimpan.' : 'Tidak ada perubahan.'; PG.edit = n > 0; };
       kartu.addEventListener('input', ubah); $('#s-daftar').onchange = ubah;
       $('#s-simpan').onclick = (e) => UI.tombol(e.currentTarget, async () => {
-        const pairs = {}; $$('[data-k]', main).forEach((i) => { if (i.value !== String(st[i.dataset.k] || '')) pairs[i.dataset.k] = i.value.trim(); });
+        const pairs = {}; $$(IKH.ISIAN, kartu).forEach((i) => { if (i.value !== String(st[i.dataset.k] || '')) pairs[i.dataset.k] = String(i.value).trim(); });
         const dft = $('#s-daftar').checked ? 'YA' : 'TIDAK'; if (dft !== (st.PENDAFTARAN_DIBUKA === 'TIDAK' ? 'TIDAK' : 'YA')) pairs.PENDAFTARAN_DIBUKA = dft;
         if (!Object.keys(pairs).length) return UI.toast('Tidak ada perubahan.', 'warn');
         const r = await api('adm.setting.simpan', { pairs });

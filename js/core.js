@@ -5,11 +5,13 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.1.0';
+  const VERSI = '1.2.0';
   const RILIS = '2026-11-15';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
   IKH.VERSI = VERSI; IKH.RILIS = RILIS;
+  /* Hanya kolom isian formulir (bukan <th data-k> milik tabel yang bisa diurutkan) */
+  IKH.ISIAN = 'input[data-k],textarea[data-k],select[data-k]';
 
   /* ---------------- Utilitas ---------------- */
   const $ = (s, el) => (el || document).querySelector(s);
@@ -22,7 +24,12 @@
   const logoBg = (st, w) => 'style="background-image:url(\'' + (st && st.LOGO_ID ? img(st.LOGO_ID, w || 160) : 'img/logo.png') + '\')"';
   const inisial = (n) => String(n || '?').replace(/[,.].*$/, '').trim().split(/\s+/).slice(0, 2).map((x) => x[0] || '').join('').toUpperCase() || '?';
   const warnaAva = (n) => 'c' + ((String(n || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 5) + 1);
-  const debounce = (fn, ms) => { let t; return function () { const a = arguments; clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; };
+  const debounce = (fn, ms) => {
+    let t = null, a = null, ini = null;
+    const f = function () { a = arguments; ini = this; clearTimeout(t); t = setTimeout(() => { t = null; fn.apply(ini, a); }, ms); };
+    f.segera = () => { if (t) { clearTimeout(t); t = null; fn.apply(ini, a); } };   // jalankan yang tertunda sekarang juga
+    return f;
+  };
   const daftar = (s) => String(s || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
   const hp08 = (v) => { let s = String(v || '').replace(/[^0-9+]/g, '').replace(/^\+/, ''); if (s.startsWith('62')) s = '0' + s.slice(2); else if (s.startsWith('8')) s = '0' + s; return s; };
   const hariIni = () => { const d = new Date(Date.now() + 8 * 3600e3); return d.toISOString().slice(0, 10); };
@@ -297,7 +304,7 @@
     muat(teks) { const o = document.createElement('div'); o.className = 'overlay-load'; o.innerHTML = '<div class="box"><span class="spin"></span><span>' + esc(teks || 'Memproses…') + '</span></div>'; document.body.appendChild(o); return { teks: (t) => { $('span:last-child', o).textContent = t; }, tutup: () => o.remove() }; },
     kosong(teks, ikon) { return '<div class="empty">' + ic(ikon || 'inventory_2') + '<div>' + esc(teks || 'Belum ada data.') + '</div></div>'; },
     skel(n) { return '<div class="col" style="padding:1rem">' + Array.from({ length: n || 4 }, (_, i) => '<div class="skel" style="width:' + (90 - i * 12) + '%"></div>').join('') + '</div>'; },
-    async tombol(btn, fn) { if (!btn || btn.classList.contains('busy')) return; const lama = btn.innerHTML; btn.classList.add('busy'); btn.innerHTML = '<span class="spin"></span>' + (btn.dataset.busy || 'Memproses…'); try { return await fn(); } finally { btn.classList.remove('busy'); btn.innerHTML = lama; } },
+    async tombol(btn, fn) { if (!btn || btn.classList.contains('busy')) return; const lama = btn.innerHTML; btn.classList.add('busy'); btn.innerHTML = '<span class="spin"></span>' + (btn.dataset.busy || 'Memproses…'); try { return await fn(); } catch (e) { console.error('[aksi gagal]', e); UI.toast('Aksi gagal diproses di browser: ' + ((e && e.message) || e) + '. Muat ulang halaman lalu coba lagi.', 'bad', 7000); } finally { btn.classList.remove('busy'); btn.innerHTML = lama; } },
     salin(teks) { (navigator.clipboard ? navigator.clipboard.writeText(teks) : Promise.reject()).then(() => UI.toast('Disalin ke papan klip.'), () => { prompt('Salin teks berikut:', teks); }); },
     badgeStatus(s) {
       const m = { 'Menunggu Verifikasi': 'b-wait', 'Menunggu': 'b-wait', 'Disetujui': 'b-ok', 'Aktif': 'b-ok', 'Terkirim': 'b-ok', 'Terbit': 'b-ok', 'Selesai': 'b-ok', 'Berjalan': 'b-info', 'Antri': 'b-wait',
@@ -523,6 +530,57 @@
     if (IKH.layoutAktif !== nama || !$('#main', app)) { app.innerHTML = render(); IKH.layoutAktif = nama; }
     window.scrollTo(0, 0);
     return $('#main', app);
+  };
+
+  /* Perubahan yang belum sempat ditulis ke penyimpanan lokal (debounce) jangan hilang saat halaman dimuat ulang/ditutup */
+  window.addEventListener('pagehide', () => { try { Store.simpanAdmLokal.segera(); } catch (e) { } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { try { Store.simpanAdmLokal.segera(); } catch (e) { } } });
+
+  /* ---------------- Menu situs publik yang bisa disembunyikan (Kelola Beranda → Menu & Tampilan) ---------------- */
+  IKH.MENU_PUB = { beranda: 'Beranda', profil: 'Profil Organisasi', berita: 'Berita', daftar: 'Pendaftaran Alumni', status: 'Cek Status Pendaftaran', verifikasi: 'Verifikasi KTA', masuk: 'Masuk' };
+  IKH.menuTersembunyi = (st) => { const s = String((st && st.MENU_SEMBUNYI) || '').toLowerCase().split(/[\s,]+/).filter(Boolean); return (k) => s.indexOf(k) > -1; };
+
+  /* ---------------- Peta sebaran per kab/kota (Dasbor Pengurus & Beranda publik) ----------------
+     Data batas wilayah (js/peta-kaltim.js) dimuat hanya saat peta pertama kali ditampilkan. */
+  const SKALA_PETA = ['#DAE2FF', '#A9BCEB', '#6F8DD1', '#2E4F95', '#0A2A63'];
+  IKH.Peta = {
+    SKALA: SKALA_PETA,
+    muat() { return window.PETA_KALTIM ? Promise.resolve(window.PETA_KALTIM) : IKH.muat(['js/peta-kaltim.js?v=' + VERSI]).then(() => window.PETA_KALTIM); },
+    warna(v, maks) { return !v ? '#EEF1F5' : SKALA_PETA[Math.min(4, Math.floor((v / maks) * 5 - 1e-9))]; },
+    /** n = {kodeBPS: jumlah}. opsi.klik = wilayah bisa diklik; opsi.aria = deskripsi peta */
+    html(P, n, o) {
+      o = o || {};
+      const maks = Math.max(1, ...P.wilayah.map((w) => n[w.kode] || 0));
+      return '<svg viewBox="0 0 ' + P.w + ' ' + P.h + '" role="img" aria-label="' + esc(o.aria || 'Peta sebaran per kabupaten/kota di Kalimantan Timur') + '">' +
+        '<g class="wil">' + P.wilayah.map((w) => '<path d="' + w.d + '" fill="' + this.warna(n[w.kode] || 0, maks) + '" data-k="' + w.kode + '" tabindex="0"' + (o.klik ? ' role="button"' : '') + ' aria-label="' + esc(w.nama + ': ' + (n[w.kode] || 0) + ' orang') + '"></path>').join('') + '</g>' +
+        '<g class="lbl" aria-hidden="true">' + P.wilayah.filter((w) => !w.kota).map((w) => '<text x="' + w.x + '" y="' + (w.y + ((n[w.kode] || 0) ? 30 : 4)) + '" text-anchor="middle">' + esc(w.singkat) + '</text>').join('') + '</g>' +
+        '<g class="gel" aria-hidden="true">' + P.wilayah.filter((w) => n[w.kode]).map((w) => { const r = 11 + 9 * Math.sqrt(n[w.kode] / maks); return '<g data-k="' + w.kode + '"><circle cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '"/><text x="' + w.x + '" y="' + (w.y + 4.5) + '" text-anchor="middle">' + n[w.kode] + '</text></g>'; }).join('') + '</g></svg>' +
+        '<div class="pt-tip hide" role="status"></div>' +
+        '<div class="pt-leg" aria-hidden="true"><span>0</span><i style="background:#EEF1F5"></i>' + SKALA_PETA.map((c) => '<i style="background:' + c + '"></i>').join('') + '<span>' + fmt.angka(maks) + '</span></div>';
+    },
+    /** Pasang sorotan + tooltip. o.tip(k) → HTML isi tooltip; o.klik(k) opsional; o.sorot(k, nyala) opsional. Mengembalikan fungsi sorot(k, nyala). */
+    pasang(box, o) {
+      const tip = $('.pt-tip', box), svg = $('svg', box);
+      const sorot = (k, on) => { $$('[data-k="' + k + '"]', svg).forEach((el) => el.classList.toggle('on', on)); if (o.sorot) o.sorot(k, on); };
+      const tampil = (k, e) => {
+        const r = box.getBoundingClientRect();
+        tip.innerHTML = o.tip(k); tip.classList.remove('hide');
+        const px = (e && e.clientX ? e.clientX - r.left : r.width / 2) + 12, py = (e && e.clientY ? e.clientY - r.top : 20) + 12;
+        tip.style.left = Math.max(0, Math.min(px, r.width - 200)) + 'px'; tip.style.top = py + 'px';
+      };
+      $$('[data-k]', svg).forEach((el) => {
+        const k = el.dataset.k;
+        el.addEventListener('mousemove', (e) => { sorot(k, true); tampil(k, e); });
+        el.addEventListener('mouseleave', () => { sorot(k, false); tip.classList.add('hide'); });
+        el.addEventListener('focus', () => { sorot(k, true); tampil(k); });
+        el.addEventListener('blur', () => { sorot(k, false); tip.classList.add('hide'); });
+        if (o.klik) {
+          el.addEventListener('click', () => o.klik(k));
+          el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); o.klik(k); } });
+        } else el.addEventListener('click', (e) => { sorot(k, true); tampil(k, e); });   // layar sentuh: ketuk = tampilkan angka
+      });
+      return sorot;
+    }
   };
 
   /* ---------------- Versi aplikasi: info, riwayat, deteksi pembaruan ----------------
