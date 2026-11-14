@@ -397,6 +397,25 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .pt-leg i { display: block; width: 26px; height: 10px; border-radius: 2px; } .pt-leg span { margin: 0 .4rem; }
 .pt-tbl td { padding-top: 7px; padding-bottom: 7px; } .pt-tbl tr.on td { background: var(--gold-soft); } .pt-tbl tr.pt-x td:first-child { color: var(--muted); font-style: italic; }
 
+/* Peta di beranda publik */
+#sebaran .peta-wrap { align-items: center; }
+.pb-ring { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1rem; }
+.pb-ring > div { background: var(--bg); border-radius: var(--r-md); padding: .85rem 1rem; }
+.pb-ring .n { font-family: var(--f-head); font-weight: 800; font-size: 26px; color: var(--navy); line-height: 1.1; } .pb-ring .n small { font-size: 14px; color: var(--muted); font-weight: 700; }
+.pb-ring .l { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.pb-list { list-style: none; margin: 0; padding: 0; counter-reset: pb; }
+.pb-list li { counter-increment: pb; display: grid; grid-template-columns: 26px minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: .65rem; align-items: center; padding: .55rem .4rem; border-bottom: 1px solid #EEF1F5; border-radius: 6px; font-size: 14px; }
+.pb-list li::before { content: counter(pb); width: 24px; height: 24px; border-radius: 50%; background: #EEF1F5; color: var(--navy); font-weight: 700; font-size: 12px; display: grid; place-items: center; }
+.pb-list li:nth-child(-n+3)::before { background: var(--gold); }
+.pb-list li.on { background: var(--gold-soft); }
+.pb-list .br { height: 8px; background: #E9EDF3; border-radius: 99px; overflow: hidden; } .pb-list .br i { display: block; height: 100%; background: var(--navy); border-radius: 99px; }
+.pb-list b { color: var(--navy); min-width: 2ch; text-align: right; }
+
+/* Saklar bertingkat (Kelola Beranda → Menu & Tampilan) */
+.saklar-baris { display: flex; gap: .8rem; align-items: flex-start; padding: .7rem 0; border-bottom: 1px solid #EEF1F5; cursor: pointer; }
+.saklar-baris:last-child { border-bottom: 0; } .saklar-baris .switch { margin-top: 1px; }
+.saklar-baris b { display: block; font-size: 14px; } .saklar-baris .hint { display: block; margin-top: 2px; }
+
 /* ---------- Versi aplikasi ---------- */
 .ver-chip { display: inline-flex; align-items: center; font: 600 11.5px/1 var(--f-body); padding: 3px 8px; border-radius: 99px; border: 1px solid var(--border); background: #fff; color: var(--navy); cursor: pointer; vertical-align: middle; letter-spacing: .02em; }
 .ver-chip:hover, .ver-chip:focus-visible { border-color: var(--navy); }
