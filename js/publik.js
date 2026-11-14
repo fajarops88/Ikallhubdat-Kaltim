@@ -1,0 +1,471 @@
+/* ==========================================================================
+   publik.js — situs publik + autentikasi
+   ========================================================================== */
+(function () {
+  'use strict';
+  const { $, $$, esc, ic, img, bg, fmt, UI, api, Store, Sesi, Router, Kta, daftar, LS, hariIni } = IKH;
+
+  /* ---------------- Bingkai publik ---------------- */
+  const NAV = [['/', 'Beranda'], ['/profil', 'Profil Organisasi'], ['/berita', 'Berita'], ['/daftar', 'Pendaftaran Alumni'], ['/verifikasi', 'Verifikasi KTA']];
+  function logoHtml(st, kelas) {
+    return st.LOGO_ID ? '<span class="lg img ' + (kelas || '') + '" ' + bg(st.LOGO_ID, 160) + ' role="img" aria-label="Logo"></span>' : '<span class="lg ' + (kelas || '') + '">' + ic('shield', 'lg') + '</span>';
+  }
+  function layoutPub() {
+    return '<header class="pub-top"><div class="wrap"><a class="brand" href="#/" id="brand"></a>' +
+      '<button class="btn btn-ghost btn-icon burger" id="burger" aria-label="Buka menu" aria-expanded="false" aria-controls="pubnav">' + ic('menu') + '</button>' +
+      '<nav class="pub-nav" id="pubnav" aria-label="Navigasi utama"></nav></div></header>' +
+      '<main id="main" class="pub-main" tabindex="-1"></main><footer class="pub-foot" id="foot"></footer>';
+  }
+  function bingkai() {
+    const st = IKH.setPub(), path = Router.parse().path, me = Sesi.me;
+    const brand = $('#brand'); if (!brand) return;
+    brand.innerHTML = logoHtml(st) + '<div class="grow"><div class="t1">SIM IKALLHUBDAT</div><div class="t2">' + esc((st.ORG_NAMA || 'DPD Kalimantan Timur').replace(/^DPD IKALLHUBDAT\s*/i, 'DPD ')) + '</div></div>';
+    $('#pubnav').innerHTML = NAV.map((n) => '<a href="#' + n[0] + '" class="' + ((n[0] === '/' ? path === '/' : path.indexOf(n[0]) === 0) ? 'on' : '') + '">' + n[1] + '</a>').join('') +
+      (me ? '<a class="btn btn-primary btn-sm" href="#' + (me.peran === 'pengurus' ? '/admin' : '/anggota') + '">' + ic('person', 'sm') + (me.peran === 'pengurus' ? 'Panel Pengurus' : 'Ruang Anggota') + '</a>'
+        : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a><a class="btn btn-gold btn-sm" href="#/daftar">Daftar Sekarang</a>');
+    const tahun = new Date().getFullYear();
+    $('#foot').innerHTML = '<div class="wrap"><div><a class="brand" href="#/" style="color:#fff">' + logoHtml(st) + '<div><div class="t1" style="color:#fff">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</div><div class="t2" style="color:#93A6D4">' + esc(st.ORG_NAMA_PANJANG || '') + '</div></div></a>' +
+      '<p class="mt" style="font-size:13.5px;max-width:420px">Portal resmi keanggotaan alumni: pendaftaran mandiri, verifikasi berjenjang oleh Pengurus, dan KTA digital ber-QR yang dapat diperiksa keasliannya.</p>' +
+      '<button class="btn btn-gold btn-sm hide" data-install>' + ic('download', 'sm') + 'Pasang Aplikasi</button></div>' +
+      '<div><h4>Tautan Cepat</h4><a href="#/">Beranda</a><a href="#/profil">Profil Organisasi & Kepengurusan</a><a href="#/daftar">Pendaftaran Alumni Baru</a><a href="#/status">Cek Status Pendaftaran</a><a href="#/verifikasi">Verifikasi Keaslian KTA</a><a href="#/masuk">Masuk Anggota / Pengurus</a></div>' +
+      '<div><h4>Sekretariat</h4>' +
+      (st.ORG_ALAMAT ? '<div class="ln">' + ic('location_on', 'sm') + '<span>' + esc(st.ORG_ALAMAT) + '</span></div>' : '') +
+      (st.ORG_EMAIL ? '<div class="ln">' + ic('mail', 'sm') + '<a href="mailto:' + esc(st.ORG_EMAIL) + '" style="display:inline;padding:0">' + esc(st.ORG_EMAIL) + '</a></div>' : '') +
+      (st.ORG_TELEPON ? '<div class="ln">' + ic('call', 'sm') + '<span>' + esc(st.ORG_TELEPON) + '</span></div>' : '') +
+      (st.ORG_WA ? '<div class="ln">' + ic('chat', 'sm') + '<a href="https://wa.me/' + esc(IKH.hp08(st.ORG_WA).replace(/^0/, '62')) + '" target="_blank" rel="noopener" style="display:inline;padding:0">WhatsApp ' + esc(st.ORG_WA) + '</a></div>' : '') +
+      (st.ORG_JAM_LAYANAN ? '<div class="ln">' + ic('schedule', 'sm') + '<span>' + esc(st.ORG_JAM_LAYANAN) + '</span></div>' : '') +
+      (!st.ORG_ALAMAT && !st.ORG_EMAIL ? '<div class="ln small">Kontak sekretariat belum diisi Pengurus.</div>' : '') +
+      '</div></div><div class="bawah"><div class="wrap"><span>© ' + tahun + ' ' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</span><span>SIM v' + IKH.VERSI + '</span></div></div>';
+    if (IKH.bisaPasang()) $$('[data-install]').forEach((b) => b.classList.remove('hide'));
+    $$('[data-install]').forEach((b) => b.onclick = () => IKH.pasangApp());
+    const bg2 = $('#burger'), nav = $('#pubnav');
+    bg2.onclick = () => { const o = nav.classList.toggle('open'); bg2.setAttribute('aria-expanded', o); };
+    $$('a', nav).forEach((a) => a.addEventListener('click', () => { nav.classList.remove('open'); bg2.setAttribute('aria-expanded', 'false'); }));
+  }
+  let _rid = 0;
+  /** Halaman publik: render dari cache → segarkan di latar → render ulang bila data berubah */
+  async function halamanPub(judul, render) {
+    IKH.judul(judul);
+    const rid = ++_rid;
+    const main = IKH.pasangLayout('pub', layoutPub);
+    bingkai();
+    const hidup = () => rid === _rid && document.body.contains(main);
+    const gambar = () => { if (!hidup()) return; bingkai(); render(main, Store.pub || {}); };
+    const sudah = !!Store.pub;
+    if (sudah) gambar(); else { main.innerHTML = '<div class="wrap sec">' + UI.skel(6) + '</div>'; IKH.warmUp('pub'); }
+    const sebelum = Store.pubAt;
+    await Store.pubBoot();
+    if (Store.pubAt !== sebelum || !sudah) gambar();
+    const ev = () => { if (hidup()) gambar(); else document.removeEventListener('ikh:pub', ev); };
+    document.addEventListener('ikh:pub', ev);
+  }
+  const pageHead = (crumb, judul, sub) => '<section class="page-h"><div class="wrap"><div class="crumb"><a href="#/">Beranda</a>' + ic('chevron_right', 'sm') + '<span>' + esc(crumb) + '</span></div><h1>' + esc(judul) + '</h1>' + (sub ? '<p class="muted mb-0" style="max-width:760px">' + esc(sub) + '</p>' : '') + '</div></section>';
+  const contohKta = (st) => ({ nama: 'Nama Anggota', id_member: (st.KTA_PREFIX || 'IKH-KT') + '-' + new Date().getFullYear() + '-0001', nomor_taruna: 'NIT', angkatan: '—', prodi: 'Program Studi', masa_berlaku_kartu: (new Date().getFullYear() + 3) + '-12-31', status_verifikasi: 'Disetujui', status_anggota: 'Aktif' });
+
+  /* ---------------- Beranda ---------------- */
+  function beranda() {
+    return halamanPub('Beranda', (main, d) => {
+      const st = d.setting || {}, berita = (d.berita || []).slice(0, 3), gal = (d.galeri || []).slice(0, 8), stat = d.stat;
+      const judul = String(st.HERO_JUDUL || 'Sistem Informasi Manajemen Ikatan Alumni Lalu Lintas & Perhubungan Darat');
+      const pisah = judul.indexOf(' Ikatan') > 0 ? [judul.slice(0, judul.indexOf(' Ikatan')), judul.slice(judul.indexOf(' Ikatan') + 1)] : [judul, ''];
+      main.innerHTML =
+        '<section class="hero"><div class="wrap"><div><span class="pill">' + ic('verified', 'sm') + esc(st.HERO_LABEL || 'Portal Resmi Keanggotaan') + '</span>' +
+        '<h1 class="mt">' + esc(pisah[0]) + (pisah[1] ? '<span>' + esc(pisah[1]) + '</span>' : '') + '</h1><p class="lead">' + esc(st.HERO_SUBJUDUL || '') + '</p>' +
+        '<div class="row wrap">' + (st.PENDAFTARAN_DIBUKA !== 'TIDAK' ? '<a class="btn btn-primary" href="#/daftar">' + ic('how_to_reg') + 'Daftar Jadi Anggota</a>' : '') +
+        '<a class="btn btn-outline" href="#/verifikasi">' + ic('qr_code_scanner') + 'Verifikasi KTA</a><a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk</a></div>' +
+        '<div class="trust"><span>' + ic('verified_user', 'sm') + 'Diverifikasi Pengurus</span><span>' + ic('qr_code_2', 'sm') + 'KTA ber-QR bertanda tangan digital</span><span>' + ic('lock', 'sm') + 'Data tersimpan aman</span></div></div>' +
+        '<div class="kartu-hero" aria-hidden="true"><div class="kicker center" style="margin-bottom:.5rem">Contoh tampilan KTA digital</div>' + Kta.depan(contohKta(st), st) + '</div></div></section>' +
+        (stat ? '<div class="wrap"><div class="stats">' +
+          [['groups', stat.alumni, 'Alumni terverifikasi'], ['badge', stat.aktif, 'KTA aktif'], ['school', stat.angkatan, 'Angkatan terdata'], ['domain', stat.instansi, 'Instansi penempatan']]
+            .map((s) => '<div class="stat"><div class="ico">' + ic(s[0]) + '</div><div><div class="n tnum">' + fmt.angka(s[1]) + '</div><div class="l">' + s[2] + '</div></div></div>').join('') + '</div></div>' : '') +
+        '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Kabar Organisasi</div><h2>Berita & Pengumuman Terkini</h2></div><a class="btn btn-ghost btn-sm" href="#/berita">Semua berita' + ic('arrow_forward', 'sm') + '</a></div>' +
+        (berita.length ? '<div class="news">' + berita.map(kartuBerita).join('') + '</div>' : UI.kosong('Belum ada berita.', 'newspaper')) + '</div></section>' +
+        (st.SAMBUTAN_ISI ? '<section class="sec alt"><div class="wrap sambutan"><div class="foto" ' + (st.SAMBUTAN_FOTO_ID ? bg(st.SAMBUTAN_FOTO_ID, 600) : '') + '>' + (st.SAMBUTAN_FOTO_ID ? '' : ic('person', 'xl')) + '</div>' +
+          '<div><div class="kicker gold">' + esc(st.SAMBUTAN_JUDUL || 'Sambutan Ketua') + '</div><div class="quote mt">' + esc(potong(st.SAMBUTAN_ISI, 420)) + '</div>' +
+          '<div class="mt"><b>' + esc(st.KETUA_NAMA || '') + '</b><div class="muted small">' + esc(st.KETUA_JABATAN || '') + ' ' + esc(st.ORG_SINGKAT || '') + '</div></div>' +
+          '<a class="btn btn-text mt" href="#/profil?s=sambutan">Baca selengkapnya' + ic('arrow_forward', 'sm') + '</a></div></div></section>' : '') +
+        (gal.length ? '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Dokumentasi</div><h2>Galeri Kegiatan</h2></div></div><div class="gal">' +
+          gal.map((g) => '<button class="g" ' + bg(g.gambar_id, 700) + ' data-src="' + esc(img(g.gambar_id, 1400)) + '" data-cap="' + esc(g.judul) + '" aria-label="Perbesar foto ' + esc(g.judul) + '"><span class="cap">' + esc(g.judul) + (g.lokasi ? '<br><span style="font-weight:400;opacity:.8">' + esc(g.lokasi) + '</span>' : '') + '</span></button>').join('') + '</div></div></section>' : '') +
+        '<section class="sec" style="padding-top:' + (gal.length ? '0' : '2rem') + '"><div class="wrap"><div class="cta"><div><div class="kicker" style="color:var(--gold)">Digitalisasi Keanggotaan</div><h2 class="mt">Belum terdata sebagai anggota?</h2><p>Daftar mandiri untuk memperoleh KTA digital ber-QR. Sudah menjadi anggota? Masuk untuk melihat kartu dan mengajukan pembaruan data.</p></div>' +
+        '<div class="row wrap">' + (st.PENDAFTARAN_DIBUKA !== 'TIDAK' ? '<a class="btn btn-gold" href="#/daftar">' + ic('person_add') + 'Daftar Sekarang</a>' : '') + '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk Anggota</a></div></div></div></section>';
+      $$('.gal .g', main).forEach((b) => b.onclick = () => UI.lightbox(b.dataset.src, b.dataset.cap));
+    });
+  }
+  const potong = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n).replace(/\s\S*$/, '') + '…' : s; };
+  function kartuBerita(b) {
+    return '<a class="news-c" href="#/berita/' + esc(b.id) + '"><div class="im" ' + (b.gambar_id ? bg(b.gambar_id, 800) : '') + '>' + (b.gambar_id ? '' : ic('newspaper', 'xl')) + '</div>' +
+      '<div class="bd"><div class="meta">' + ic('calendar_month', 'sm') + fmt.tgl(b.tanggal, true) + (b.kategori ? ' • <span class="badge b-info">' + esc(b.kategori) + '</span>' : '') + '</div>' +
+      '<h3>' + esc(b.judul) + '</h3><p>' + esc(potong(b.ringkasan || b.isi, 160)) + '</p></div></a>';
+  }
+
+  /* ---------------- Berita ---------------- */
+  function beritaList() {
+    return halamanPub('Berita', (main, d) => {
+      const b = d.berita || [];
+      main.innerHTML = pageHead('Berita', 'Berita & Pengumuman', 'Informasi terbaru kegiatan dan pengumuman organisasi.') +
+        '<section class="sec" style="padding-top:2rem"><div class="wrap">' + (b.length ? '<div class="news">' + b.map(kartuBerita).join('') + '</div>' : UI.kosong('Belum ada berita.', 'newspaper')) + '</div></section>';
+    });
+  }
+  function beritaDetail(p) {
+    return halamanPub('Berita', (main, d) => {
+      const b = (d.berita || []).find((x) => x.id === p.id);
+      if (!b) { main.innerHTML = pageHead('Berita', 'Berita tidak ditemukan') + '<div class="wrap sec">' + UI.kosong('Berita mungkin sudah dihapus.', 'newspaper') + '</div>'; return; }
+      IKH.judul(b.judul);
+      main.innerHTML = '<section class="page-h"><div class="wrap" style="max-width:860px"><div class="crumb"><a href="#/">Beranda</a>' + ic('chevron_right', 'sm') + '<a href="#/berita">Berita</a></div>' +
+        '<div class="row small muted">' + ic('calendar_month', 'sm') + fmt.tgl(b.tanggal, true) + (b.kategori ? ' • ' + esc(b.kategori) : '') + (b.penulis ? ' • ' + esc(b.penulis) : '') + '</div><h1 class="mt">' + esc(b.judul) + '</h1></div></section>' +
+        '<section class="sec" style="padding-top:2rem"><div class="wrap" style="max-width:860px">' + (b.gambar_id ? '<img src="' + esc(img(b.gambar_id, 1400)) + '" alt="" style="width:100%;border-radius:14px;margin-bottom:1.5rem">' : '') +
+        (b.ringkasan ? '<p class="b" style="font-size:16.5px">' + esc(b.ringkasan) + '</p>' : '') + '<div class="prose">' + esc(b.isi) + '</div>' +
+        '<a class="btn btn-ghost mt-lg" href="#/berita">' + ic('arrow_back') + 'Kembali ke daftar berita</a></div></section>';
+    });
+  }
+
+  /* ---------------- Profil organisasi ---------------- */
+  function profil(p, q) {
+    return halamanPub('Profil Organisasi', (main, d) => {
+      const st = d.setting || {}, str = d.struktur || [];
+      const sub = [['tentang', 'Tentang & Tujuan'], ['sejarah', 'Sejarah'], ['visimisi', 'Visi & Misi'], ['sambutan', 'Sambutan Ketua'], ['struktur', 'Struktur Organisasi'], ['pengurus', 'Profil Pengurus']];
+      main.innerHTML = pageHead('Profil Organisasi', 'Profil ' + (st.ORG_NAMA || 'Organisasi'), st.ORG_NAMA_PANJANG) +
+        '<div class="wrap" style="position:sticky;top:68px;z-index:5;background:var(--bg)"><div class="tabs" style="padding:0;border:0">' + sub.map((s) => '<button data-s="' + s[0] + '">' + s[1] + '</button>').join('') + '</div></div>' +
+        '<div class="wrap" style="padding-bottom:3rem">' +
+        '<section class="sec form-sec" id="s-tentang" style="padding-top:1.5rem"><div class="grid g2"><div class="card card-b"><div class="kicker gold">Tentang Kami</div><div class="prose mt">' + esc(st.PROFIL_TENTANG) + '</div></div>' +
+        '<div class="card card-b"><div class="kicker gold">Tujuan Organisasi</div><ul class="misi mt">' + daftar(st.PROFIL_TUJUAN).map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div></div></section>' +
+        '<section class="form-sec" id="s-sejarah"><div class="card card-b"><div class="kicker gold">Sejarah</div><h2 class="mt">Perjalanan Organisasi</h2><div class="prose">' + esc(st.PROFIL_SEJARAH) + '</div></div></section>' +
+        '<section class="sec form-sec" id="s-visimisi" style="padding-bottom:0"><div class="grid g2"><div class="card navy card-b"><div class="kicker" style="color:var(--gold)">Visi</div><div class="quote mt" style="color:#fff">' + esc(st.PROFIL_VISI) + '</div></div>' +
+        '<div class="card card-b"><div class="kicker gold">Misi</div><ul class="misi mt">' + daftar(st.PROFIL_MISI).map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div></div></section>' +
+        '<section class="sec form-sec" id="s-sambutan" style="padding-bottom:0"><div class="card card-b sambutan" style="grid-template-columns:240px 1fr"><div class="foto" ' + (st.SAMBUTAN_FOTO_ID ? bg(st.SAMBUTAN_FOTO_ID, 600) : '') + '>' + (st.SAMBUTAN_FOTO_ID ? '' : ic('person', 'xl')) + '</div>' +
+        '<div><div class="kicker gold">' + esc(st.SAMBUTAN_JUDUL || 'Sambutan Ketua') + '</div><div class="prose mt">' + esc(st.SAMBUTAN_ISI) + '</div><div class="mt"><b>' + esc(st.KETUA_NAMA || '') + '</b><div class="muted small">' + esc(st.KETUA_JABATAN || '') + '</div></div></div></div></section>' +
+        '<section class="sec form-sec" id="s-struktur" style="padding-bottom:0"><div class="sec-h"><div><div class="kicker gold">Kepengurusan</div><h2>Struktur Organisasi</h2></div></div>' +
+        (st.STRUKTUR_BAGAN_ID ? '<div class="card card-b mb"><img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 1600)) + '" alt="Bagan struktur organisasi" style="width:100%;border-radius:8px;cursor:zoom-in" id="bagan"></div>' : '') +
+        (str.length ? '<div class="org">' + str.map((s, i) => '<div class="p ' + (i === 0 ? 'top' : '') + '"><div class="ft" ' + (s.foto_id ? bg(s.foto_id, 300) : '') + '>' + (s.foto_id ? '' : esc(IKH.inisial(s.nama))) + '</div><b>' + esc(s.nama) + '</b><div class="small" style="color:var(--navy);font-weight:600">' + esc(s.jabatan) + '</div>' + (s.bidang ? '<div class="tiny muted">' + esc(s.bidang) + '</div>' : '') + '</div>').join('') + '</div>' : UI.kosong('Struktur organisasi belum diisi.', 'account_tree')) + '</section>' +
+        '<section class="sec form-sec" id="s-pengurus" style="padding-bottom:0"><div class="sec-h"><div><div class="kicker gold">Mengenal Lebih Dekat</div><h2>Profil Pengurus</h2></div></div>' +
+        (str.filter((s) => s.profil_singkat).length ? '<div class="grid g2">' + str.filter((s) => s.profil_singkat).map((s) => '<div class="card card-b row top gap-lg"><div class="ava lg" ' + (s.foto_id ? bg(s.foto_id, 200) : '') + '>' + (s.foto_id ? '' : esc(IKH.inisial(s.nama))) + '</div><div><b>' + esc(s.nama) + '</b><div class="small" style="color:var(--navy);font-weight:600">' + esc(s.jabatan) + (s.periode ? ' • ' + esc(s.periode) : '') + '</div><p class="small muted mt mb-0" style="white-space:pre-line">' + esc(s.profil_singkat) + '</p></div></div>').join('') + '</div>' : UI.kosong('Profil pengurus belum diisi.', 'groups')) + '</section></div>';
+      $$('[data-s]', main).forEach((b) => b.onclick = () => { const el = $('#s-' + b.dataset.s); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      const bag = $('#bagan', main); if (bag) bag.onclick = () => UI.lightbox(bag.src, 'Bagan struktur organisasi');
+      if (q && q.get('s')) setTimeout(() => { const el = $('#s-' + q.get('s')); if (el) el.scrollIntoView({ block: 'start' }); }, 60);
+    });
+  }
+
+  /* ---------------- Pendaftaran mandiri ---------------- */
+  const FIELD_DAFTAR = ['nama', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'no_hp', 'email', 'kota_domisili', 'alamat', 'nomor_taruna', 'angkatan', 'prodi', 'tahun_kelulusan', 'status_kepegawaian', 'instansi', 'jabatan_terakhir'];
+  const WAJIB = ['nama', 'no_hp', 'email', 'nomor_taruna', 'angkatan', 'prodi', 'tahun_kelulusan', 'status_kepegawaian'];
+  const opsi = (list, pilih, kosong) => '<option value="">' + esc(kosong || '— Pilih —') + '</option>' + list.map((x) => '<option ' + (x === pilih ? 'selected' : '') + '>' + esc(x) + '</option>').join('');
+  IKH.formAlumni = function (st, v, o) {
+    v = v || {}; o = o || {};
+    const f = (k, label, inp, hint, full) => '<div class="fld ' + (full ? 'full' : '') + '" data-f="' + k + '"><label for="f-' + k + '">' + label + (WAJIB.indexOf(k) > -1 && !o.tanpaWajib ? '<span class="req">*</span>' : '') + '</label>' + inp + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
+    const t = (k, ph, type, extra) => '<input class="inp" id="f-' + k + '" name="' + k + '" type="' + (type || 'text') + '" value="' + esc(v[k] || '') + '" placeholder="' + esc(ph || '') + '" ' + (extra || '') + '>';
+    const s = (k, list) => '<select class="inp" id="f-' + k + '" name="' + k + '">' + opsi(list, v[k]) + (v[k] && list.indexOf(v[k]) === -1 ? '<option selected>' + esc(v[k]) + '</option>' : '') + '</select>';
+    const tahun = new Date().getFullYear();
+    return {
+      identitas: '<div class="form-grid">' + f('nama', 'Nama lengkap & gelar', t('nama', 'Sesuai ijazah, beserta gelar', 'text', 'autocomplete="name" maxlength="150"'), 'Nama ini dicetak pada KTA.', true) +
+        f('jenis_kelamin', 'Jenis kelamin', s('jenis_kelamin', ['Laki-laki', 'Perempuan'])) + f('tempat_lahir', 'Tempat lahir', t('tempat_lahir', 'Kota kelahiran')) +
+        f('tanggal_lahir', 'Tanggal lahir', t('tanggal_lahir', '', 'date', 'max="' + (tahun - 15) + '-12-31"')) + f('no_hp', 'Nomor WhatsApp aktif', t('no_hp', '08xxxxxxxxxx', 'tel', 'autocomplete="tel" inputmode="tel"'), 'Untuk notifikasi status verifikasi.') +
+        f('email', 'Email aktif', t('email', 'nama@email.com', 'email', 'autocomplete="email"'), 'Akun & KTA digital dikirim ke email ini.') + f('kota_domisili', 'Domisili (kab/kota)', s('kota_domisili', daftar(st.DAFTAR_KOTA))) +
+        f('alamat', 'Alamat lengkap', '<textarea class="inp" id="f-alamat" name="alamat" rows="2" maxlength="300" placeholder="Jalan, RT, kelurahan, kecamatan">' + esc(v.alamat || '') + '</textarea>', '', true) + '</div>',
+      akademik: '<div class="form-grid">' + f('nomor_taruna', 'Nomor Induk Taruna (NIT)', t('nomor_taruna', 'Contoh: 1902044', 'text', 'maxlength="30"')) + f('angkatan', 'Angkatan', t('angkatan', 'Contoh: 38', 'text', 'maxlength="10"')) +
+        f('prodi', 'Program studi', s('prodi', daftar(st.DAFTAR_PRODI))) + f('tahun_kelulusan', 'Tahun lulus', t('tahun_kelulusan', 'TTTT', 'text', 'inputmode="numeric" maxlength="4"')) + '</div>',
+      kepegawaian: '<div class="form-grid">' + f('status_kepegawaian', 'Status kepegawaian', s('status_kepegawaian', daftar(st.DAFTAR_KEPEGAWAIAN))) + f('instansi', 'Instansi / unit kerja', t('instansi', 'Contoh: Dinas Perhubungan Kota …')) +
+        f('jabatan_terakhir', 'Jabatan terakhir', t('jabatan_terakhir', 'Contoh: Analis Lalu Lintas'), '', true) + '</div>'
+    };
+  };
+  IKH.ambilForm = function (el, fields) { const o = {}; fields.forEach((k) => { const x = $('[name="' + k + '"]', el); if (x) o[k] = x.value.trim(); }); return o; };
+  IKH.validasiForm = function (el, o, wajib) {
+    $$('.fld.err', el).forEach((x) => { x.classList.remove('err'); const m = $('.msg-err', x); if (m) m.remove(); });
+    const salah = [];
+    const tanda = (k, msg) => { const f = $('[data-f="' + k + '"]', el); if (f) { f.classList.add('err'); f.insertAdjacentHTML('beforeend', '<span class="msg-err">' + esc(msg) + '</span>'); } salah.push(k); };
+    (wajib || []).forEach((k) => { if (!o[k]) tanda(k, 'Wajib diisi.'); });
+    if (o.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(o.email)) tanda('email', 'Format email tidak valid.');
+    if (o.no_hp && !/^08\d{8,12}$/.test(IKH.hp08(o.no_hp))) tanda('no_hp', 'Nomor tidak valid (contoh 081234567890).');
+    if (o.tahun_kelulusan && !/^\d{4}$/.test(o.tahun_kelulusan)) tanda('tahun_kelulusan', 'Isi 4 digit tahun.');
+    if (salah.length) { const f = $('[data-f="' + salah[0] + '"] .inp', el); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } }
+    return !salah.length;
+  };
+
+  function daftarPage() {
+    return halamanPub('Pendaftaran Alumni', (main, d) => {
+      const st = d.setting || {};
+      if (main.dataset.form === '1' && $('#frm-daftar', main)) return;     // jangan timpa isian saat data disegarkan
+      if (st.PENDAFTARAN_DIBUKA === 'TIDAK') { main.innerHTML = pageHead('Pendaftaran Alumni', 'Pendaftaran sedang ditutup') + '<div class="wrap sec"><div class="alert warn">' + ic('info') + '<div>Pendaftaran anggota baru sedang ditutup oleh Pengurus. Silakan hubungi sekretariat untuk informasi.</div></div></div>'; return; }
+      const draf = LS.get('draf_daftar', {});
+      const F = IKH.formAlumni(st, draf);
+      const sec = (n, id, judul, sub, isi) => '<section class="card form-sec mb" id="sec-' + id + '"><div class="card-h"><div class="row gap-lg"><span class="n">' + n + '</span><div><h3>' + judul + '</h3><div class="sub">' + sub + '</div></div></div></div><div class="card-b">' + isi + '</div></section>';
+      main.dataset.form = '1';
+      main.innerHTML = pageHead('Pendaftaran Alumni', 'Formulir Pendaftaran Mandiri Anggota', 'Isi data identitas, riwayat akademik, kepegawaian, dan unggah dokumen pendukung. Pengurus akan memverifikasi; setelah disetujui, akun dan KTA digital ber-QR dikirim ke email Anda.') +
+        '<div class="wrap sec" style="padding-top:1.5rem"><div class="grid" style="grid-template-columns:260px minmax(0,1fr);align-items:start" id="dft-grid">' +
+        '<aside class="steps" style="position:sticky;top:90px" aria-label="Tahapan formulir">' + [['identitas', 'Identitas & Kontak'], ['akademik', 'Akademik Kedinasan'], ['kepegawaian', 'Kepegawaian'], ['dokumen', 'Dokumen & Pernyataan']].map((s, i) => '<a class="step" href="javascript:void 0" data-go="' + s[0] + '"><span class="n">' + (i + 1) + '</span><span>' + s[1] + '</span></a>').join('') +
+        '<div class="alert info mt small">' + ic('info', 'sm') + '<div>Isian tersimpan otomatis di perangkat ini sampai formulir dikirim (kecuali berkas).</div></div><a class="btn btn-text small" href="#/status">Sudah mendaftar? Cek status' + ic('arrow_forward', 'sm') + '</a></aside>' +
+        '<form id="frm-daftar" novalidate>' +
+        sec(1, 'identitas', 'Data Identitas & Kontak', 'Data diri dan kontak yang dapat dihubungi', F.identitas) +
+        sec(2, 'akademik', 'Riwayat Akademik Kedinasan', 'Almamater, program studi, dan angkatan', F.akademik) +
+        sec(3, 'kepegawaian', 'Status Kepegawaian & Penempatan', 'Instansi dan jabatan saat ini', F.kepegawaian) +
+        sec(4, 'dokumen', 'Unggah Dokumen & Pernyataan', 'Pas foto wajib; ijazah/SK dianjurkan untuk mempercepat verifikasi',
+          '<div class="grid g2"><div class="fld" data-f="foto"><label>Pas foto (untuk KTA)<span class="req">*</span></label><label class="upload"><input type="file" id="in-foto" accept="image/*"><span class="pv" id="pv-foto">' + ic('photo_camera', 'lg') + '</span><span><b>Pilih foto</b><br><span class="hint">Latar polos, wajah jelas. JPG/PNG — dikompres otomatis.</span></span></label></div>' +
+          '<div class="fld" data-f="berkas"><label>Berkas pendukung (maks. 3)</label><label class="upload"><input type="file" id="in-berkas" accept="application/pdf,image/*" multiple><span class="pv" style="height:72px">' + ic('upload_file', 'lg') + '</span><span><b>Ijazah / SK penempatan</b><br><span class="hint">PDF maks. 4 MB atau gambar. Hanya dapat dilihat Pengurus.</span></span></label><div class="files" id="ls-berkas"></div></div></div>' +
+          '<input type="text" name="website" id="f-website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">' +
+          '<label class="cek mt-lg" data-f="setuju"><input type="checkbox" id="f-setuju"><span>Saya menyatakan data yang saya isi benar dan dapat dipertanggungjawabkan, serta bersedia data saya dikelola Pengurus untuk keperluan administrasi keanggotaan.</span></label>' +
+          '<div class="row wrap mt-lg"><button class="btn btn-primary" type="submit" id="btn-kirim">' + ic('send') + 'Kirim Pendaftaran</button><button class="btn btn-ghost" type="button" id="btn-reset">Kosongkan formulir</button></div>') +
+        '</form></div></div>';
+      if (window.innerWidth < 900) { $('#dft-grid', main).style.gridTemplateColumns = '1fr'; $('.steps', main).style.position = 'static'; }
+      const frm = $('#frm-daftar', main);
+      let foto = null, berkas = [];
+      $$('[data-go]', main).forEach((a) => a.onclick = () => $('#sec-' + a.dataset.go).scrollIntoView({ behavior: 'smooth' }));
+      frm.addEventListener('input', IKH.debounce(() => { if (!document.body.contains(frm)) return; LS.set('draf_daftar', IKH.ambilForm(frm, FIELD_DAFTAR)); tandaiLangkah(); }, 400));
+      function tandaiLangkah() {
+        const o = IKH.ambilForm(frm, FIELD_DAFTAR);
+        const lengkap = { identitas: ['nama', 'no_hp', 'email'].every((k) => o[k]), akademik: ['nomor_taruna', 'angkatan', 'prodi', 'tahun_kelulusan'].every((k) => o[k]), kepegawaian: !!o.status_kepegawaian, dokumen: !!foto && $('#f-setuju', frm).checked };
+        $$('[data-go]', main).forEach((a) => a.classList.toggle('done', !!lengkap[a.dataset.go]));
+      }
+      tandaiLangkah();
+      $('#f-setuju', frm).onchange = tandaiLangkah;
+      $('#in-foto').onchange = async (e) => {
+        try { foto = await IKH.bacaGambar(e.target.files[0], 800, 0.86); $('#pv-foto').style.backgroundImage = 'url(' + foto.data + ')'; $('#pv-foto').innerHTML = ''; tandaiLangkah(); }
+        catch (er) { UI.toast(er.message, 'bad'); }
+      };
+      const gambarBerkas = () => { $('#ls-berkas').innerHTML = berkas.map((b, i) => '<div class="f">' + ic(b.tipe === 'application/pdf' ? 'description' : 'image', 'sm') + '<span class="grow trunc">' + esc(b.nama) + '</span><button type="button" class="btn btn-text btn-xs" data-hb="' + i + '" aria-label="Hapus berkas">' + ic('close', 'sm') + '</button></div>').join(''); $$('[data-hb]', main).forEach((x) => x.onclick = () => { berkas.splice(+x.dataset.hb, 1); gambarBerkas(); }); };
+      $('#in-berkas').onchange = async (e) => {
+        for (const f of Array.from(e.target.files)) { if (berkas.length >= 3) { UI.toast('Maksimal 3 berkas.', 'warn'); break; } try { berkas.push(await IKH.bacaBerkas(f, 4)); } catch (er) { UI.toast(f.name + ': ' + er.message, 'bad'); } }
+        e.target.value = ''; gambarBerkas();
+      };
+      $('#btn-reset').onclick = async () => { if ((await UI.konfirmasi('Kosongkan semua isian formulir?')).ok) { LS.del('draf_daftar'); main.dataset.form = ''; Router.jalan(); } };
+      frm.onsubmit = async (e) => {
+        e.preventDefault();
+        const o = IKH.ambilForm(frm, FIELD_DAFTAR);
+        if (!IKH.validasiForm(frm, o, WAJIB)) return UI.toast('Periksa kembali isian yang ditandai merah.', 'bad');
+        if (!foto) { $('[data-f="foto"]').classList.add('err'); $('#sec-dokumen').scrollIntoView({ behavior: 'smooth' }); return UI.toast('Pas foto wajib diunggah.', 'bad'); }
+        if (!$('#f-setuju').checked) return UI.toast('Centang pernyataan kebenaran data.', 'bad');
+        o.no_hp = IKH.hp08(o.no_hp);
+        const m = UI.muat('Mengirim pendaftaran & mengunggah berkas…');
+        const r = await api('pub.daftar', { data: o, foto: foto, berkas: berkas, setuju: true, website: $('#f-website').value });
+        m.tutup();
+        if (!r.ok) return UI.toast(r.msg, 'bad', 6000);
+        LS.del('draf_daftar'); LS.set('reg_terakhir', { id: r.data.id_record, email: o.email });
+        main.dataset.form = '';
+        main.innerHTML = pageHead('Pendaftaran Alumni', 'Pendaftaran terkirim') + '<div class="wrap sec" style="max-width:720px"><div class="res"><div class="hd ok">' + ic('task_alt') + '<div><h3>Terima kasih, ' + esc(o.nama) + '!</h3><div>Pendaftaran Anda sedang menunggu verifikasi Pengurus.</div></div></div>' +
+          '<div class="bd"><div class="kv box"><div>Nomor registrasi</div><div class="mono">' + esc(r.data.id_record) + '</div><div>Email</div><div>' + esc(o.email) + '</div><div>Status</div><div>' + UI.badgeStatus('Menunggu Verifikasi') + '</div></div>' +
+          '<p class="mt small muted">Simpan nomor registrasi untuk mengecek status. Setelah disetujui, Anda menerima email berisi kata sandi awal dan KTA digital (PDF).</p>' +
+          '<div class="row wrap"><a class="btn btn-primary" href="#/status?id=' + encodeURIComponent(r.data.id_record) + '&e=' + encodeURIComponent(o.email) + '">' + ic('fact_check') + 'Cek Status</a><a class="btn btn-ghost" href="#/">Kembali ke Beranda</a></div></div></div></div>';
+        window.scrollTo(0, 0);
+      };
+    });
+  }
+
+  /* ---------------- Cek status pendaftaran ---------------- */
+  function statusPage(p, q) {
+    return halamanPub('Cek Status Pendaftaran', (main) => {
+      const last = LS.get('reg_terakhir', {}) || {};
+      main.innerHTML = pageHead('Cek Status', 'Cek Status Pendaftaran', 'Masukkan nomor registrasi dan email yang Anda gunakan saat mendaftar.') +
+        '<div class="wrap sec" style="max-width:640px;padding-top:2rem"><form class="card card-b col gap-lg" id="frm-st"><div class="fld"><label for="st-id">Nomor registrasi</label><input class="inp mono" id="st-id" placeholder="REG-2026-0001" value="' + esc(q.get('id') || last.id || '') + '"></div>' +
+        '<div class="fld"><label for="st-em">Email</label><input class="inp" id="st-em" type="email" value="' + esc(q.get('e') || last.email || '') + '"></div><button class="btn btn-primary" type="submit">' + ic('search') + 'Periksa Status</button></form><div id="st-hasil" class="mt-lg" aria-live="polite"></div></div>';
+      const frm = $('#frm-st', main);
+      frm.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = $('button[type=submit]', frm);
+        const r = await UI.tombol(btn, () => api('pub.cekStatus', { id_record: $('#st-id').value.trim(), email: $('#st-em').value.trim() }));
+        const el = $('#st-hasil');
+        if (!r.ok) { el.innerHTML = '<div class="alert bad">' + ic('error') + '<div>' + esc(r.msg) + '</div></div>'; return; }
+        const d = r.data, s = d.status_verifikasi;
+        el.innerHTML = '<div class="res"><div class="hd ' + (s === 'Disetujui' ? 'ok' : s === 'Ditolak' ? 'bad' : 'warn') + '">' + ic(s === 'Disetujui' ? 'verified' : s === 'Ditolak' ? 'cancel' : 'hourglass_top') + '<div><h3>' + esc(s) + '</h3><div>' + esc(d.nama) + '</div></div></div>' +
+          '<div class="bd"><div class="kv"><div>Nomor registrasi</div><div class="mono">' + esc(d.id_record) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(d.tgl_daftar) + '</div>' + (d.id_member ? '<div>Nomor anggota</div><div class="mono">' + esc(d.id_member) + '</div>' : '') + (d.tgl_verifikasi ? '<div>Diverifikasi</div><div>' + fmt.waktu(d.tgl_verifikasi) + '</div>' : '') + '</div>' +
+          (s === 'Ditolak' ? '<div class="alert warn mt">' + ic('info') + '<div><b>Catatan Pengurus:</b> ' + esc(d.catatan || '-') + '<br>Silakan perbaiki lalu daftar kembali.</div></div><a class="btn btn-primary mt" href="#/daftar">Daftar Ulang</a>' : '') +
+          (s === 'Disetujui' ? '<p class="mt small">Info akun dan KTA telah dikirim ke email Anda. Belum menerima? Gunakan <a href="#/lupa">Lupa / Aktivasi Kata Sandi</a>.</p><a class="btn btn-primary" href="#/masuk">Masuk ke Ruang Anggota</a>' : '') +
+          (s === 'Menunggu Verifikasi' ? '<p class="mt small muted mb-0">Pengurus sedang memeriksa data Anda. Anda akan menerima notifikasi melalui email/WhatsApp.</p>' : '') + '</div></div>';
+      };
+      if ((q.get('id') || last.id) && (q.get('e') || last.email) && q.get('id')) frm.requestSubmit();
+    });
+  }
+
+  /* ---------------- Verifikasi KTA ---------------- */
+  let _kamera = null;
+  function hentikanKamera() { if (_kamera) { _kamera.getTracks().forEach((t) => t.stop()); _kamera = null; } }
+  window.addEventListener('hashchange', hentikanKamera);
+  function verifikasiPage(p) {
+    return halamanPub('Verifikasi KTA', (main) => {
+      if (main.dataset.vrf === (p.kode || '-') && $('#vr-hasil', main)) return;
+      main.dataset.vrf = p.kode || '-';
+      main.innerHTML = pageHead('Verifikasi KTA', 'Verifikasi Keaslian KTA Digital', 'Pindai kode QR pada KTA atau masukkan nomor anggota untuk memeriksa keabsahan kartu langsung ke basis data organisasi.') +
+        '<div class="wrap sec" style="padding-top:2rem"><div class="grid g2" style="align-items:start"><div class="card"><div class="tabs" role="tablist"><button class="on" data-t="scan" role="tab">' + ic('qr_code_scanner', 'sm') + 'Pindai QR</button><button data-t="manual" role="tab">' + ic('badge', 'sm') + 'Cari Nomor KTA</button></div>' +
+        '<div class="card-b" id="t-scan"><div class="scanner" id="scanner"><div class="center col" style="align-items:center;padding:1rem">' + ic('photo_camera', 'xl') + '<span class="small">Kamera belum aktif</span></div></div>' +
+        '<div class="row wrap mt"><button class="btn btn-primary" id="btn-kam">' + ic('photo_camera') + 'Nyalakan Kamera</button><label class="btn btn-ghost">' + ic('image') + 'Unggah Foto QR<input type="file" accept="image/*" id="in-qr" class="hide"></label></div>' +
+        '<p class="hint mt mb-0">Tips: kamera ponsel bawaan juga dapat memindai QR pada KTA dan langsung membuka halaman ini.</p></div>' +
+        '<form class="card-b hide" id="t-manual"><div class="fld"><label for="vr-no">Nomor anggota (KTA) atau NIT</label><div class="inp-ic">' + ic('search') + '<input class="inp mono" id="vr-no" placeholder="Contoh: IKH-KT-2026-0001"></div></div><button class="btn btn-primary mt" type="submit">' + ic('fact_check') + 'Periksa Keaslian</button>' +
+        '<p class="hint mt mb-0">Pencarian manual menampilkan data terbatas. Pemindaian QR menampilkan data lengkap beserta foto karena QR bertanda tangan digital.</p></form></div>' +
+        '<div id="vr-hasil" aria-live="polite">' + '<div class="card card-b col" style="align-items:center;text-align:center;padding:2.5rem">' + ic('verified_user', 'xl') + '<h3 class="mt">Hasil verifikasi tampil di sini</h3><p class="muted mb-0">Data diambil langsung dari basis data resmi saat pengecekan.</p></div></div></div></div>';
+      $$('[data-t]', main).forEach((b) => b.onclick = () => { $$('[data-t]', main).forEach((x) => x.classList.toggle('on', x === b)); $('#t-scan').classList.toggle('hide', b.dataset.t !== 'scan'); $('#t-manual').classList.toggle('hide', b.dataset.t !== 'manual'); if (b.dataset.t !== 'scan') hentikanKamera(); });
+      $('#t-manual').onsubmit = (e) => { e.preventDefault(); const v = $('#vr-no').value.trim(); if (v) periksa(v); };
+      $('#btn-kam').onclick = mulaiKamera;
+      $('#in-qr').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const kode = await dekodeGambar(f); if (kode) periksa(kode); else UI.toast('QR tidak terbaca pada gambar. Coba foto yang lebih jelas.', 'bad'); e.target.value = ''; };
+      if (p.kode) periksa(p.kode);
+    });
+  }
+  async function periksa(kode) {
+    const el = $('#vr-hasil'); if (!el) return;
+    hentikanKamera();
+    el.innerHTML = '<div class="card">' + UI.skel(5) + '</div>';
+    const r = await api('pub.verifikasi', { kode: kode });
+    if (!r.ok) { el.innerHTML = '<div class="alert bad">' + ic('error') + '<div>' + esc(r.msg) + '</div></div>'; return; }
+    const d = r.data;
+    if (!d.valid) { el.innerHTML = '<div class="res"><div class="hd bad">' + ic('cancel') + '<div><h3>KTA TIDAK VALID</h3><div>' + esc(d.pesan || '') + '</div></div></div><div class="bd small muted">Diperiksa ' + fmt.waktu(d.dicek) + '. Bila menurut Anda ini keliru, hubungi sekretariat.</div></div>'; return; }
+    const a = d.anggota, aktif = d.status === 'Aktif';
+    el.innerHTML = '<div class="res"><div class="hd ' + (aktif ? 'ok' : 'warn') + '">' + ic(aktif ? 'verified' : 'warning') + '<div><h3>' + (aktif ? 'KTA VALID & TERDAFTAR RESMI' : 'KTA TERDAFTAR — STATUS ' + esc(d.status).toUpperCase()) + '</h3><div>' + esc(d.org || '') + (d.qr ? ' • QR bertanda tangan sah' : ' • Pencarian manual') + '</div></div></div>' +
+      '<div class="bd"><div class="row top gap-lg">' + (a.foto_id ? '<div style="width:96px;height:120px;border-radius:10px;flex:none;background:#E9EDF3 center/cover no-repeat;background-image:url(\'' + esc(img(a.foto_id, 300)) + '\')"></div>' : '') +
+      '<div class="grow"><div class="kicker">Nama Lengkap</div><h3 style="margin:.15rem 0 .5rem">' + esc(a.nama) + '</h3>' + UI.badgeStatus(d.status) + '</div></div>' +
+      '<div class="kv mt"><div>Nomor anggota</div><div class="mono">' + esc(a.id_member) + '</div>' + (a.nomor_taruna ? '<div>NIT</div><div class="mono">' + esc(a.nomor_taruna) + '</div>' : '') + '<div>Angkatan</div><div>' + esc(a.angkatan || '-') + '</div><div>Program studi</div><div>' + esc(a.prodi || '-') + '</div>' +
+      (a.tahun_kelulusan ? '<div>Tahun lulus</div><div>' + esc(a.tahun_kelulusan) + '</div>' : '') + (a.instansi ? '<div>Instansi</div><div>' + esc(a.instansi) + '</div>' : '') + '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div></div>' +
+      '<p class="small muted mt mb-0">Diperiksa ' + fmt.waktu(d.dicek) + '.</p><button class="btn btn-ghost btn-sm mt" onclick="IKH.Router.go(\'/verifikasi\')">' + ic('refresh', 'sm') + 'Periksa KTA lain</button></div></div>';
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function mulaiKamera() {
+    const box = $('#scanner');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return UI.toast('Browser tidak mendukung kamera. Gunakan Unggah Foto QR.', 'bad');
+    try { _kamera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
+    catch (e) { return UI.toast('Izin kamera ditolak / tidak tersedia.', 'bad'); }
+    box.innerHTML = '<video playsinline muted></video><div class="fr"></div>';
+    const v = $('video', box); v.srcObject = _kamera; await v.play();
+    const det = 'BarcodeDetector' in window ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null;
+    if (!det) await IKH.muat(IKH.CDN.jsqr);
+    const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
+    const loop = async () => {
+      if (!_kamera) return;
+      try {
+        let kode = null;
+        if (det) { const r = await det.detect(v); if (r.length) kode = r[0].rawValue; }
+        else if (v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; x.drawImage(v, 0, 0); const q = window.jsQR(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height); if (q) kode = q.data; }
+        if (kode) { if (navigator.vibrate) navigator.vibrate(80); return periksa(kode); }
+      } catch (e) { }
+      setTimeout(() => requestAnimationFrame(loop), 180);
+    };
+    loop();
+  }
+  async function dekodeGambar(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const im = new Image(); im.src = url; await im.decode();
+      if ('BarcodeDetector' in window) { try { const r = await new window.BarcodeDetector({ formats: ['qr_code'] }).detect(im); if (r.length) return r[0].rawValue; } catch (e) { } }
+      await IKH.muat(IKH.CDN.jsqr);
+      const c = document.createElement('canvas'), s = Math.min(1, 1400 / Math.max(im.width, im.height)); c.width = im.width * s; c.height = im.height * s;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0, c.width, c.height);
+      const q = window.jsQR(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+      return q ? q.data : null;
+    } catch (e) { return null; } finally { URL.revokeObjectURL(url); }
+  }
+
+  /* ---------------- Autentikasi ---------------- */
+  function layoutAuth(kanan) {
+    const st = IKH.setPub();
+    return '<div class="auth"><div class="kiri"><span class="pill" style="align-self:flex-start">' + ic('shield', 'sm') + 'Portal Layanan Alumni</span><h1 class="mt">Sistem Informasi Manajemen Keanggotaan ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</h1>' +
+      '<p>Satu akun untuk melihat KTA digital, mengunduh kartu, dan mengajukan pembaruan data yang diverifikasi Pengurus.</p>' +
+      '<div class="ft">' + ic('verified_user') + '<div><b>Akun dibuat otomatis</b>setelah pendaftaran disetujui. Kata sandi awal dikirim ke email terdaftar.</div></div>' +
+      '<div class="ft">' + ic('lock_reset') + '<div><b>Data lama sudah diimpor?</b>Aktifkan akun lewat menu "Lupa / Aktivasi Kata Sandi" memakai email terdaftar.</div></div>' +
+      '<div class="ft">' + ic('qr_code_2') + '<div><b>KTA ber-QR</b>dapat diperiksa keasliannya oleh siapa pun.</div></div></div><div class="kanan"><div class="box">' + kanan + '</div></div></div>';
+  }
+  function halAuth(judul, kanan, pasang) {
+    IKH.judul(judul);
+    const main = IKH.pasangLayout('pub', layoutPub); bingkai();
+    main.innerHTML = layoutAuth(kanan);
+    pasang(main);
+    if (!Store.pub) Store.pubBoot().then(() => { bingkai(); });
+  }
+  const mata = (id) => '<button type="button" class="btn btn-text ic-r" data-mata="' + id + '" aria-label="Tampilkan kata sandi">' + ic('visibility', 'sm') + '</button>';
+  function pasangMata(el) { $$('[data-mata]', el).forEach((b) => b.onclick = () => { const i = $('#' + b.dataset.mata); i.type = i.type === 'password' ? 'text' : 'password'; b.innerHTML = ic(i.type === 'password' ? 'visibility' : 'visibility_off', 'sm'); }); }
+  function setelahMasuk(d) {
+    Sesi.simpan(d.token, d.me);
+    if (d.boot) { if (d.me.peran === 'pengurus') IKH.Store.setAdm(d.boot); else IKH.Store.setAgt(d.boot); }
+    if (d.me.wajib) return Router.go('/ganti-sandi');
+    const balik = LS.get('balik', ''); LS.del('balik');
+    const tujuan = balik && balik.indexOf(d.me.peran === 'pengurus' ? '#/admin' : '#/anggota') === 0 ? balik.slice(1) : (d.me.peran === 'pengurus' ? '/admin' : '/anggota');
+    Router.go(tujuan);
+  }
+  IKH.setelahMasuk = setelahMasuk;
+  function masuk() {
+    if (Sesi.me && !Sesi.me.wajib) return Router.go(Sesi.me.peran === 'pengurus' ? '/admin' : '/anggota');
+    IKH.warmUp('admin');
+    halAuth('Masuk', '<div class="kicker gold">Portal Masuk Terpadu</div><h2 class="mt">Masuk ke Akun Anda</h2><p class="muted">Gunakan email dan kata sandi yang terdaftar.</p>' +
+      '<div class="seg mb" role="tablist" aria-label="Jenis akun"><button class="on" data-p="anggota" type="button">' + 'Alumni / Anggota</button><button data-p="pengurus" type="button">Pengurus</button></div>' +
+      '<form id="frm-in" class="col gap-lg" novalidate><div class="fld"><label for="in-em">Email</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="in-em" type="email" autocomplete="username" placeholder="nama@email.com"></div></div>' +
+      '<div class="fld"><div class="row between"><label for="in-pw" class="lbl">Kata sandi</label><a href="#/lupa" class="small">Lupa / aktivasi?</a></div><div class="inp-ic">' + ic('lock') + '<input class="inp" id="in-pw" type="password" autocomplete="current-password">' + mata('in-pw') + '</div></div>' +
+      '<label class="cek" id="ingat-w"><input type="checkbox" id="in-ingat"><span>Ingat saya di perangkat ini (30 hari)</span></label>' +
+      '<button class="btn btn-primary btn-block" type="submit" data-busy="Memeriksa…">' + ic('login') + 'Masuk</button></form>' +
+      '<div class="alert info mt-lg small" id="in-info">' + ic('info', 'sm') + '<div>Akun anggota aktif setelah pendaftaran disetujui Pengurus. Belum terdaftar? <a href="#/daftar"><b>Daftar sekarang</b></a>.</div></div>', (el) => {
+      pasangMata(el);
+      $$('[data-p]', el).forEach((b) => b.onclick = () => {
+        $$('[data-p]', el).forEach((x) => x.classList.toggle('on', x === b));
+        const png = b.dataset.p === 'pengurus';
+        $('#ingat-w').classList.toggle('hide', png);
+        $('#in-info').innerHTML = ic('info', 'sm') + (png ? '<div>Akun Pengurus dibuat oleh Pengurus lain. Pemasangan pertama: gunakan <b>akses darurat</b> dari log setup Apps Script, lalu buat akun Pengurus di menu Pengaturan.</div>' : '<div>Akun anggota aktif setelah pendaftaran disetujui Pengurus. Belum terdaftar? <a href="#/daftar"><b>Daftar sekarang</b></a>.</div>');
+      });
+      $('#frm-in').onsubmit = async (e) => {
+        e.preventDefault();
+        const em = $('#in-em').value.trim(), pw = $('#in-pw').value;
+        if (!em || !pw) return UI.toast('Isi email dan kata sandi.', 'bad');
+        const r = await UI.tombol($('#frm-in button[type=submit]'), () => api('auth.login', { email: em, sandi: pw, ingat: $('#in-ingat').checked, appUrl: location.origin + location.pathname }));
+        if (!r.ok) { $('#in-pw').value = ''; $('#in-pw').focus(); return UI.toast(r.msg, 'bad', 5000); }
+        UI.toast(r.msg);
+        setelahMasuk(r.data);
+      };
+      setTimeout(() => $('#in-em').focus(), 50);
+    });
+  }
+  function gantiSandiWajib() {
+    const me = Sesi.me; if (!me) return Router.go('/masuk');
+    if (!me.wajib) return Router.go(me.peran === 'pengurus' ? '/admin' : '/anggota');
+    halAuth('Ganti Kata Sandi', '<div class="kicker gold">Keamanan Akun</div><h2 class="mt">Ganti Kata Sandi Awal</h2><p class="muted">Demi keamanan, ganti kata sandi awal sebelum melanjutkan.</p>' +
+      '<form id="frm-gs" class="col gap-lg"><div class="fld"><label for="gs-l">Kata sandi saat ini (dari email)</label><div class="inp-ic">' + ic('key') + '<input class="inp" id="gs-l" type="password" autocomplete="current-password">' + mata('gs-l') + '</div></div>' +
+      '<div class="fld"><label for="gs-b">Kata sandi baru</label><div class="inp-ic">' + ic('lock') + '<input class="inp" id="gs-b" type="password" autocomplete="new-password">' + mata('gs-b') + '</div><span class="hint">Minimal 8 karakter, memuat huruf dan angka.</span></div>' +
+      '<div class="fld"><label for="gs-k">Ulangi kata sandi baru</label><input class="inp" id="gs-k" type="password" autocomplete="new-password"></div>' +
+      '<button class="btn btn-primary btn-block" type="submit">' + ic('check_circle') + 'Simpan & Lanjutkan</button><button class="btn btn-ghost btn-block" type="button" id="gs-out">Keluar</button></form>', (el) => {
+      pasangMata(el);
+      $('#gs-out').onclick = () => Sesi.keluar();
+      $('#frm-gs').onsubmit = async (e) => {
+        e.preventDefault();
+        const l = $('#gs-l').value, b = $('#gs-b').value;
+        if (b !== $('#gs-k').value) return UI.toast('Konfirmasi kata sandi tidak sama.', 'bad');
+        if (b.length < 8 || !/[A-Za-z]/.test(b) || !/\d/.test(b)) return UI.toast('Kata sandi minimal 8 karakter dengan huruf dan angka.', 'bad');
+        const r = await UI.tombol($('#frm-gs button[type=submit]'), () => api('auth.ganti', { lama: l, baru: b }));
+        if (!UI.hasil(r)) return;
+        setelahMasuk(r.data);
+      };
+    });
+  }
+  function lupa() {
+    halAuth('Lupa Kata Sandi', '<div class="kicker gold">Pemulihan / Aktivasi Akun</div><h2 class="mt">Lupa atau Aktivasi Kata Sandi</h2><p class="muted">Masukkan email terdaftar. Kami akan mengirim tautan untuk mengatur kata sandi (berlaku 60 menit). Anggota dari data lama yang belum punya akun juga memakai menu ini.</p>' +
+      '<form id="frm-lp" class="col gap-lg"><div class="fld"><label for="lp-em">Email terdaftar</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="lp-em" type="email" autocomplete="email"></div></div>' +
+      '<button class="btn btn-primary btn-block" type="submit">' + ic('send') + 'Kirim Tautan</button><a class="btn btn-ghost btn-block" href="#/masuk">Kembali ke halaman masuk</a></form><div id="lp-hasil" class="mt" aria-live="polite"></div>', (el) => {
+      $('#frm-lp').onsubmit = async (e) => {
+        e.preventDefault();
+        const r = await UI.tombol($('#frm-lp button[type=submit]'), () => api('auth.lupa', { email: $('#lp-em').value.trim() }));
+        $('#lp-hasil').innerHTML = '<div class="alert ' + (r.ok ? 'ok' : 'bad') + '">' + ic(r.ok ? 'mail' : 'error') + '<div>' + esc(r.msg) + '</div></div>';
+      };
+    });
+  }
+  function reset(p, q) {
+    const em = q.get('e') || '', t = q.get('t') || '';
+    halAuth('Atur Kata Sandi', '<div class="kicker gold">Atur Kata Sandi</div><h2 class="mt">Buat Kata Sandi Baru</h2><p class="muted">Akun: <b>' + esc(em || '-') + '</b></p>' +
+      (!em || !t ? '<div class="alert bad">' + ic('error') + '<div>Tautan tidak lengkap. Minta tautan baru di menu Lupa Kata Sandi.</div></div>' :
+        '<form id="frm-rs" class="col gap-lg"><div class="fld"><label for="rs-b">Kata sandi baru</label><div class="inp-ic">' + ic('lock') + '<input class="inp" id="rs-b" type="password" autocomplete="new-password">' + mata('rs-b') + '</div><span class="hint">Minimal 8 karakter, huruf dan angka.</span></div>' +
+        '<div class="fld"><label for="rs-k">Ulangi kata sandi baru</label><input class="inp" id="rs-k" type="password" autocomplete="new-password"></div><button class="btn btn-primary btn-block" type="submit">' + ic('check_circle') + 'Simpan Kata Sandi</button></form>'), (el) => {
+      pasangMata(el);
+      const f = $('#frm-rs'); if (!f) return;
+      f.onsubmit = async (e) => {
+        e.preventDefault();
+        const b = $('#rs-b').value;
+        if (b !== $('#rs-k').value) return UI.toast('Konfirmasi kata sandi tidak sama.', 'bad');
+        const r = await UI.tombol($('#frm-rs button[type=submit]'), () => api('auth.reset', { email: em, t: t, baru: b }));
+        if (!UI.hasil(r)) return;
+        Router.go('/masuk');
+      };
+    });
+  }
+
+  /* ---------------- Rute ---------------- */
+  const R = IKH.Router;
+  R.add('/', beranda); R.add('/profil', profil); R.add('/berita', beritaList); R.add('/berita/:id', beritaDetail);
+  R.add('/daftar', daftarPage); R.add('/status', statusPage); R.add('/verifikasi', verifikasiPage); R.add('/v/:kode', verifikasiPage);
+  R.add('/masuk', masuk); R.add('/lupa', lupa); R.add('/reset', reset); R.add('/ganti-sandi', gantiSandiWajib);
+  R.add('/anggota', IKH.modul('Anggota', 'dasbor'), { peran: 'anggota' }); R.add('/anggota/kta', IKH.modul('Anggota', 'kta'), { peran: 'anggota' });
+  R.add('/anggota/profil', IKH.modul('Anggota', 'profil'), { peran: 'anggota' }); R.add('/anggota/keamanan', IKH.modul('Anggota', 'keamanan'), { peran: 'anggota' });
+  [['', 'dasbor'], ['/verifikasi', 'verifikasi'], ['/perubahan', 'perubahan'], ['/alumni', 'alumni'], ['/kta', 'kta'], ['/rekap', 'rekap'], ['/log', 'log'], ['/pengaturan', 'pengaturan'], ['/arsip', 'arsip']]
+    .forEach((x) => R.add('/admin' + x[0], IKH.modul('Admin', x[1]), { peran: 'pengurus' }));
+  [['/beranda', 'beranda'], ['/notifikasi', 'notifikasi'], ['/crm', 'crm'], ['/impor', 'impor']]
+    .forEach((x) => R.add('/admin' + x[0], IKH.modul('Admin2', x[1]), { peran: 'pengurus' }));
+  IKH.bingkaiPub = bingkai;
+  document.addEventListener('DOMContentLoaded', () => IKH.mulai());
+})();
