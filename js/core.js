@@ -5,8 +5,8 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.4.1';
-  const RILIS = '2026-11-15';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
+  const VERSI = '1.5.0';
+  const RILIS = '2026-11-16';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
   IKH.VERSI = VERSI; IKH.RILIS = RILIS;
@@ -434,23 +434,38 @@
     const q = window.qrcode(0, 'M'); q.addData(teks); q.make();
     return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
   };
+  /* ---------------- Jenis anggota (v1.3.0) ----------------
+     Semua jenis adalah alumni dengan hak yang sama. Kolom kosong (data lama) = Biasa.
+     Luar Biasa: KTA 5 tahun sejak penetapan · Kehormatan: KTA seumur hidup (tanpa tanggal). */
+  const JENIS = {
+    'Biasa': { kode: 'b', badge: 'b-jn-b', judul: 'ANGGOTA BIASA' },
+    'Luar Biasa': { kode: 'lb', badge: 'b-jn-lb', judul: 'ANGGOTA LUAR BIASA' },
+    'Kehormatan': { kode: 'kh', badge: 'b-jn-kh', judul: 'ANGGOTA KEHORMATAN' }
+  };
+  IKH.JENIS = JENIS;
+  IKH.jenisAgt = (a) => (a && (a.jenis_anggota === 'Luar Biasa' || a.jenis_anggota === 'Kehormatan')) ? a.jenis_anggota : 'Biasa';
+  IKH.seumurHidup = (a) => IKH.jenisAgt(a) === 'Kehormatan';
+  IKH.masaTeks = (a, panjang) => IKH.seumurHidup(a) ? 'Seumur hidup' : (a && a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu, panjang) : '-');
+  IKH.badgeJenis = (a, ringkas) => { const j = IKH.jenisAgt(a); return '<span class="badge ' + JENIS[j].badge + '">' + (ringkas ? j : 'Anggota ' + j) + '</span>'; };
+
   const Kta = {
-    statusTeks(a) { if (a.status_verifikasi !== 'Disetujui') return 'BELUM TERVERIFIKASI'; if (a.status_anggota === 'Nonaktif') return 'NONAKTIF'; if (a.masa_berlaku_kartu && a.masa_berlaku_kartu < hariIni()) return 'KEDALUWARSA'; return 'AKTIF'; },
+    statusTeks(a) { if (a.status_verifikasi !== 'Disetujui') return 'BELUM TERVERIFIKASI'; if (a.status_anggota === 'Nonaktif') return 'NONAKTIF'; if (!IKH.seumurHidup(a) && a.masa_berlaku_kartu && a.masa_berlaku_kartu < hariIni()) return 'KEDALUWARSA'; return 'AKTIF'; },
     depan(a, st) {
       st = st || {};
-      const s = Kta.statusTeks(a);
-      return '<div class="kta depan" role="img" aria-label="KTA sisi depan ' + esc(a.nama) + '">' +
+      const s = Kta.statusTeks(a), J = JENIS[IKH.jenisAgt(a)];
+      return '<div class="kta depan" data-jn="' + J.kode + '" role="img" aria-label="KTA sisi depan ' + esc(a.nama) + ', ' + J.judul.toLowerCase() + '">' +
         '<div class="hd"><div class="lg" ' + logoBg(st, 160) + '></div><div><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2">' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</div></div></div>' +
         '<div class="chipg"></div><div class="garis"></div>' +
         '<div class="ft" ' + (a.foto_id ? bg(a.foto_id, 400) : '') + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
         '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm">' + esc(String(a.nama || 'NAMA ANGGOTA').toUpperCase()) + '</div></div>' +
         '<div><div class="l">Nomor Anggota</div><div class="v no">' + esc(a.id_member || '—') + '</div></div>' +
         '<div class="dua"><div><div class="l">NIT / Angkatan</div><div class="v">' + esc((a.nomor_taruna || '-') + ' / ' + (a.angkatan || '-')) + '</div></div><div><div class="l">Program Studi</div><div class="v">' + esc(a.prodi || '-') + '</div></div></div></div>' +
-        '<div class="bw"><span>BERLAKU S.D. <b>' + esc(a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu).toUpperCase() : '—') + '</b></span><span class="st ' + (s === 'AKTIF' ? '' : 'bad') + '">' + s + '</span></div></div>';
+        '<div class="bw"><span>' + (IKH.seumurHidup(a) ? 'BERLAKU <b>SEUMUR HIDUP</b>' : 'BERLAKU S.D. <b>' + esc(a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu).toUpperCase() : '—') + '</b>') + '</span>' +
+        '<span class="kn"><span class="jn">' + J.judul + '</span><span class="st ' + (s === 'AKTIF' ? '' : 'bad') + '">' + s + '</span></span></div></div>';
     },
     belakang(a, st, qrSvg) {
       st = st || {};
-      return '<div class="kta belakang" role="img" aria-label="KTA sisi belakang">' +
+      return '<div class="kta belakang" data-jn="' + JENIS[IKH.jenisAgt(a)].kode + '" role="img" aria-label="KTA sisi belakang">' +
         '<div class="pita">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</div>' +
         '<div class="qr">' + (qrSvg || '') + '</div><div class="qrl">PINDAI UNTUK VERIFIKASI</div>' +
         '<div class="kt"><b>KETENTUAN</b>1. Kartu ini milik ' + esc(st.ORG_NAMA || 'organisasi') + ' dan tidak dapat dipindahtangankan.<br>2. Keaslian kartu dapat diperiksa dengan memindai kode QR.<br>3. Bila menemukan kartu ini, mohon kembalikan ke sekretariat.</div>' +

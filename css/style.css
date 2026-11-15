@@ -269,6 +269,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .kta.belakang .ttd { position: absolute; right: 5cqw; bottom: 6cqw; text-align: center; font-size: 2.1cqw; color: var(--muted); }
 .kta.belakang .ttd .nm { font-weight: 800; color: var(--text); font-size: 2.5cqw; margin-top: 7cqw; border-top: .2cqw solid var(--border-2); padding-top: .8cqw; }
 .kta.belakang .bwh { position: absolute; left: 0; right: 0; bottom: 0; height: 3cqw; background: var(--gold); }
+/* Jenis anggota (v1.3.0): Biasa biru-emas · Luar Biasa hijau tua · Kehormatan marun-emas */
+.kta .bw .kn { display: flex; align-items: center; gap: 1.2cqw; }
+.kta .bw .jn { padding: .5cqw 1.8cqw; border-radius: 99px; background: var(--gold); color: var(--navy); font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.kta.depan[data-jn="lb"] { background: radial-gradient(120% 120% at 100% 0%, #1E6B55 0%, #0B4A3A 45%, #05261D 100%); }
+.kta.depan[data-jn="kh"] { background: radial-gradient(120% 120% at 100% 0%, #8E2A3C 0%, #6A1525 45%, #3A0812 100%); }
+.kta[data-jn="lb"] .dt .l, .kta[data-jn="lb"] .bw { color: #A8D5C2; } .kta[data-jn="kh"] .dt .l, .kta[data-jn="kh"] .bw { color: #E7B3BC; }
+.kta[data-jn="lb"] .ft { background-color: #2A6B58; } .kta[data-jn="kh"] .ft { background-color: #8C3443; }
+.kta[data-jn="lb"] .bw .jn { color: #0B4A3A; } .kta[data-jn="kh"] .bw .jn { color: #6A1525; }
+.kta.belakang[data-jn="lb"] .pita { background: #0B4A3A; } .kta.belakang[data-jn="kh"] .pita { background: #6A1525; }
+.kta.belakang[data-jn="lb"] .kt b { color: #0B4A3A; } .kta.belakang[data-jn="kh"] .kt b { color: #6A1525; }
+.badge.b-jn-b { background: var(--navy-soft); color: var(--navy); border-color: rgba(10, 42, 99, .18); }
+.badge.b-jn-lb { background: #E3F2EC; color: #0B4A3A; border-color: #B5E0CE; }
+.badge.b-jn-kh { background: #F9E6E9; color: #6A1525; border-color: #F0C4CB; }
 .kta-flip { display: grid; } .kta-flip > .kta { grid-area: 1 / 1; transition: opacity .3s; } .kta-flip > .kta.off { opacity: 0; pointer-events: none; }
 
 /* ------------------------------ Panel anggota ------------------------------ */

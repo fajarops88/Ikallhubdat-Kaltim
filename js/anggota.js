@@ -61,11 +61,11 @@
   function dasbor() {
     return halaman('Dasbor Saya', (el, d) => {
       const a = d.anggota, st = d.setting || {}, peng = d.pengajuan || [], pending = peng.find((p) => p.status === 'Menunggu');
-      const sisa = fmt.sisaHari(a.masa_berlaku_kartu);
+      const seumur = IKH.seumurHidup(a), sisa = seumur ? null : fmt.sisaHari(a.masa_berlaku_kartu);
       el.innerHTML =
-        '<section class="card welcome"><div class="grow" style="min-width:280px"><div class="row wrap"><span class="badge ' + (a.status_kartu === 'Aktif' ? 'b-ok' : 'b-bad') + '">Status Keanggotaan: ' + esc((a.status_kartu || '').toUpperCase()) + '</span>' + (pending ? '<span class="badge b-wait">1 pengajuan menunggu</span>' : '') + '</div>' +
+        '<section class="card welcome"><div class="grow" style="min-width:280px"><div class="row wrap"><span class="badge ' + (a.status_kartu === 'Aktif' ? 'b-ok' : 'b-bad') + '">Status Keanggotaan: ' + esc((a.status_kartu || '').toUpperCase()) + '</span>' + IKH.badgeJenis(a) + (pending ? '<span class="badge b-wait">1 pengajuan menunggu</span>' : '') + '</div>' +
         '<h1>Selamat datang, ' + esc(a.nama) + '</h1><div class="muted">' + esc([a.prodi, a.angkatan ? 'Angkatan ' + a.angkatan : '', a.instansi].filter(Boolean).join(' • ')) + '</div></div>' +
-        '<div class="masa"><div class="ico">' + ic('badge') + '</div><div><div class="kicker">Masa Berlaku KTA</div><div class="bb" style="font-size:17px">Hingga ' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div><div class="small ' + (sisa !== null && sisa <= 30 ? '' : 'muted') + '" style="color:' + (sisa !== null && sisa <= 30 ? 'var(--bad)' : '') + '">' + (sisa === null ? '-' : sisa < 0 ? 'Sudah lewat ' + Math.abs(sisa) + ' hari — hubungi Pengurus' : 'Tersisa ' + fmt.angka(sisa) + ' hari') + '</div></div></div></section>' +
+        '<div class="masa"><div class="ico">' + ic('badge') + '</div><div><div class="kicker">Masa Berlaku KTA</div><div class="bb" style="font-size:17px">' + (seumur ? 'Seumur hidup' : 'Hingga ' + fmt.tgl(a.masa_berlaku_kartu, true)) + '</div><div class="small ' + (sisa !== null && sisa <= 30 ? '' : 'muted') + '" style="color:' + (sisa !== null && sisa <= 30 ? 'var(--bad)' : '') + '">' + (seumur ? 'Anggota Kehormatan, tanpa tanggal kedaluwarsa' : sisa === null ? '-' : sisa < 0 ? 'Sudah lewat ' + Math.abs(sisa) + ' hari — hubungi Pengurus' : 'Tersisa ' + fmt.angka(sisa) + ' hari') + '</div></div></div></section>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start" id="g1">' +
         '<section><div class="row between mb"><h3 class="mb-0 row">' + ic('badge') + 'KTA Digital Anggota</h3><div class="seg" role="tablist"><button class="on" data-sisi="depan">Sisi Depan</button><button data-sisi="belakang">Sisi Belakang</button></div></div>' +
         '<div class="kta-flip" id="flip">' + Kta.depan(a, st) + Kta.belakang(a, st, '').replace('class="kta belakang"', 'class="kta belakang off"') + '</div></section>' +
@@ -119,7 +119,7 @@
   function kta() {
     return halaman('KTA Digital', (el, d) => {
       const a = d.anggota, st = d.setting || {};
-      el.innerHTML = '<div class="ph"><div class="ttl"><span class="ico">' + ic('badge') + '</span><div><h1>Kartu Tanda Anggota Digital</h1><div class="sub">Nomor ' + esc(a.id_member || '-') + ' • berlaku s.d. ' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div></div></div>' +
+      el.innerHTML = '<div class="ph"><div class="ttl"><span class="ico">' + ic('badge') + '</span><div><h1>Kartu Tanda Anggota Digital</h1><div class="sub">Nomor ' + esc(a.id_member || '-') + ' • Anggota ' + esc(IKH.jenisAgt(a)) + ' • ' + (IKH.seumurHidup(a) ? 'berlaku seumur hidup' : 'berlaku s.d. ' + fmt.tgl(a.masa_berlaku_kartu, true)) + '</div></div></div>' +
         '<div class="row wrap no-print"><button class="btn btn-gold" id="b-pdf" data-busy="Menyiapkan PDF…">' + ic('picture_as_pdf') + 'Unduh PDF</button><button class="btn btn-ghost" id="b-print">' + ic('print') + 'Cetak</button><button class="btn btn-ghost" id="b-link">' + ic('link') + 'Salin Tautan</button></div></div>' +
         (a.status_kartu !== 'Aktif' ? '<div class="alert warn mb">' + ic('warning') + '<div>Status kartu: <b>' + esc(a.status_kartu) + '</b>. Hubungi Pengurus untuk perpanjangan/aktivasi.</div></div>' : '') +
         '<div class="grid g2 print-sheet" style="max-width:1100px"><div><div class="kicker mb no-print">Sisi depan</div>' + Kta.depan(a, st) + '</div><div><div class="kicker mb no-print">Sisi belakang</div><div id="blk">' + Kta.belakang(a, st, '') + '</div></div></div>' +

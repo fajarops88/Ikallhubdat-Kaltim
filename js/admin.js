@@ -10,7 +10,7 @@
   const FIELD = ['nama', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'no_hp', 'email', 'kota_domisili', 'alamat', 'nomor_taruna', 'angkatan', 'prodi', 'tahun_kelulusan', 'status_kepegawaian', 'instansi', 'jabatan_terakhir'];
 
   /* ---------------- Turunan data ---------------- */
-  const statusKartu = (a) => a.status_verifikasi !== 'Disetujui' ? a.status_verifikasi : a.status_anggota === 'Nonaktif' ? 'Nonaktif' : (a.masa_berlaku_kartu && a.masa_berlaku_kartu < hariIni() ? 'Kedaluwarsa' : 'Aktif');
+  const statusKartu = (a) => a.status_verifikasi !== 'Disetujui' ? a.status_verifikasi : a.status_anggota === 'Nonaktif' ? 'Nonaktif' : (!IKH.seumurHidup(a) && a.masa_berlaku_kartu && a.masa_berlaku_kartu < hariIni() ? 'Kedaluwarsa' : 'Aktif');
   const statusPdf = (a, st) => !a.kta_file_id ? 'Belum Terbit' : (a.kta_usang === 'YA' || (st.KTA_DESAIN_VER && a.kta_terbit && a.kta_terbit < st.KTA_DESAIN_VER)) ? 'Usang' : 'Terbit';
   function D() {
     const d = Store.adm || { anggota: [], pengajuan: [], akun: [], setting: {}, log: [] };
@@ -352,27 +352,27 @@
   }
 
   /* ======================= DATA ALUMNI ======================= */
-  const AS = { q: '', prodi: '', angkatan: '', status: '', dom: '', tbl: null };
+  const AS = { q: '', prodi: '', angkatan: '', status: '', dom: '', jn: '', tbl: null };
   function alumni(p, q) {
     const buka = q && q.get('id'), tambahSaya = q && q.get('tambah') === '1';
     if (q && q.get('dom') !== null) { AS.dom = q.get('dom'); AS.status = q.get('st') === 'terverifikasi' ? '' : AS.status; AS.hanyaVer = q.get('st') === 'terverifikasi'; } else AS.hanyaVer = false;
     return halaman('/admin/alumni', 'Data Alumni', (main, x, awal) => {
-      const data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a) }));
+      const data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a), _jn: IKH.jenisAgt(a) }));
       if (awal || !AS.tbl || !$('#al-tbl')) {
         main.innerHTML = ph('groups', 'Data Alumni', fmt.angka(x.alumni.length) + ' terverifikasi • ' + fmt.angka(x.d.anggota.length) + ' total data', '<button class="btn btn-ghost btn-sm" id="al-xls">' + ic('table_view', 'sm') + 'Ekspor Excel</button><button class="btn btn-primary btn-sm" id="al-add">' + ic('person_add', 'sm') + 'Tambah Manual</button>') +
           '<section class="card"><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="al-q" placeholder="Cari nama, NIT, nomor anggota, instansi, email…" value="' + esc(AS.q) + '"></div>' +
-          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-dom" style="width:auto" aria-label="Domisili"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select></div><div id="al-tbl"></div></section>';
+          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-dom" style="width:auto" aria-label="Domisili"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select><select class="inp" id="al-jn" style="width:auto" aria-label="Jenis anggota">' + opsi(['Biasa', 'Luar Biasa', 'Kehormatan'], AS.jn, 'Semua jenis') + '</select></div><div id="al-tbl"></div></section>';
         AS.tbl = IKH.Tabel($('#al-tbl'), {
-          data, idKey: 'id_record', per: 25, cari: (a) => [a.nama, a.nomor_taruna, a.id_member, a.instansi, a.email, a.no_hp, a.prodi].join(' '),
+          data, idKey: 'id_record', per: 25, cari: (a) => [a.nama, a.nomor_taruna, a.id_member, a.instansi, a.email, a.no_hp, a.prodi, a._jn].join(' '),
           kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member || '-') + '</span>' },
             { k: 'angkatan', label: 'NIT / Angk.', render: (a) => '<span class="mono">' + esc(a.nomor_taruna || '-') + '</span><div class="small muted">Angk. ' + esc(a.angkatan || '-') + '</div>' },
             { k: 'prodi', label: 'Program studi' }, { k: 'instansi', label: 'Instansi', render: (a) => esc(a.instansi || '-') + '<div class="small muted">' + esc(a.jabatan_terakhir || '') + '</div>' },
-            { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) }, { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu) : '-' },
+            { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') }, { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) },
             { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="ubah">' + ic('edit', 'sm') + '</button>' }],
           onRow: (a) => drawerAlumni(a.id_record), onAksi: (act, a) => act === 'ubah' ? formAlumni(a.id_record) : drawerAlumni(a.id_record)
         });
         $('#al-q').oninput = IKH.debounce((e) => { AS.q = e.target.value; AS.tbl.cari(AS.q); }, 200);
-        ['al-prodi', 'al-angk', 'al-st', 'al-dom'].forEach((id) => $('#' + id).onchange = () => { AS.prodi = $('#al-prodi').value; AS.angkatan = $('#al-angk').value; AS.status = $('#al-st').value; AS.dom = $('#al-dom').value; AS.hanyaVer = false; saringA(); });
+        ['al-prodi', 'al-angk', 'al-st', 'al-dom', 'al-jn'].forEach((id) => $('#' + id).onchange = () => { AS.prodi = $('#al-prodi').value; AS.angkatan = $('#al-angk').value; AS.status = $('#al-st').value; AS.dom = $('#al-dom').value; AS.jn = $('#al-jn').value; AS.hanyaVer = false; saringA(); });
         $('#al-add').onclick = () => formAlumni(null);
         $('#al-xls').onclick = () => IKH.Ekspor.excel(AS.tbl.hasil().map(baris), 'Data-Alumni-' + hariIni(), 'Alumni');
         if (AS.q) AS.tbl.cari(AS.q);
@@ -386,8 +386,8 @@
       if (tambahSaya && awal) { const me = Sesi.me || {}; formAlumni(null, { email: me.email || '', nama: me.nama || '' }); }
     });
   }
-  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom)); }
-  const baris = (a) => ({ 'No. Anggota': a.id_member, Nama: a.nama, NIT: a.nomor_taruna, Angkatan: a.angkatan, 'Program Studi': a.prodi, 'Tahun Lulus': a.tahun_kelulusan, 'Status Kepegawaian': a.status_kepegawaian, Instansi: a.instansi, Jabatan: a.jabatan_terakhir, 'No. WhatsApp': a.no_hp, Email: a.email, 'Jenis Kelamin': a.jenis_kelamin, Domisili: a.kota_domisili, Status: statusKartu(a), 'Berlaku s.d.': a.masa_berlaku_kartu, 'ID Registrasi': a.id_record });
+  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom) && (!AS.jn || a._jn === AS.jn)); }
+  const baris = (a) => ({ 'No. Anggota': a.id_member, Nama: a.nama, NIT: a.nomor_taruna, Angkatan: a.angkatan, 'Program Studi': a.prodi, 'Tahun Lulus': a.tahun_kelulusan, 'Status Kepegawaian': a.status_kepegawaian, Instansi: a.instansi, Jabatan: a.jabatan_terakhir, 'No. WhatsApp': a.no_hp, Email: a.email, 'Jenis Kelamin': a.jenis_kelamin, Domisili: a.kota_domisili, Status: statusKartu(a), 'Jenis Anggota': IKH.jenisAgt(a), 'Berlaku s.d.': IKH.seumurHidup(a) ? 'Seumur hidup' : a.masa_berlaku_kartu, 'Tgl Penetapan Jenis': a.tgl_penetapan || '', 'No. SK Penetapan': a.no_sk_penetapan || '', 'ID Registrasi': a.id_record });
   IKH.barisAlumni = baris;
   function drawerAlumni(id) {
     const x = D(), a = x.cari(id); if (!a) return UI.toast('Data tidak ditemukan.', 'bad');
@@ -395,12 +395,13 @@
     const sc = document.createElement('div'); sc.className = 'scrim'; sc.style.placeItems = 'stretch end'; sc.style.padding = '0';
     const s = statusKartu(a);
     sc.innerHTML = '<aside class="drawer" role="dialog" aria-modal="true" aria-label="Detail alumni"><div class="modal-h"><h3>Detail Alumni</h3><button class="btn btn-ghost btn-icon btn-sm" data-x aria-label="Tutup">' + ic('close') + '</button></div>' +
-      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row mt">' + UI.badgeStatus(s) + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
+      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row wrap mt">' + UI.badgeStatus(s) + (a.status_verifikasi === 'Disetujui' ? IKH.badgeJenis(a) : '') + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
       (a.status_verifikasi === 'Disetujui' ? '<div class="mt-lg" style="max-width:420px">' + Kta.depan(a, x.st) + '</div>' : '') +
       '<h4 class="mt-lg">Data Lengkap</h4><div class="kv">' + FIELD.map((k) => '<div>' + LABEL[k] + '</div><div>' + esc(a[k] || '-') + '</div>').join('') +
-      '<div>Masa berlaku</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
+      '<div>Jenis anggota</div><div>' + esc('Anggota ' + IKH.jenisAgt(a)) + (a.tgl_penetapan ? '<div class="small muted">Ditetapkan ' + fmt.tgl(a.tgl_penetapan, true) + (a.no_sk_penetapan ? ' • SK ' + esc(a.no_sk_penetapan) : '') + (a.ket_penetapan ? '<br>' + esc(a.ket_penetapan) : '') + '</div>' : '') + '</div>' +
+      '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
       '<div class="modal-f"><button class="btn btn-danger" data-a="arsip">' + ic('inventory_2', 'sm') + 'Arsipkan</button>' + (akun ? '<button class="btn btn-ghost" data-a="reset">' + ic('lock_reset', 'sm') + 'Reset Sandi</button>' : '') +
-      (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="kta" data-busy="Menyiapkan…">' + ic('picture_as_pdf', 'sm') + 'Unduh KTA</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
+      (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="jenis">' + ic('workspace_premium', 'sm') + 'Jenis Anggota</button><button class="btn btn-ghost" data-a="kta" data-busy="Menyiapkan…">' + ic('picture_as_pdf', 'sm') + 'Unduh KTA</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
     document.body.appendChild(sc);
     const tutup = () => sc.remove();
     sc.addEventListener('mousedown', (e) => { if (e.target === sc) tutup(); });
@@ -410,6 +411,7 @@
       const act = b.dataset.a;
       if (act === 'ubah') { tutup(); formAlumni(id); }
       if (act === 'kta') unduhKta(a, b);
+      if (act === 'jenis') formJenis(a, () => { tutup(); drawerAlumni(id); });
       if (act === 'reset') { const r = await UI.tombol(b, () => resetSandi(akun.email)); }
       if (act === 'arsip') {
         const k = await UI.konfirmasi('Pindahkan <b>' + esc(a.nama) + '</b> ke arsip? Akun login dinonaktifkan. Data dapat dipulihkan dari menu Arsip.', { bahaya: true, ya: 'Arsipkan', input: { label: 'Alasan', tipe: 'input' } });
@@ -421,6 +423,46 @@
     });
   }
   IKH.drawerAlumni = drawerAlumni;
+  /** Tetapkan Anggota Luar Biasa / Kehormatan, atau kembalikan ke Biasa (v1.3.0, butuh backend v1.3.0) */
+  function formJenis(a, selesai) {
+    if (IKH.butuhServer('1.3.0', 'Penetapan jenis anggota')) return;
+    const kini = IKH.jenisAgt(a), hari = hariIni(), thB = Number(D().st.MASA_BERLAKU_TAHUN) || 3;
+    const plus = (ymd, n) => { const p = String(ymd || hari).split('-'); return (Number(p[0]) + n) + '-' + p[1] + '-' + p[2]; };
+    const PIL = [['Luar Biasa', 'Alumni senior atau purna tugas. KTA berlaku 5 tahun sejak tanggal penetapan.'],
+      ['Kehormatan', 'Alumni yang berjasa menonjol bagi organisasi, almamater, atau transportasi darat. KTA berlaku seumur hidup.'],
+      ['Biasa', 'Cabut status ' + (kini === 'Biasa' ? 'khusus' : 'Anggota ' + kini) + '. KTA berlaku ' + thB + ' tahun sejak tanggal pencabutan.']];
+    const awal = kini === 'Biasa' ? 'Luar Biasa' : 'Biasa';
+    UI.modal({ judul: 'Jenis Anggota — ' + a.nama, isi:
+      '<div class="col gap-lg"><div class="row wrap small muted">Saat ini: ' + IKH.badgeJenis(a) + (a.tgl_penetapan ? '<span>sejak ' + fmt.tgl(a.tgl_penetapan, true) + '</span>' : '') + '</div>' +
+      '<div class="col" role="radiogroup" aria-label="Jenis anggota baru">' + PIL.map((p) => '<label class="cek' + (p[0] === kini ? ' muted' : '') + '"><input type="radio" name="jn" value="' + p[0] + '"' + (p[0] === awal ? ' checked' : '') + (p[0] === kini ? ' disabled' : '') + '><span><b>' + (p[0] === 'Biasa' ? 'Kembalikan ke Anggota Biasa' : 'Anggota ' + p[0]) + '</b>' + (p[0] === kini ? ' (saat ini)' : '') + '<br><span class="small muted">' + esc(p[1]) + '</span></span></label>').join('') + '</div>' +
+      '<div class="form-grid"><div class="fld"><label for="jn-tgl" id="jn-tgl-l">Tanggal penetapan</label><input class="inp" type="date" id="jn-tgl" value="' + hari + '" max="' + hari + '"></div>' +
+      '<div class="fld" id="jn-sk-f"><label for="jn-sk">Nomor SK penetapan <span class="muted">(opsional)</span></label><input class="inp" id="jn-sk" maxlength="100" placeholder="mis. SK/01/DPD-IKH/2026"></div></div>' +
+      '<div class="fld"><label for="jn-als" id="jn-als-l">Alasan penetapan *</label><textarea class="inp" id="jn-als" rows="2" maxlength="300" placeholder="Tercatat di Log Aktivitas"></textarea></div>' +
+      '<div class="alert info small" id="jn-info" aria-live="polite"></div></div>',
+      onBuka: (md) => {
+        const upd = () => {
+          const j = ($('[name=jn]:checked', md) || {}).value, tgl = $('#jn-tgl', md).value || hari, cabut = j === 'Biasa';
+          $('#jn-tgl-l', md).textContent = cabut ? 'Tanggal pencabutan' : 'Tanggal penetapan';
+          $('#jn-als-l', md).textContent = cabut ? 'Alasan pencabutan *' : 'Alasan penetapan *';
+          $('#jn-sk-f', md).classList.toggle('hide', cabut);
+          const masa = j === 'Kehormatan' ? 'berlaku <b>seumur hidup</b>' : 'berlaku s.d. <b>' + fmt.tgl(plus(tgl, j === 'Luar Biasa' ? 5 : thB), true) + '</b>';
+          $('#jn-info', md).innerHTML = ic('info') + '<div>KTA baru ' + masa + '. KTA lama ditandai <b>Perlu cetak ulang</b>. Nomor anggota, QR, akun login, dan hak anggota tidak berubah.</div>';
+        };
+        $$('[name=jn]', md).forEach((r) => r.onchange = upd); $('#jn-tgl', md).onchange = upd; upd();
+      },
+      tombol: [{ teks: 'Batal' }, { teks: 'Simpan', kelas: 'btn-primary', aksi: async (md) => {
+        const j = ($('[name=jn]:checked', md) || {}).value, als = $('#jn-als', md).value.trim(), tgl = $('#jn-tgl', md).value;
+        if (!j) { UI.toast('Pilih jenis anggota.', 'warn'); return false; }
+        if (!tgl || tgl > hari) { UI.toast('Isi tanggal yang tidak melewati hari ini.', 'warn'); $('#jn-tgl', md).focus(); return false; }
+        if (!als) { UI.toast(j === 'Biasa' ? 'Tulis alasan pencabutan.' : 'Tulis alasan penetapan.', 'warn'); $('#jn-als', md).focus(); return false; }
+        const r = await api('adm.alumni.jenis', { id_record: a.id_record, jenis: j, tanggal: tgl, no_sk: j === 'Biasa' ? '' : $('#jn-sk', md).value.trim(), alasan: als });
+        if (!UI.hasil(r)) return false;
+        Store.patchAnggota(r.data.anggota); document.dispatchEvent(new CustomEvent('ikh:adm'));
+        if (selesai) selesai();
+        return true;
+      } }] });
+  }
+  IKH.formJenis = formJenis;
   async function unduhKta(a, btn) {
     const r = await UI.tombol(btn, () => api('adm.kta.unduh', { id_record: a.id_record }));
     if (!r.ok) return UI.toast(r.msg, 'bad');
@@ -447,7 +489,7 @@
       '<form id="fa" novalidate><h4 class="row">' + ic('person', 'sm') + 'Identitas & Kontak</h4>' + F.identitas + '<hr class="sep"><h4 class="row">' + ic('school', 'sm') + 'Akademik</h4>' + F.akademik + '<hr class="sep"><h4 class="row">' + ic('work', 'sm') + 'Kepegawaian</h4>' + F.kepegawaian +
       '<hr class="sep"><h4 class="row">' + ic('badge', 'sm') + 'Keanggotaan</h4><div class="form-grid"><div class="fld"><label>Pas foto</label><label class="upload"><input type="file" id="fa-foto" accept="image/*"><span class="pv" id="fa-pv" ' + (a.foto_id ? bg(a.foto_id, 200) : '') + '>' + (a.foto_id ? '' : ic('photo_camera')) + '</span><span class="small">Pilih foto (opsional)</span></label></div>' +
       '<div class="col">' + (id ? '<div class="fld"><label for="fa-st">Status anggota</label><select class="inp" id="fa-st">' + opsi(['Aktif', 'Nonaktif', 'Kedaluwarsa'], a.status_anggota, false) + '</select></div>' : '') +
-      '<div class="fld"><label for="fa-masa">Berlaku s.d.</label><input class="inp" type="date" id="fa-masa" value="' + esc(a.masa_berlaku_kartu || '') + '"><span class="hint">' + (id ? '' : 'Kosongkan untuk default ' + esc(x.st.MASA_BERLAKU_TAHUN || 3) + ' tahun.') + '</span></div>' +
+      '<div class="fld"><label for="fa-masa">Berlaku s.d.</label><input class="inp" type="date" id="fa-masa" value="' + esc(IKH.seumurHidup(a) ? '' : a.masa_berlaku_kartu || '') + '"' + (IKH.seumurHidup(a) ? ' disabled' : '') + '><span class="hint">' + (IKH.seumurHidup(a) ? 'Seumur hidup (Anggota Kehormatan). Ubah lewat tombol Jenis Anggota.' : id ? (IKH.jenisAgt(a) === 'Luar Biasa' ? 'Anggota Luar Biasa: 5 tahun sejak penetapan.' : '') : 'Kosongkan untuk default ' + esc(x.st.MASA_BERLAKU_TAHUN || 3) + ' tahun.') + '</span></div>' +
       '<div class="fld"><label for="fa-idm">Nomor anggota</label><input class="inp mono" id="fa-idm" value="' + esc(a.id_member || '') + '" placeholder="Otomatis bila kosong"></div></div></div>' +
       (!id ? '<div class="col mt"><label class="cek"><input type="checkbox" id="fa-aktif" checked><span>Langsung aktif (terbitkan nomor anggota tanpa antrean verifikasi)</span></label><label class="cek"><input type="checkbox" id="fa-akun" checked><span>Buat akun login & kirim email berisi kata sandi awal + KTA (bila email diisi)</span></label></div>' +
         (me.darurat ? '' : '<div class="alert info small mt">' + ic('link', 'sm') + '<div>Data Anda sendiri? Isi email dengan email akun Pengurus Anda (<b>' + esc(me.email || '') + '</b>). Data ini otomatis terhubung ke akun Anda dan bisa dibuka di menu <b>Data & KTA Saya</b> — tanpa akun atau kata sandi kedua.</div></div>') : '') + '</form>',
@@ -476,8 +518,9 @@
   function kta(p, q) {
     if (q && q.get('f') !== null) KS.f = q.get('f');
     return halaman('/admin/kta', 'Kartu Digital KTA', (main, x, awal) => {
-      const data = x.alumni.map((a) => Object.assign({}, a, { _st: statusKartu(a), _pdf: statusPdf(a, x.st), _sisa: fmt.sisaHari(a.masa_berlaku_kartu) }));
-      const n = { usang: data.filter((a) => a._pdf !== 'Terbit' && a._st !== 'Nonaktif').length, 30: data.filter((a) => a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30).length, exp: data.filter((a) => a._st === 'Kedaluwarsa').length, non: data.filter((a) => a._st === 'Nonaktif').length };
+      const data = x.alumni.map((a) => Object.assign({}, a, { _st: statusKartu(a), _pdf: statusPdf(a, x.st), _jn: IKH.jenisAgt(a), _sisa: IKH.seumurHidup(a) ? null : fmt.sisaHari(a.masa_berlaku_kartu) }));
+      const n = { usang: data.filter((a) => a._pdf !== 'Terbit' && a._st !== 'Nonaktif').length, 30: data.filter((a) => a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30).length, exp: data.filter((a) => a._st === 'Kedaluwarsa').length, non: data.filter((a) => a._st === 'Nonaktif').length,
+        lb: data.filter((a) => a._jn === 'Luar Biasa').length, kh: data.filter((a) => a._jn === 'Kehormatan').length };
       if (awal || !$('#k-tbl')) {
         main.innerHTML = ph('badge', 'Manajemen KTA Digital', 'Cetak/unduh, cetak ulang massal, perpanjang masa berlaku, dan kirim pengingat kedaluwarsa.') +
           '<section class="card"><div class="toolbar" id="k-chips"></div><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="k-q" placeholder="Cari nama / nomor anggota…" value="' + esc(KS.q) + '"></div></div>' +
@@ -485,9 +528,9 @@
           '<button class="btn btn-primary btn-xs" data-b="cetak">' + ic('print', 'sm') + 'Cetak Ulang</button><button class="btn btn-ghost btn-xs" data-b="gabung">' + ic('picture_as_pdf', 'sm') + 'Unduh PDF Gabungan</button>' +
           '<button class="btn btn-ghost btn-xs" data-b="perpanjang">' + ic('event_available', 'sm') + 'Perpanjang</button><button class="btn btn-ghost btn-xs" data-b="ingat">' + ic('notifications', 'sm') + 'Kirim Pengingat</button><button class="btn btn-text btn-xs" data-b="batal">Batal pilih</button></div><div id="k-tbl"></div></section>';
         KS.tbl = IKH.Tabel($('#k-tbl'), {
-          data, idKey: 'id_record', pilih: true, per: 25, cari: (a) => [a.nama, a.id_member, a.nomor_taruna].join(' '),
-          kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member) + '</span>' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) },
-            { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => fmt.tgl(a.masa_berlaku_kartu) + '<div class="small ' + (a._sisa !== null && a._sisa <= 30 ? '' : 'muted') + '" style="' + (a._sisa !== null && a._sisa <= 30 ? 'color:var(--bad);font-weight:600' : '') + '">' + (a._sisa === null ? '' : a._sisa < 0 ? 'lewat ' + Math.abs(a._sisa) + ' hari' : a._sisa + ' hari lagi') + '</div>' },
+          data, idKey: 'id_record', pilih: true, per: 25, cari: (a) => [a.nama, a.id_member, a.nomor_taruna, a._jn].join(' '),
+          kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member) + '</span>' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') },
+            { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) + '<div class="small ' + (a._sisa !== null && a._sisa <= 30 ? '' : 'muted') + '" style="' + (a._sisa !== null && a._sisa <= 30 ? 'color:var(--bad);font-weight:600' : '') + '">' + (a._sisa === null ? '' : a._sisa < 0 ? 'lewat ' + Math.abs(a._sisa) + ' hari' : a._sisa + ' hari lagi') + '</div>' },
             { k: '_pdf', label: 'PDF KTA', render: (a) => UI.badgeStatus(a._pdf) + (a.kta_terbit ? '<div class="tiny muted">' + fmt.tgl(a.kta_terbit) + '</div>' : '') },
             { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat" title="Pratinjau">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="unduh" title="Unduh PDF" data-busy="…">' + ic('download', 'sm') + '</button>' }],
           onPilih: (sel) => { $('#k-bulk').classList.toggle('hide', !sel.length); $('#k-bn').textContent = sel.length + ' dipilih'; },
@@ -497,9 +540,9 @@
         $$('[data-b]', main).forEach((b) => b.onclick = () => aksiMassalKta(b.dataset.b));
         if (KS.q) KS.tbl.cari(KS.q);
       } else KS.tbl.set(data);
-      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['usang', 'Perlu cetak ulang', n.usang], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
+      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['usang', 'Perlu cetak ulang', n.usang], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non], ['lb', 'Luar Biasa', n.lb], ['kh', 'Kehormatan', n.kh]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
       $$('[data-f]', main).forEach((c) => c.onclick = () => { KS.f = c.dataset.f; kta(); });
-      KS.tbl.saring((a) => !KS.f || (KS.f === 'usang' && a._pdf !== 'Terbit' && a._st !== 'Nonaktif') || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif'));
+      KS.tbl.saring((a) => !KS.f || (KS.f === 'usang' && a._pdf !== 'Terbit' && a._st !== 'Nonaktif') || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif') || (KS.f === 'lb' && a._jn === 'Luar Biasa') || (KS.f === 'kh' && a._jn === 'Kehormatan'));
     });
   }
   function pratinjau(a) {
@@ -538,7 +581,7 @@
       } catch (e) { UI.toast(e.message, 'bad'); } finally { m.tutup(); Store.admBoot(true); }
     }
     if (act === 'perpanjang') {
-      UI.modal({ judul: 'Perpanjang Masa Berlaku (' + ids.length + ' anggota)', isi: '<div class="col gap-lg"><div class="fld"><label>Tambah masa berlaku</label><div class="seg" id="pp-seg">' + [1, 2, 3, 5].map((t) => '<button type="button" data-t="' + t + '" class="' + (t === 3 ? 'on' : '') + '">+' + t + ' tahun</button>').join('') + '</div><span class="hint">Dihitung dari tanggal berlaku saat ini (atau hari ini bila sudah lewat).</span></div>' +
+      UI.modal({ judul: 'Perpanjang Masa Berlaku (' + ids.length + ' anggota)', isi: '<div class="col gap-lg"><div class="fld"><label>Tambah masa berlaku</label><div class="seg" id="pp-seg">' + [1, 2, 3, 5].map((t) => '<button type="button" data-t="' + t + '" class="' + (t === 3 ? 'on' : '') + '">+' + t + ' tahun</button>').join('') + '</div><span class="hint">Dihitung dari tanggal berlaku saat ini (atau hari ini bila sudah lewat). Anggota Luar Biasa selalu +5 tahun; Anggota Kehormatan (seumur hidup) dilewati.</span></div>' +
         '<div class="fld"><label for="pp-tgl">…atau tetapkan tanggal</label><input class="inp" type="date" id="pp-tgl"></div><label class="cek"><input type="checkbox" id="pp-n" checked><span>Kirim notifikasi perpanjangan ke anggota</span></label></div>',
         onBuka: (md) => $$('[data-t]', md).forEach((b) => b.onclick = () => $$('[data-t]', md).forEach((x) => x.classList.toggle('on', x === b))),
         tombol: [{ teks: 'Batal' }, { teks: 'Perpanjang', kelas: 'btn-primary', aksi: async (md) => {
@@ -574,21 +617,21 @@
   IKH.prosesBlok = prosesBlok;
 
   /* ======================= REKAP & LAPORAN ======================= */
-  const RS = { prodi: '', angkatan: '', status: '', lulus: '', peg: '', q: '' };
+  const RS = { prodi: '', angkatan: '', status: '', lulus: '', peg: '', jn: '', q: '' };
   function rekap() {
     return halaman('/admin/rekap', 'Rekap & Laporan', (main, x, awal) => {
       if (awal || !$('#r-hasil')) {
         main.innerHTML = ph('summarize', 'Rekap & Laporan Data Alumni', 'Saring data lalu unduh dalam format Excel atau PDF.', '<button class="btn btn-ghost btn-sm" id="r-pdf">' + ic('picture_as_pdf', 'sm') + 'Unduh PDF</button><button class="btn btn-gold btn-sm" id="r-xls">' + ic('table_view', 'sm') + 'Unduh Excel</button>') +
           '<section class="card mb"><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="r-q" placeholder="Cari nama, instansi…"></div><select class="inp" id="r-prodi" style="width:auto"></select><select class="inp" id="r-angk" style="width:auto"></select><select class="inp" id="r-lulus" style="width:auto"></select><select class="inp" id="r-peg" style="width:auto"></select>' +
-          '<select class="inp" id="r-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], RS.status, 'Semua status') + '</select><button class="btn btn-text btn-sm" id="r-reset">Atur ulang</button></div><div id="r-ring" class="card-b sm row wrap gap-lg"></div></section>' +
+          '<select class="inp" id="r-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], RS.status, 'Semua status') + '</select><select class="inp" id="r-jn" style="width:auto" aria-label="Jenis anggota">' + opsi(['Biasa', 'Luar Biasa', 'Kehormatan'], RS.jn, 'Semua jenis') + '</select><button class="btn btn-text btn-sm" id="r-reset">Atur ulang</button></div><div id="r-ring" class="card-b sm row wrap gap-lg"></div></section>' +
           '<div class="grid g2 mb" id="r-sum"></div><section class="card"><div class="card-h"><h4>Tabel Data</h4><span class="small muted" id="r-n"></span></div><div id="r-hasil"></div></section>';
         RS.tbl = IKH.Tabel($('#r-hasil'), { data: [], idKey: 'id_record', per: 50, kolom: [{ k: 'nama', label: 'Nama' }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member || '-') + '</span>' }, { k: 'angkatan', label: 'Angk.' }, { k: 'prodi', label: 'Program studi' }, { k: 'tahun_kelulusan', label: 'Lulus' }, { k: 'status_kepegawaian', label: 'Kepegawaian' }, { k: 'instansi', label: 'Instansi' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) }] });
         $('#r-q').oninput = IKH.debounce((e) => { RS.q = e.target.value.toLowerCase(); hitungR(); }, 200);
-        [['r-prodi', 'prodi'], ['r-angk', 'angkatan'], ['r-lulus', 'lulus'], ['r-peg', 'peg'], ['r-st', 'status']].forEach((p) => $('#' + p[0]).onchange = (e) => { RS[p[1]] = e.target.value; hitungR(); });
-        $('#r-reset').onclick = () => { Object.assign(RS, { prodi: '', angkatan: '', status: '', lulus: '', peg: '', q: '' }); $('#r-q').value = ''; rekap(); };
+        [['r-prodi', 'prodi'], ['r-angk', 'angkatan'], ['r-lulus', 'lulus'], ['r-peg', 'peg'], ['r-st', 'status'], ['r-jn', 'jn']].forEach((p) => $('#' + p[0]).onchange = (e) => { RS[p[1]] = e.target.value; hitungR(); });
+        $('#r-reset').onclick = () => { Object.assign(RS, { prodi: '', angkatan: '', status: '', lulus: '', peg: '', jn: '', q: '' }); $('#r-q').value = ''; rekap(); };
         $('#r-xls').onclick = () => IKH.Ekspor.excel(RS.data.map(baris), 'Rekap-Alumni-' + hariIni(), 'Rekap');
         $('#r-pdf').onclick = () => IKH.Ekspor.pdf({ judul: 'Rekap Data Alumni — ' + (x.st.ORG_NAMA || ''), sub: ringkasFilter() + ' • ' + RS.data.length + ' data', nama: 'Rekap-Alumni-' + hariIni(), rows: RS.data.map((a, i) => Object.assign({ no: i + 1 }, a)),
-          kolom: [{ k: 'no', label: 'No' }, { k: 'nama', label: 'Nama' }, { k: 'id_member', label: 'No. Anggota' }, { k: 'nomor_taruna', label: 'NIT' }, { k: 'angkatan', label: 'Angk.' }, { k: 'prodi', label: 'Program Studi' }, { k: 'tahun_kelulusan', label: 'Lulus' }, { k: 'status_kepegawaian', label: 'Kepegawaian' }, { k: 'instansi', label: 'Instansi' }, { k: 'no_hp', label: 'WhatsApp' }, { k: '_st', label: 'Status' }] });
+          kolom: [{ k: 'no', label: 'No' }, { k: 'nama', label: 'Nama' }, { k: 'id_member', label: 'No. Anggota' }, { k: 'nomor_taruna', label: 'NIT' }, { k: 'angkatan', label: 'Angk.' }, { k: 'prodi', label: 'Program Studi' }, { k: 'tahun_kelulusan', label: 'Lulus' }, { k: 'status_kepegawaian', label: 'Kepegawaian' }, { k: 'instansi', label: 'Instansi' }, { k: 'no_hp', label: 'WhatsApp' }, { k: '_st', label: 'Status' }, { k: '_jn', label: 'Jenis' }] });
       }
       const all = x.d.anggota;
       $('#r-prodi').innerHTML = opsi(uniq(all.map((a) => a.prodi)), RS.prodi, 'Semua prodi');
@@ -598,17 +641,17 @@
       hitungR();
     });
   }
-  function ringkasFilter() { return [RS.prodi, RS.angkatan && 'Angkatan ' + RS.angkatan, RS.lulus && 'Lulus ' + RS.lulus, RS.peg, RS.status].filter(Boolean).join(' • ') || 'Semua data'; }
+  function ringkasFilter() { return [RS.prodi, RS.angkatan && 'Angkatan ' + RS.angkatan, RS.lulus && 'Lulus ' + RS.lulus, RS.peg, RS.status, RS.jn && 'Anggota ' + RS.jn].filter(Boolean).join(' • ') || 'Semua data'; }
   function hitungR() {
     const x = D();
-    RS.data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a) })).filter((a) => (!RS.prodi || a.prodi === RS.prodi) && (!RS.angkatan || String(a.angkatan) === RS.angkatan) && (!RS.lulus || String(a.tahun_kelulusan) === RS.lulus) && (!RS.peg || a.status_kepegawaian === RS.peg) && (!RS.status || a._st === RS.status) && (!RS.q || [a.nama, a.instansi, a.id_member, a.nomor_taruna].join(' ').toLowerCase().indexOf(RS.q) > -1))
+    RS.data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a), _jn: IKH.jenisAgt(a) })).filter((a) => (!RS.jn || a._jn === RS.jn) && (!RS.prodi || a.prodi === RS.prodi) && (!RS.angkatan || String(a.angkatan) === RS.angkatan) && (!RS.lulus || String(a.tahun_kelulusan) === RS.lulus) && (!RS.peg || a.status_kepegawaian === RS.peg) && (!RS.status || a._st === RS.status) && (!RS.q || [a.nama, a.instansi, a.id_member, a.nomor_taruna].join(' ').toLowerCase().indexOf(RS.q) > -1))
       .sort((a, b) => String(a.angkatan).localeCompare(String(b.angkatan), 'id', { numeric: true }) || String(a.nama).localeCompare(String(b.nama)));
     RS.tbl.set(RS.data); $('#r-n').textContent = fmt.angka(RS.data.length) + ' data • ' + ringkasFilter();
     const cnt = (f) => { const m = {}; RS.data.forEach((a) => { const k = a[f] || '(kosong)'; m[k] = (m[k] || 0) + 1; }); return Object.keys(m).sort((a, b) => m[b] - m[a]).map((k) => [k, m[k]]); };
     const st = cnt('_st');
     $('#r-ring').innerHTML = '<span><b class="tnum" style="font-size:20px">' + fmt.angka(RS.data.length) + '</b> <span class="muted">data</span></span>' + st.map((s) => '<span>' + UI.badgeStatus(s[0]) + ' <b class="tnum">' + s[1] + '</b></span>').join('');
     const tb = (judul, rows) => '<section class="card"><div class="card-h"><h4>' + judul + '</h4></div><div class="tbl-wrap" style="max-height:260px"><table class="tbl"><thead><tr><th>' + judul.replace('Per ', '') + '</th><th class="right">Jumlah</th><th class="right">%</th></tr></thead><tbody>' + rows.map((r) => '<tr><td>' + esc(r[0]) + '</td><td class="right tnum">' + r[1] + '</td><td class="right tnum muted">' + (RS.data.length ? Math.round(r[1] / RS.data.length * 100) : 0) + '%</td></tr>').join('') + '</tbody></table></div></section>';
-    $('#r-sum').innerHTML = tb('Per Program Studi', cnt('prodi')) + tb('Per Angkatan', cnt('angkatan'));
+    $('#r-sum').innerHTML = tb('Per Program Studi', cnt('prodi')) + tb('Per Angkatan', cnt('angkatan')) + tb('Per Jenis Anggota', cnt('_jn').map((r) => ['Anggota ' + r[0], r[1]]));
   }
 
   /* ======================= LOG ======================= */

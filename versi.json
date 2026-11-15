@@ -1,9 +1,23 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.4.1",
-  "tanggal": "2026-11-15",
-  "server_min": "1.2.0",
+  "versi": "1.5.0",
+  "tanggal": "2026-11-16",
+  "server_min": "1.3.0",
   "riwayat": [
+    {
+      "versi": "1.5.0",
+      "tanggal": "2026-11-16",
+      "judul": "Jenis anggota: Biasa, Luar Biasa, Kehormatan",
+      "poin": [
+        "Data Alumni → detail anggota → tombol \"Jenis Anggota\": Pengurus menetapkan Anggota Luar Biasa (alumni senior/purna tugas) atau Anggota Kehormatan (alumni berjasa), atau mengembalikannya ke Anggota Biasa. Alasan wajib, nomor SK opsional; semuanya tercatat di Log Aktivitas.",
+        "KTA Luar Biasa berlaku 5 tahun sejak penetapan; KTA Kehormatan berlaku seumur hidup (tidak ikut pengingat & perpanjangan). Pencabutan status → masa berlaku bawaan sejak tanggal pencabutan.",
+        "KTA berwarna per jenis (biru-emas, hijau tua, marun-emas) dengan label jenis tercetak, di aplikasi maupun PDF. Ganti jenis → KTA otomatis \"Perlu cetak ulang\"; nomor anggota & QR tetap.",
+        "Filter & kolom Jenis di Data Alumni, Kartu Digital KTA (chip Luar Biasa/Kehormatan), Rekap (+ ringkasan per jenis) dan ekspor Excel/PDF.",
+        "Ruang Anggota & halaman verifikasi QR menampilkan jenis anggota dan \"Seumur hidup\" untuk Anggota Kehormatan.",
+        "Pendaftaran publik tidak berubah: semua pendaftar masuk sebagai Anggota Biasa. Semua jenis tetap punya akun login dan hak yang sama.",
+        "Membutuhkan backend Apps Script v1.3.0."
+      ]
+    },
     {
       "versi": "1.4.1",
       "tanggal": "2026-11-15",
