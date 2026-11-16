@@ -11,7 +11,9 @@
 
   /* ---------------- Turunan data ---------------- */
   const statusKartu = (a) => a.status_verifikasi !== 'Disetujui' ? a.status_verifikasi : a.status_anggota === 'Nonaktif' ? 'Nonaktif' : (!IKH.seumurHidup(a) && a.masa_berlaku_kartu && a.masa_berlaku_kartu < hariIni() ? 'Kedaluwarsa' : 'Aktif');
-  const statusPdf = (a, st) => !a.kta_file_id ? 'Belum Terbit' : (a.kta_usang === 'YA' || (st.KTA_DESAIN_VER && a.kta_terbit && a.kta_terbit < st.KTA_DESAIN_VER)) ? 'Usang' : 'Terbit';
+  /* v1.6.0: tidak ada lagi PDF/"usang" — kartu selalu digambar dari data terbaru. Yang dipantau: siapa pengesahnya.
+     true = pengesah tercatat di kartu berbeda dari ketua di Pengaturan saat ini (mis. setelah ganti ketua). */
+  const sahBeda = (a, st) => !!(st.KETUA_NAMA && a.kta_sah_pada && String(a.kta_sah_oleh || '') !== String(st.KETUA_NAMA));
   function D() {
     const d = Store.adm || { anggota: [], pengajuan: [], akun: [], setting: {}, log: [] };
     const ang = d.anggota;
@@ -23,7 +25,7 @@
       cari: (id) => ang.find((a) => a.id_record === id)
     };
   }
-  IKH.adm = { D, statusKartu, statusPdf };
+  IKH.adm = { D, statusKartu, sahBeda };
 
   /* ---------------- Layout ---------------- */
   const MENU = [
@@ -90,7 +92,7 @@
   function dasbor() {
     return halaman('/admin', 'Dasbor', (main, x) => {
       const ak = x.alumni.filter((a) => { const s = fmt.sisaHari(a.masa_berlaku_kartu); return statusKartu(a) === 'Aktif' && s !== null && s <= 30; });
-      const usang = x.alumni.filter((a) => statusPdf(a, x.st) !== 'Terbit' && statusKartu(a) !== 'Nonaktif');
+      const beda = x.alumni.filter((a) => sahBeda(a, x.st));
       const aktif = x.alumni.filter((a) => statusKartu(a) === 'Aktif').length;
       const baruMinggu = x.d.anggota.filter((a) => a.tgl_daftar && Date.now() - new Date(a.tgl_daftar).getTime() < 7 * 864e5).length;
       main.innerHTML = ph('dashboard', 'Dasbor Pengurus', 'Ringkasan keanggotaan ' + esc(x.st.ORG_NAMA || ''), '<a class="btn btn-gold btn-sm" href="#/admin/rekap">' + ic('summarize', 'sm') + 'Rekap Cepat</a>') +
@@ -108,7 +110,7 @@
         (x.chg.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Anggota</th><th>Isian diubah</th><th>Diajukan</th><th></th></tr></thead><tbody>' +
           x.chg.slice(0, 5).map((p) => '<tr class="clk" data-go="/admin/perubahan?id=' + esc(p.id_pengajuan) + '"><td><b>' + esc(p.nama) + '</b><div class="small muted mono">' + esc(p.id_pengajuan) + '</div></td><td><span class="badge b-gold">' + esc(p.field_diubah) + '</span></td><td class="small">' + fmt.relatif(p.diajukan_pada) + '</td><td class="act"><span class="btn btn-ghost btn-xs">' + ic('visibility', 'sm') + 'Periksa</span></td></tr>').join('') + '</tbody></table></div>' : UI.kosong('Tidak ada pengajuan perubahan.', 'task_alt')) + '</section></div>' +
         '<div class="col gap-lg"><section class="card navy card-b"><div class="row between mb"><div class="kicker" style="color:#B9C6E4">Aksi Cepat Pengurus</div>' + ic('bolt') + '</div><div class="quick">' +
-        '<a href="#/admin/kta?f=usang"><span class="ico">' + ic('print') + '</span><span class="grow"><b>Cetak Ulang KTA</b><span class="s">' + usang.length + ' kartu perlu dibuat ulang</span></span>' + ic('chevron_right', 'sm') + '</a>' +
+        '<a href="#/admin/kta' + (beda.length ? '?f=sah' : '?f=') + '"><span class="ico">' + ic('badge') + '</span><span class="grow"><b>Kartu Digital KTA</b><span class="s">' + (beda.length ? beda.length + ' kartu disahkan ketua sebelumnya' : 'Pratinjau, simpan & sahkan ulang') + '</span></span>' + ic('chevron_right', 'sm') + '</a>' +
         '<a href="#/admin/rekap"><span class="ico g">' + ic('table_view') + '</span><span class="grow"><b>Ekspor Rekap Excel/PDF</b><span class="s">Filter per prodi/angkatan/status</span></span>' + ic('chevron_right', 'sm') + '</a>' +
         '<a href="#/admin/kta?f=30"><span class="ico o">' + ic('notifications') + '</span><span class="grow"><b>Pengingat Masa Berlaku</b><span class="s">' + ak.length + ' anggota ≤ 30 hari</span></span>' + ic('chevron_right', 'sm') + '</a></div></section>' +
         '<section class="card"><div class="card-h"><h4>Status Integrasi</h4><span id="int-st" class="badge b-mute">memeriksa…</span></div><div class="card-b" id="int-b">' + UI.skel(3) + '</div></section>' +
@@ -399,9 +401,9 @@
       (a.status_verifikasi === 'Disetujui' ? '<div class="mt-lg" style="max-width:420px">' + Kta.depan(a, x.st) + '</div>' : '') +
       '<h4 class="mt-lg">Data Lengkap</h4><div class="kv">' + FIELD.map((k) => '<div>' + LABEL[k] + '</div><div>' + esc(a[k] || '-') + '</div>').join('') +
       '<div>Jenis anggota</div><div>' + esc('Anggota ' + IKH.jenisAgt(a)) + (a.tgl_penetapan ? '<div class="small muted">Ditetapkan ' + fmt.tgl(a.tgl_penetapan, true) + (a.no_sk_penetapan ? ' • SK ' + esc(a.no_sk_penetapan) : '') + (a.ket_penetapan ? '<br>' + esc(a.ket_penetapan) : '') + '</div>' : '') + '</div>' +
-      '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
+      '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div>' + (a.kta_sah_pada ? '<div>Pengesahan KTA</div><div>' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '<div class="small muted">' + esc(a.kta_sah_jabatan || '') + ' • ' + fmt.tgl(a.kta_sah_pada, true) + '</div></div>' : '') + '<div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
       '<div class="modal-f"><button class="btn btn-danger" data-a="arsip">' + ic('inventory_2', 'sm') + 'Arsipkan</button>' + (akun ? '<button class="btn btn-ghost" data-a="reset">' + ic('lock_reset', 'sm') + 'Reset Sandi</button>' : '') +
-      (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="jenis">' + ic('workspace_premium', 'sm') + 'Jenis Anggota</button><button class="btn btn-ghost" data-a="kta" data-busy="Menyiapkan…">' + ic('picture_as_pdf', 'sm') + 'Unduh KTA</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
+      (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="jenis">' + ic('workspace_premium', 'sm') + 'Jenis Anggota</button><button class="btn btn-ghost" data-a="kta">' + ic('badge', 'sm') + 'Kartu Digital</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
     document.body.appendChild(sc);
     const tutup = () => sc.remove();
     sc.addEventListener('mousedown', (e) => { if (e.target === sc) tutup(); });
@@ -410,7 +412,7 @@
     $$('[data-a]', sc).forEach((b) => b.onclick = async () => {
       const act = b.dataset.a;
       if (act === 'ubah') { tutup(); formAlumni(id); }
-      if (act === 'kta') unduhKta(a, b);
+      if (act === 'kta') pratinjau(a);
       if (act === 'jenis') formJenis(a, () => { tutup(); drawerAlumni(id); });
       if (act === 'reset') { const r = await UI.tombol(b, () => resetSandi(akun.email)); }
       if (act === 'arsip') {
@@ -446,7 +448,7 @@
           $('#jn-als-l', md).textContent = cabut ? 'Alasan pencabutan *' : 'Alasan penetapan *';
           $('#jn-sk-f', md).classList.toggle('hide', cabut);
           const masa = j === 'Kehormatan' ? 'berlaku <b>seumur hidup</b>' : 'berlaku s.d. <b>' + fmt.tgl(plus(tgl, j === 'Luar Biasa' ? 5 : thB), true) + '</b>';
-          $('#jn-info', md).innerHTML = ic('info') + '<div>KTA baru ' + masa + '. KTA lama ditandai <b>Perlu cetak ulang</b>. Nomor anggota, QR, akun login, dan hak anggota tidak berubah.</div>';
+          $('#jn-info', md).innerHTML = ic('info') + '<div>KTA baru ' + masa + '. Kartu digital & pengesahannya <b>langsung diperbarui</b>. Nomor anggota, QR verifikasi, akun login, dan hak anggota tidak berubah.</div>';
         };
         $$('[name=jn]', md).forEach((r) => r.onchange = upd); $('#jn-tgl', md).onchange = upd; upd();
       },
@@ -463,12 +465,6 @@
       } }] });
   }
   IKH.formJenis = formJenis;
-  async function unduhKta(a, btn) {
-    const r = await UI.tombol(btn, () => api('adm.kta.unduh', { id_record: a.id_record }));
-    if (!r.ok) return UI.toast(r.msg, 'bad');
-    IKH.unduhB64(r.data.data, r.data.nama);
-    Store.patchAnggota({ id_record: a.id_record, kta_file_id: a.kta_file_id || 'ada', kta_usang: '', kta_terbit: new Date().toISOString() });
-  }
   async function resetSandi(email) {
     if (!(await UI.konfirmasi('Buat kata sandi sementara untuk <b>' + esc(email) + '</b>? Semua sesi akun itu akan berakhir.', { ya: 'Buat Sandi Sementara' })).ok) return;
     const r = await api('adm.akun.reset', { email });
@@ -517,68 +513,66 @@
   const KS = { f: '', q: '', tbl: null };
   function kta(p, q) {
     if (q && q.get('f') !== null) KS.f = q.get('f');
+    if (['', 'sah', '30', 'exp', 'non', 'lb', 'kh'].indexOf(KS.f) === -1) KS.f = '';      // mis. tautan lama ?f=usang
     return halaman('/admin/kta', 'Kartu Digital KTA', (main, x, awal) => {
-      const data = x.alumni.map((a) => Object.assign({}, a, { _st: statusKartu(a), _pdf: statusPdf(a, x.st), _jn: IKH.jenisAgt(a), _sisa: IKH.seumurHidup(a) ? null : fmt.sisaHari(a.masa_berlaku_kartu) }));
-      const n = { usang: data.filter((a) => a._pdf !== 'Terbit' && a._st !== 'Nonaktif').length, 30: data.filter((a) => a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30).length, exp: data.filter((a) => a._st === 'Kedaluwarsa').length, non: data.filter((a) => a._st === 'Nonaktif').length,
+      const data = x.alumni.map((a) => Object.assign({}, a, { _st: statusKartu(a), _beda: sahBeda(a, x.st), _jn: IKH.jenisAgt(a), _sisa: IKH.seumurHidup(a) ? null : fmt.sisaHari(a.masa_berlaku_kartu) }));
+      const n = { sah: data.filter((a) => a._beda).length, 30: data.filter((a) => a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30).length, exp: data.filter((a) => a._st === 'Kedaluwarsa').length, non: data.filter((a) => a._st === 'Nonaktif').length,
         lb: data.filter((a) => a._jn === 'Luar Biasa').length, kh: data.filter((a) => a._jn === 'Kehormatan').length };
       if (awal || !$('#k-tbl')) {
-        main.innerHTML = ph('badge', 'Manajemen KTA Digital', 'Cetak/unduh, cetak ulang massal, perpanjang masa berlaku, dan kirim pengingat kedaluwarsa.') +
+        main.innerHTML = ph('badge', 'Manajemen KTA Digital', 'Pratinjau & simpan kartu, perpanjang masa berlaku, sahkan ulang, dan kirim pengingat kedaluwarsa.') +
           '<section class="card"><div class="toolbar" id="k-chips"></div><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="k-q" placeholder="Cari nama / nomor anggota…" value="' + esc(KS.q) + '"></div></div>' +
           '<div class="bulkbar hide" id="k-bulk"><b id="k-bn"></b><button class="btn btn-ghost btn-xs" data-b="semua">Pilih semua hasil</button><span class="grow"></span>' +
-          '<button class="btn btn-primary btn-xs" data-b="cetak">' + ic('print', 'sm') + 'Cetak Ulang</button><button class="btn btn-ghost btn-xs" data-b="gabung">' + ic('picture_as_pdf', 'sm') + 'Unduh PDF Gabungan</button>' +
-          '<button class="btn btn-ghost btn-xs" data-b="perpanjang">' + ic('event_available', 'sm') + 'Perpanjang</button><button class="btn btn-ghost btn-xs" data-b="ingat">' + ic('notifications', 'sm') + 'Kirim Pengingat</button><button class="btn btn-text btn-xs" data-b="batal">Batal pilih</button></div><div id="k-tbl"></div></section>';
+          '<button class="btn btn-primary btn-xs" data-b="perpanjang">' + ic('event_available', 'sm') + 'Perpanjang</button><button class="btn btn-ghost btn-xs" data-b="sahkan">' + ic('verified_user', 'sm') + 'Sahkan Ulang</button>' +
+          '<button class="btn btn-ghost btn-xs" data-b="ingat">' + ic('notifications', 'sm') + 'Kirim Pengingat</button><button class="btn btn-text btn-xs" data-b="batal">Batal pilih</button></div><div id="k-tbl"></div></section>';
         KS.tbl = IKH.Tabel($('#k-tbl'), {
           data, idKey: 'id_record', pilih: true, per: 25, cari: (a) => [a.nama, a.id_member, a.nomor_taruna, a._jn].join(' '),
           kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member) + '</span>' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') },
             { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) + '<div class="small ' + (a._sisa !== null && a._sisa <= 30 ? '' : 'muted') + '" style="' + (a._sisa !== null && a._sisa <= 30 ? 'color:var(--bad);font-weight:600' : '') + '">' + (a._sisa === null ? '' : a._sisa < 0 ? 'lewat ' + Math.abs(a._sisa) + ' hari' : a._sisa + ' hari lagi') + '</div>' },
-            { k: '_pdf', label: 'PDF KTA', render: (a) => UI.badgeStatus(a._pdf) + (a.kta_terbit ? '<div class="tiny muted">' + fmt.tgl(a.kta_terbit) + '</div>' : '') },
-            { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat" title="Pratinjau">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="unduh" title="Unduh PDF" data-busy="…">' + ic('download', 'sm') + '</button>' }],
+            { k: 'kta_sah_oleh', label: 'Disahkan oleh', render: (a) => a.kta_sah_pada ? '<div class="small' + (a._beda ? ' sah-beda' : '') + '">' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '</div><div class="tiny muted">' + fmt.tgl(a.kta_sah_pada) + (a._beda ? ' • bukan ketua saat ini' : '') + '</div>' : '<span class="tiny muted">—</span>' },
+            { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat" title="Pratinjau kartu">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="simpan" title="Simpan kartu (gambar/PDF)">' + ic('download', 'sm') + '</button>' }],
           onPilih: (sel) => { $('#k-bulk').classList.toggle('hide', !sel.length); $('#k-bn').textContent = sel.length + ' dipilih'; },
-          onAksi: (act, a, b) => act === 'unduh' ? unduhKta(a, b) : pratinjau(a)
+          onAksi: (act, a) => act === 'simpan' ? IKH.Kartu.simpan(a.id_record) : pratinjau(a)
         });
         $('#k-q').oninput = IKH.debounce((e) => { KS.q = e.target.value; KS.tbl.cari(KS.q); }, 200);
         $$('[data-b]', main).forEach((b) => b.onclick = () => aksiMassalKta(b.dataset.b));
         if (KS.q) KS.tbl.cari(KS.q);
       } else KS.tbl.set(data);
-      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['usang', 'Perlu cetak ulang', n.usang], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non], ['lb', 'Luar Biasa', n.lb], ['kh', 'Kehormatan', n.kh]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
+      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['sah', 'Pengesah bukan ketua saat ini', n.sah], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non], ['lb', 'Luar Biasa', n.lb], ['kh', 'Kehormatan', n.kh]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
       $$('[data-f]', main).forEach((c) => c.onclick = () => { KS.f = c.dataset.f; kta(); });
-      KS.tbl.saring((a) => !KS.f || (KS.f === 'usang' && a._pdf !== 'Terbit' && a._st !== 'Nonaktif') || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif') || (KS.f === 'lb' && a._jn === 'Luar Biasa') || (KS.f === 'kh' && a._jn === 'Kehormatan'));
+      KS.tbl.saring((a) => !KS.f || (KS.f === 'sah' && a._beda) || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif') || (KS.f === 'lb' && a._jn === 'Luar Biasa') || (KS.f === 'kh' && a._jn === 'Kehormatan'));
     });
   }
+  /** Pratinjau kartu seorang anggota: kedua sisi dengan QR asli (diambil dari server), lalu bisa disimpan. */
   function pratinjau(a) {
     const st = D().st;
-    UI.modal({ judul: 'Pratinjau KTA — ' + a.nama, lebar: 'lg', isi: '<div class="grid g2"><div>' + Kta.depan(a, st) + '</div><div>' + Kta.belakang(a, st, '<div style="display:grid;place-items:center;height:100%;font-size:11px;color:#55647C;text-align:center">QR bertanda tangan<br>ada di PDF resmi</div>') + '</div></div><p class="small muted mt mb-0">Pratinjau layar. PDF resmi memuat QR bertanda tangan digital dan tanda tangan ketua.</p>',
-      tombol: [{ teks: 'Tutup' }, { teks: 'Unduh PDF', kelas: 'btn-primary', ikon: 'download', aksi: async () => { const r = await api('adm.kta.unduh', { id_record: a.id_record }); if (!r.ok) { UI.toast(r.msg, 'bad'); return false; } IKH.unduhB64(r.data.data, r.data.nama); return true; } }] });
+    UI.modal({ judul: 'Kartu Digital — ' + a.nama, lebar: 'lg',
+      isi: '<div class="grid g2"><div><div class="kicker mb">Sisi depan</div>' + Kta.depan(a, st) + '</div><div><div class="kicker mb">Sisi belakang</div>' + Kta.belakang(a, st) + '</div></div>' +
+        '<p class="small muted mt mb-0" id="pv-ket">Memuat QR…</p>',
+      tombol: [{ teks: 'Tutup' }, { teks: 'Simpan Kartu', kelas: 'btn-primary', ikon: 'download', aksi: async () => { await IKH.Kartu.simpan(a.id_record); return false; } }],
+      onBuka: async (md) => {
+        const ket = $('#pv-ket', md);
+        if (IKH.butuhServer('1.4.0', 'Kartu digital')) { ket.textContent = 'QR tampil setelah backend diperbarui ke v1.4.0.'; return; }
+        const r = await IKH.Kartu.ambil(a.id_record);
+        if (!document.body.contains(md)) return;
+        if (!r.ok) { ket.textContent = r.msg || 'QR tidak dapat dimuat.'; return; }
+        await Kta.pasang(md, r.data);
+        ket.innerHTML = 'Disahkan secara elektronik oleh <b>' + esc(r.data.sah.oleh || '(nama ketua belum diisi)') + '</b> (' + esc(r.data.sah.jabatan) + ') pada ' + fmt.tgl(r.data.sah.pada, true) + '. Ketuk QR untuk memperbesar. Anggota melihat kartu yang sama di Ruang Anggota, ditambah jam berjalan.';
+      } });
   }
   async function aksiMassalKta(act) {
     if (act === 'semua') return KS.tbl.pilihSemuaHasil();
     if (act === 'batal') return KS.tbl.kosongkanPilihan();
     const sel = KS.tbl.terpilih(); if (!sel.length) return;
     const ids = sel.map((a) => a.id_record);
-    if (act === 'cetak') {
-      if (!(await UI.konfirmasi('Buat ulang PDF KTA untuk <b>' + ids.length + '</b> anggota? Diproses per blok 4 kartu (±' + Math.ceil(ids.length * 3 / 60) + ' menit).', { ya: 'Mulai Cetak Ulang' })).ok) return;
-      await prosesBlok(ids, 4, 'Mencetak ulang KTA', async (blok) => { const r = await api('adm.kta.cetakUlang', { ids: blok }); return r.ok ? r.data.hasil : blok.map((id) => ({ id, ok: false, msg: r.msg })); });
-      Store.admBoot(true);
-    }
-    if (act === 'gabung') {
-      if (ids.length > 60) return UI.toast('Maksimal 60 KTA per PDF gabungan. Kurangi pilihan.', 'warn');
-      const m = UI.muat('Memuat pustaka PDF…');
-      try {
-        await IKH.muat(IKH.CDN.pdflib);
-        const out = await window.PDFLib.PDFDocument.create(); let ok = 0;
-        for (let i = 0; i < ids.length; i += 3) {
-          m.teks('Mengambil KTA ' + Math.min(i + 3, ids.length) + ' / ' + ids.length + '…');
-          const res = await Promise.all(ids.slice(i, i + 3).map((id) => api('adm.kta.unduh', { id_record: id })));
-          for (const r of res) {
-            if (!r.ok) continue;
-            const bytes = Uint8Array.from(atob(r.data.data), (c) => c.charCodeAt(0));
-            try { const src = await window.PDFLib.PDFDocument.load(bytes); const pg = await out.copyPages(src, src.getPageIndices()); pg.forEach((p) => out.addPage(p)); ok++; } catch (e) { }
-          }
-        }
-        if (!ok) throw new Error('Tidak ada PDF yang berhasil diambil.');
-        const b = await out.saveAsBase64();
-        IKH.unduhB64(b, 'KTA-gabungan-' + hariIni() + '.pdf'); UI.toast(ok + ' KTA digabung dalam 1 PDF.');
-      } catch (e) { UI.toast(e.message, 'bad'); } finally { m.tutup(); Store.admBoot(true); }
+    if (act === 'sahkan') {
+      if (IKH.butuhServer('1.4.0', 'Sahkan ulang KTA')) return;
+      const st = D().st;
+      if (!st.KETUA_NAMA) return UI.toast('Nama ketua belum diisi. Isi dulu di Pengaturan → Identitas Organisasi.', 'warn', 6000);
+      if (!(await UI.konfirmasi('Sahkan ulang <b>' + ids.length + '</b> KTA atas nama <b>' + esc(st.KETUA_NAMA) + '</b> (' + esc(st.KETUA_JABATAN || 'Ketua') + ')?<br><span class="small muted">Nama pengesah & tanggal pengesahan di kartu diganti dengan ketua saat ini. QR pengesahan lama akan terbaca "sudah digantikan". Masa berlaku dan nomor anggota tidak berubah.</span>', { ya: 'Sahkan Ulang' })).ok) return;
+      const m = UI.muat('Mengesahkan ulang…');
+      const r = await api('adm.kta.sahkan', { ids }); m.tutup();
+      if (!UI.hasil(r)) return;
+      KS.tbl.kosongkanPilihan(); Store.admBoot(true);
     }
     if (act === 'perpanjang') {
       UI.modal({ judul: 'Perpanjang Masa Berlaku (' + ids.length + ' anggota)', isi: '<div class="col gap-lg"><div class="fld"><label>Tambah masa berlaku</label><div class="seg" id="pp-seg">' + [1, 2, 3, 5].map((t) => '<button type="button" data-t="' + t + '" class="' + (t === 3 ? 'on' : '') + '">+' + t + ' tahun</button>').join('') + '</div><span class="hint">Dihitung dari tanggal berlaku saat ini (atau hari ini bila sudah lewat). Anggota Luar Biasa selalu +5 tahun; Anggota Kehormatan (seumur hidup) dilewati.</span></div>' +
@@ -708,14 +702,14 @@
       const tabs = [['org', 'Identitas Organisasi', 'domain'], ['kta', 'Keanggotaan & KTA', 'badge'], ['akun', 'Akun Pengurus', 'manage_accounts'], ['aman', 'Keamanan', 'shield']];
       const t = (k, label, hint, tipe) => '<div class="fld"><label for="s-' + k + '">' + label + '</label>' + (tipe === 'area' ? '<textarea class="inp" id="s-' + k + '" data-k="' + k + '" rows="6">' + esc(st[k] || '') + '</textarea>' : '<input class="inp" id="s-' + k + '" data-k="' + k + '" type="' + (tipe || 'text') + '" value="' + esc(st[k] || '') + '">') + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
       PG.edit = false;
-      main.innerHTML = ph('settings', 'Pengaturan Organisasi & Sistem', 'Identitas organisasi, logo & tanda tangan, aturan KTA, dan akun Pengurus.') +
+      main.innerHTML = ph('settings', 'Pengaturan Organisasi & Sistem', 'Identitas organisasi, logo & pengesah KTA, aturan KTA, dan akun Pengurus.') +
         '<section class="card"><div class="tabs">' + tabs.map((tb) => '<button data-tab="' + tb[0] + '" class="' + (PG.tab === tb[0] ? 'on' : '') + '">' + ic(tb[2], 'sm') + tb[1] + '</button>').join('') + '</div>' +
         '<div class="card-b ' + (PG.tab === 'org' ? '' : 'hide') + '" data-p="org"><div class="grid g2"><div class="col gap-lg">' + t('ORG_NAMA', 'Nama organisasi', 'Tercetak di KTA & header.') + t('ORG_NAMA_PANJANG', 'Kepanjangan') + t('ORG_SINGKAT', 'Nama singkat') + t('ORG_ALAMAT', 'Alamat sekretariat') +
         '<div class="grid g2">' + t('ORG_EMAIL', 'Email sekretariat', '', 'email') + t('ORG_TELEPON', 'Telepon') + t('ORG_WA', 'WhatsApp helpdesk', '08…', 'tel') + t('ORG_JAM_LAYANAN', 'Jam layanan') + '</div></div>' +
         '<div class="col gap-lg"><div class="fld"><label>Logo organisasi</label><div class="row gap-lg"><span style="width:84px;height:84px;border-radius:12px;border:1px solid var(--border);background:#fff center/contain no-repeat;' + (st.LOGO_ID ? 'background-image:url(\'' + img(st.LOGO_ID, 200) + '\')' : '') + '" id="lg-pv"></span><div class="col"><label class="btn btn-ghost btn-sm">' + ic('upload', 'sm') + 'Unggah Logo<input type="file" accept="image/png,image/jpeg,image/webp" class="hide" id="up-logo"></label>' + (st.LOGO_ID ? '<button class="btn btn-text btn-sm" id="del-logo">Hapus logo</button>' : '') + '<span class="hint">PNG latar transparan disarankan. Publik.</span></div></div></div>' +
-        '<div class="grid g2">' + t('KETUA_NAMA', 'Nama ketua (penanda tangan KTA)') + t('KETUA_JABATAN', 'Jabatan penanda tangan') + '</div>' +
-        '<div class="fld"><label>Tanda tangan ketua</label><div class="row gap-lg"><span class="badge ' + (st.TTD_KETUA_ID ? 'b-ok' : 'b-mute') + '">' + (st.TTD_KETUA_ID ? 'Tersimpan (privat)' : 'Belum ada') + '</span><label class="btn btn-ghost btn-sm">' + ic('draw', 'sm') + 'Unggah TTD<input type="file" accept="image/png" class="hide" id="up-ttd"></label>' + (st.TTD_KETUA_ID ? '<button class="btn btn-text btn-sm" id="del-ttd">Hapus</button>' : '') + '</div><span class="hint">PNG transparan. Disimpan privat — hanya dipakai saat membuat PDF KTA, tidak ditampilkan di web.</span></div>' +
-        '<div class="alert info small">' + ic('info', 'sm') + '<div>Mengubah nama organisasi, ketua, logo, atau TTD menandai semua KTA lama "usang"; PDF dibuat ulang otomatis saat diunduh atau lewat menu Kartu Digital → Cetak Ulang.</div></div></div></div></div>' +
+        '<div class="grid g2">' + t('KETUA_NAMA', 'Nama ketua (pengesah KTA)') + t('KETUA_JABATAN', 'Jabatan pengesah') + '</div>' +
+        '<div class="alert info small">' + ic('info', 'sm') + '<div>KTA disahkan secara elektronik: nama & jabatan ketua dicatat di kartu saat KTA terbit, diperpanjang, atau datanya berubah, dan dibuktikan dengan QR pengesahan. <b>Mengganti ketua di sini tidak mengubah kartu yang sudah terbit</b> — untuk memperbaruinya, buka Kartu Digital KTA → pilih anggota → Sahkan Ulang.</div></div>' +
+        (st.TTD_KETUA_ID ? '<div class="alert warn small">' + ic('warning', 'sm') + '<div>Berkas tanda tangan ketua dari versi sebelumnya masih tersimpan di Drive dan <b>tidak dipakai lagi</b>. <button class="btn btn-text btn-sm" id="del-ttd" type="button">Hapus berkas tanda tangan</button></div></div>' : '') + '</div></div></div>' +
         '<div class="card-b ' + (PG.tab === 'kta' ? '' : 'hide') + '" data-p="kta"><div class="grid g2"><div class="col gap-lg"><div class="grid g2">' + t('MASA_BERLAKU_TAHUN', 'Masa berlaku KTA (tahun)', '1–10 tahun sejak disetujui.', 'number') + t('KTA_PREFIX', 'Awalan nomor anggota', 'Contoh hasil: ' + esc((st.KTA_PREFIX || 'IKH-KT') + '-' + new Date().getFullYear() + '-0001')) + '</div>' +
         '<div class="fld"><label class="switch"><input type="checkbox" id="s-daftar" ' + (st.PENDAFTARAN_DIBUKA !== 'TIDAK' ? 'checked' : '') + '><span class="tr"></span>Formulir pendaftaran publik dibuka</label></div>' +
         t('APP_URL', 'URL aplikasi (GitHub Pages)', 'Dipakai pada QR KTA & tautan email. Terisi otomatis saat Pengurus pertama masuk.', 'url') + t('DAFTAR_KOTA', 'Pilihan domisili (satu per baris)', '', 'area') + '</div>' +
@@ -742,13 +736,13 @@
       const unggah = (inp, tujuan) => { const el = $(inp, main); if (el) el.onchange = async (e) => {
         try {
           const f = e.target.files[0]; if (!f) return;
-          const data = tujuan === 'ttd' || f.type === 'image/png' ? await new Promise((res, rej) => { if (f.size > 3 * 1048576) return rej(new Error('Maks. 3 MB')); const fr = new FileReader(); fr.onload = () => res({ nama: f.name, tipe: f.type, data: fr.result }); fr.readAsDataURL(f); }) : await IKH.bacaGambar(f, 600, 0.9);
+          const data = f.type === 'image/png' ? await new Promise((res, rej) => { if (f.size > 3 * 1048576) return rej(new Error('Maks. 3 MB')); const fr = new FileReader(); fr.onload = () => res({ nama: f.name, tipe: f.type, data: fr.result }); fr.readAsDataURL(f); }) : await IKH.bacaGambar(f, 600, 0.9);
           const m = UI.muat('Mengunggah…'); const r = await api('adm.upload', { tujuan, file: data }); m.tutup();
           if (UI.hasil(r) && r.data.setting) { Store.adm.setting = r.data.setting; Store.simpanAdmLokal(); Store.pubBoot(true); pengaturan(); }
         } catch (er) { UI.toast(er.message, 'bad'); }
       }; };
-      unggah('#up-logo', 'logo'); unggah('#up-ttd', 'ttd');
-      [['#del-logo', 'logo'], ['#del-ttd', 'ttd']].forEach((d) => { const b = $(d[0], main); if (b) b.onclick = async () => { if (!(await UI.konfirmasi('Hapus gambar ini?', { bahaya: true, ya: 'Hapus' })).ok) return; const r = await api('adm.upload', { tujuan: d[1], hapus: true }); if (UI.hasil(r)) { Store.admBoot(true); } }; });
+      unggah('#up-logo', 'logo');
+      [['#del-logo', 'logo'], ['#del-ttd', 'ttd']].forEach((d) => { const b = $(d[0], main); if (b) b.onclick = async () => { if (!(await UI.konfirmasi(d[1] === 'ttd' ? 'Hapus berkas tanda tangan ketua dari Drive? Berkas ini tidak dipakai lagi oleh aplikasi.' : 'Hapus gambar ini?', { bahaya: true, ya: 'Hapus' })).ok) return; const r = await api('adm.upload', { tujuan: d[1], hapus: true }); if (UI.hasil(r)) { Store.admBoot(true); } }; });
       tabelAkun(main);
       const fp = $('#f-pw', main); if (fp) fp.onsubmit = async (e) => { e.preventDefault(); const r = await UI.tombol($('button', fp), () => api('auth.ganti', { lama: $('#pw-l').value, baru: $('#pw-b').value })); if (UI.hasil(r)) { Sesi.simpan(r.data.token, r.data.me); if (r.data.boot) Store.setAdm(r.data.boot); fp.reset(); } };
       const fd = $('#f-dar', main); if (fd) fd.onsubmit = async (e) => { e.preventDefault(); UI.hasil(await UI.tombol($('button', fd), () => api('adm.darurat.ganti', { baru: $('#dar-b').value }))); fd.reset(); };

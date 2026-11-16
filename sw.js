@@ -3,8 +3,8 @@
    • Halaman, config.js & versi.json: selalu dicek ke server (perubahan langsung terlihat setelah push)
    • API Apps Script & gambar Drive: TIDAK pernah dicache oleh service worker
    VERSI & ?v= di bawah disetel otomatis oleh skrip build (sama dengan versi.json & core.js) */
-const VERSI = 'ikh-v1.5.0';
-const SHELL = ['./', './index.html', './css/style.css?v=1.5.0', './js/config.js?v=1.5.0', './js/core.js?v=1.5.0', './js/publik.js?v=1.5.0',
+const VERSI = 'ikh-v1.6.0';
+const SHELL = ['./', './index.html', './css/style.css?v=1.6.0', './js/config.js?v=1.6.0', './js/core.js?v=1.6.0', './js/publik.js?v=1.6.0',
   './manifest.json', './img/logo.png', './img/favicon.png', './img/icon-192.png', './img/icon-512.png'];
 
 self.addEventListener('install', (e) => {

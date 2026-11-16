@@ -1,9 +1,24 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.5.0",
+  "versi": "1.6.0",
   "tanggal": "2026-11-16",
-  "server_min": "1.3.0",
+  "server_min": "1.4.0",
   "riwayat": [
+    {
+      "versi": "1.6.0",
+      "tanggal": "2026-11-16",
+      "judul": "KTA hanya digital: pengesahan elektronik ketua & kartu ukuran identitas",
+      "poin": [
+        "Tanda tangan ketua diganti pengesahan elektronik: sisi belakang KTA memuat QR pengesahan (QR kecil), tulisan \"Disahkan secara elektronik\", nama & jabatan ketua, serta tanggal pengesahan.",
+        "Dua QR dengan fungsi berbeda — QR besar memeriksa status keanggotaan; QR kecil membuka halaman Pengesahan KTA (siapa yang mengesahkan dan kapan). Ketuk QR di kartu untuk memperbesarnya.",
+        "KTA terbit saat pendaftaran disetujui. Nama & jabatan ketua dibekukan di kartu saat itu, dan diperbarui otomatis saat kartu diperpanjang, jenis anggota berubah, atau data di kartu berubah.",
+        "Ganti ketua di Pengaturan tidak mengubah kartu yang sudah terbit. Kartu Digital KTA → Sahkan Ulang untuk memperbarui pengesah kartu terpilih; ada filter \"Pengesah bukan ketua saat ini\".",
+        "Ruang Anggota: tombol Layar Penuh untuk memperlihatkan kartu dari ponsel (kartu otomatis diputar memenuhi layar, tombol balik sisi), dan jam berjalan di sudut kartu sebagai penanda kartu tampil langsung dari aplikasi.",
+        "Simpan Kartu: gambar sisi depan & belakang berukuran kartu identitas (85,6 × 54 mm · 2022 × 1276 piksel) dan PDF ukuran kartu 2 halaman. Kartu dibuat di perangkat — tidak lagi bergantung pada konverter PDF Google dan layanan QR luar.",
+        "KTA PDF A4, tombol Cetak, Cetak Ulang, PDF Gabungan, status \"Usang/Perlu cetak ulang\", dan unggah tanda tangan ketua dihapus. Email persetujuan tidak lagi melampirkan PDF.",
+        "Membutuhkan backend Apps Script v1.4.0."
+      ]
+    },
     {
       "versi": "1.5.0",
       "tanggal": "2026-11-16",

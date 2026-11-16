@@ -199,7 +199,7 @@
     };
     const tahun = new Date().getFullYear();
     return {
-      identitas: '<div class="form-grid">' + f('nama', 'Nama lengkap & gelar', t('nama', 'Sesuai ijazah, beserta gelar', 'text', 'autocomplete="name" maxlength="150"'), 'Nama ini dicetak pada KTA.', true) +
+      identitas: '<div class="form-grid">' + f('nama', 'Nama lengkap & gelar', t('nama', 'Sesuai ijazah, beserta gelar', 'text', 'autocomplete="name" maxlength="150"'), 'Nama ini tampil pada KTA.', true) +
         f('jenis_kelamin', 'Jenis kelamin', s('jenis_kelamin', ['Laki-laki', 'Perempuan'])) + f('tempat_lahir', 'Tempat lahir', t('tempat_lahir', 'Kota kelahiran')) +
         f('tanggal_lahir', 'Tanggal lahir', t('tanggal_lahir', '', 'date', 'max="' + (tahun - 15) + '-12-31"')) + f('no_hp', 'Nomor WhatsApp aktif', t('no_hp', '08xxxxxxxxxx', 'tel', 'autocomplete="tel" inputmode="tel"'), 'Untuk notifikasi status verifikasi.') +
         f('email', 'Email aktif', t('email', 'nama@email.com', 'email', 'autocomplete="email"'), 'Akun & KTA digital dikirim ke email ini.') + f('kota_domisili', 'Domisili (kab/kota)', s('kota_domisili', daftar(st.DAFTAR_KOTA))) +
@@ -328,7 +328,7 @@
         el.innerHTML = '<div class="res"><div class="hd ' + (s === 'Disetujui' ? 'ok' : s === 'Ditolak' ? 'bad' : 'warn') + '">' + ic(s === 'Disetujui' ? 'verified' : s === 'Ditolak' ? 'cancel' : 'hourglass_top') + '<div><h3>' + esc(s) + '</h3><div>' + esc(d.nama) + '</div></div></div>' +
           '<div class="bd"><div class="kv"><div>Nomor registrasi</div><div class="mono">' + esc(d.id_record) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(d.tgl_daftar) + '</div>' + (d.id_member ? '<div>Nomor anggota</div><div class="mono">' + esc(d.id_member) + '</div>' : '') + (d.tgl_verifikasi ? '<div>Diverifikasi</div><div>' + fmt.waktu(d.tgl_verifikasi) + '</div>' : '') + '</div>' +
           (s === 'Ditolak' ? '<div class="alert warn mt">' + ic('info') + '<div><b>Catatan Pengurus:</b> ' + esc(d.catatan || '-') + '<br>Silakan perbaiki lalu daftar kembali.</div></div><a class="btn btn-primary mt" href="#/daftar">Daftar Ulang</a>' : '') +
-          (s === 'Disetujui' ? '<p class="mt small">Info akun dan KTA telah dikirim ke email Anda. Belum menerima? Gunakan <a href="#/lupa">Lupa / Aktivasi Kata Sandi</a>.</p><a class="btn btn-primary" href="#/masuk">Masuk ke Ruang Anggota</a>' : '') +
+          (s === 'Disetujui' ? '<p class="mt small">Info akun telah dikirim ke email Anda; KTA digital tersedia di Ruang Anggota. Belum menerima? Gunakan <a href="#/lupa">Lupa / Aktivasi Kata Sandi</a>.</p><a class="btn btn-primary" href="#/masuk">Masuk ke Ruang Anggota</a>' : '') +
           (s === 'Menunggu Verifikasi' ? '<p class="mt small muted mb-0">Pengurus sedang memeriksa data Anda. Anda akan menerima notifikasi melalui email/WhatsApp.</p>' : '') + '</div></div>';
       };
       if ((q.get('id') || last.id) && (q.get('e') || last.email) && q.get('id')) frm.requestSubmit();
@@ -361,6 +361,8 @@
   async function periksa(kode) {
     const el = $('#vr-hasil'); if (!el) return;
     hentikanKamera();
+    const ms = /#\/s\/([^?\s#]+)/.exec(String(kode));              // yang dipindai QR pengesahan → halaman pengesahan
+    if (ms) { IKH.Router.go('/s/' + ms[1]); return; }
     el.innerHTML = '<div class="card">' + UI.skel(5) + '</div>';
     const r = await api('pub.verifikasi', { kode: kode });
     if (!r.ok) { el.innerHTML = '<div class="alert bad">' + ic('error') + '<div>' + esc(r.msg) + '</div></div>'; return; }
@@ -371,9 +373,36 @@
       '<div class="bd"><div class="row top gap-lg">' + (a.foto_id ? '<div style="width:96px;height:120px;border-radius:10px;flex:none;background:#E9EDF3 center/cover no-repeat;background-image:url(\'' + esc(img(a.foto_id, 300)) + '\')"></div>' : '') +
       '<div class="grow"><div class="kicker">Nama Lengkap</div><h3 style="margin:.15rem 0 .5rem">' + esc(a.nama) + '</h3>' + UI.badgeStatus(d.status) + '</div></div>' +
       '<div class="kv mt"><div>Jenis anggota</div><div>' + IKH.badgeJenis(a) + '</div><div>Nomor anggota</div><div class="mono">' + esc(a.id_member) + '</div>' + (a.nomor_taruna ? '<div>NIT</div><div class="mono">' + esc(a.nomor_taruna) + '</div>' : '') + '<div>Angkatan</div><div>' + esc(a.angkatan || '-') + '</div><div>Program studi</div><div>' + esc(a.prodi || '-') + '</div>' +
-      (a.tahun_kelulusan ? '<div>Tahun lulus</div><div>' + esc(a.tahun_kelulusan) + '</div>' : '') + (a.instansi ? '<div>Instansi</div><div>' + esc(a.instansi) + '</div>' : '') + (a.seumur_hidup ? '<div>Masa berlaku</div><div>Seumur hidup</div>' : '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div>') + '</div>' +
+      (a.tahun_kelulusan ? '<div>Tahun lulus</div><div>' + esc(a.tahun_kelulusan) + '</div>' : '') + (a.instansi ? '<div>Instansi</div><div>' + esc(a.instansi) + '</div>' : '') + (a.seumur_hidup ? '<div>Masa berlaku</div><div>Seumur hidup</div>' : '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div>') +
+      (d.sah && d.sah.pada ? '<div>Disahkan oleh</div><div>' + esc(d.sah.oleh || '-') + '<div class="small muted">' + esc(d.sah.jabatan || '') + ' • ' + fmt.tgl(d.sah.pada, true) + '</div></div>' : '') + '</div>' +
       '<p class="small muted mt mb-0">Diperiksa ' + fmt.waktu(d.dicek) + '.</p><button class="btn btn-ghost btn-sm mt" onclick="IKH.Router.go(\'/verifikasi\')">' + ic('refresh', 'sm') + 'Periksa KTA lain</button></div></div>';
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  /* ---------------- Pengesahan KTA (QR kecil di sisi belakang kartu) ----------------
+     Pengganti tanda tangan ketua: menampilkan siapa yang mengesahkan kartu dan kapan, langsung dari basis data. */
+  function pengesahanPage(p) {
+    return halamanPub('Pengesahan KTA', async (main) => {
+      if (main.dataset.sah === p.kode && $('#sh-hasil', main)) return;
+      main.dataset.sah = p.kode;
+      main.innerHTML = pageHead('Pengesahan KTA', 'Pengesahan Elektronik KTA', 'Halaman ini dibuka dari QR pengesahan pada sisi belakang KTA. KTA digital tidak memakai tanda tangan basah; pengesahan Ketua dibuktikan lewat halaman ini.') +
+        '<div class="wrap sec" style="max-width:720px;padding-top:2rem"><div id="sh-hasil" aria-live="polite"><div class="card">' + UI.skel(6) + '</div></div></div>';
+      const el = $('#sh-hasil', main);
+      const r = await api('pub.pengesahan', { kode: p.kode });
+      if (!document.body.contains(el)) return;
+      if (!r.ok) { el.innerHTML = '<div class="alert bad">' + ic('error') + '<div>' + esc(r.code === 'NOACT' ? 'Halaman pengesahan butuh backend Apps Script v1.4.0. Hubungi Pengurus.' : r.msg) + '</div></div>'; return; }
+      const d = r.data, lagi = '<a class="btn btn-ghost btn-sm mt" href="#/verifikasi">' + ic('qr_code_scanner', 'sm') + 'Pindai KTA lain</a>';
+      if (!d.valid) { el.innerHTML = '<div class="res"><div class="hd bad">' + ic('cancel') + '<div><h3>PENGESAHAN TIDAK SAH</h3><div>' + esc(d.pesan || '') + '</div></div></div><div class="bd small muted">Diperiksa ' + fmt.waktu(d.dicek) + '. Bila menurut Anda ini keliru, hubungi sekretariat.<br>' + lagi + '</div></div>'; return; }
+      const a = d.anggota, s = d.sah || {}, aktif = d.status === 'Aktif', baik = d.terkini && aktif;
+      el.innerHTML = '<div class="res"><div class="hd ' + (baik ? 'ok' : 'warn') + '">' + ic(baik ? 'verified' : 'warning') + '<div><h3>' + (!d.terkini ? 'PENGESAHAN SUDAH DIGANTIKAN' : aktif ? 'KTA DISAHKAN SECARA ELEKTRONIK' : 'DISAHKAN — STATUS KARTU ' + esc(d.status).toUpperCase()) + '</h3><div>' + esc(d.org || '') + ' • kode pengesahan bertanda tangan sah</div></div></div>' +
+        '<div class="bd">' + (!d.terkini ? '<div class="alert warn mb">' + ic('warning') + '<div>Kode pada kartu ini berasal dari pengesahan <b>' + fmt.tgl(d.sahKode, true) + '</b> yang sudah digantikan pengesahan baru (kartu diperpanjang atau datanya diperbarui). Minta pemegang kartu menampilkan <b>kartu terbaru dari aplikasi</b>.</div></div>' : '') +
+        '<div class="row top gap-lg">' + (a.foto_id ? '<div style="width:96px;height:120px;border-radius:10px;flex:none;background:#E9EDF3 center/cover no-repeat;background-image:url(\'' + esc(img(a.foto_id, 300)) + '\')"></div>' : '') +
+        '<div class="grow"><div class="kicker">Pemegang kartu</div><h3 style="margin:.15rem 0 .5rem">' + esc(a.nama) + '</h3>' + UI.badgeStatus(d.status) + ' ' + IKH.badgeJenis(a) + '</div></div>' +
+        '<div class="kv mt"><div>Nomor anggota</div><div class="mono">' + esc(a.id_member) + '</div>' + (a.seumur_hidup ? '<div>Masa berlaku</div><div>Seumur hidup</div>' : '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div>') +
+        '<div>Disahkan oleh</div><div><b>' + esc(s.oleh || '(nama ketua belum diisi Pengurus)') + '</b><div class="small muted">' + esc(s.jabatan || '') + '</div></div>' +
+        '<div>' + (d.terkini ? 'Tanggal pengesahan' : 'Pengesahan terbaru') + '</div><div>' + fmt.waktu(s.pada) + '</div>' + (s.terbit ? '<div>KTA terbit</div><div>' + fmt.tgl(s.terbit, true) + '</div>' : '') + '</div>' +
+        '<p class="small muted mt mb-0">Diperiksa ' + fmt.waktu(d.dicek) + '. Pengesahan dicatat otomatis oleh sistem atas nama Ketua yang menjabat saat kartu terbit atau diperbarui.</p>' +
+        '<div class="row wrap"><a class="btn btn-primary btn-sm mt" href="#/v/' + encodeURIComponent(a.id_member) + '">' + ic('fact_check', 'sm') + 'Lihat status keanggotaan</a>' + lagi + '</div></div></div>';
+    });
   }
   async function mulaiKamera() {
     const box = $('#scanner');
@@ -520,7 +549,7 @@
   /* ---------------- Rute ---------------- */
   const R = IKH.Router;
   R.add('/', beranda); R.add('/profil', profil); R.add('/berita', beritaList); R.add('/berita/:id', beritaDetail);
-  R.add('/daftar', daftarPage); R.add('/status', statusPage); R.add('/verifikasi', verifikasiPage); R.add('/v/:kode', verifikasiPage);
+  R.add('/daftar', daftarPage); R.add('/status', statusPage); R.add('/verifikasi', verifikasiPage); R.add('/v/:kode', verifikasiPage); R.add('/s/:kode', pengesahanPage);
   R.add('/masuk', masuk); R.add('/lupa', lupa); R.add('/reset', reset); R.add('/ganti-sandi', gantiSandiWajib);
   // pengurusBoleh: Pengurus yang akunnya terhubung ke data alumni membuka "Data & KTA Saya" (peran ganda)
   const AG = { peran: 'anggota', pengurusBoleh: true };
