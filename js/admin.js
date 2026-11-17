@@ -753,7 +753,7 @@
   }
   /* ---------- Login anggota dengan Google (v1.9.0, butuh backend v1.7.0) ---------- */
   function kartuGoogle(x) {
-    const cid = x.d.googleClientId || '';
+    const cid = x.d.googleClientId || (Store.pub && Store.pub.google) || '';     // v2.0.1: dulu hilang setiap data panel dimuat ulang
     return '<form class="card card-b col gap-lg" id="f-g" autocomplete="off"><div class="row between wrap"><h4 class="mb-0">Login Anggota dengan Google</h4>' +
       (cid ? '<span class="badge b-ok">Aktif</span>' : '<span class="badge b-wait">Belum aktif</span>') + '</div>' +
       '<p class="small muted mb-0">Anggota dan Pengurus hanya bisa masuk dengan akun Google. Kata sandi tinggal untuk <b>akses darurat</b>. Mengganti Client ID dengan nilai yang salah mengunci semua orang kecuali akses darurat.</p>' +
@@ -785,7 +785,7 @@
     ganda: ['bad', 'Email dipakai 2 data', 'Satu email (titik & +alias Gmail disamakan) tercatat di lebih dari satu data anggota. Masuk ditolak sampai dirapikan.'],
     lain: ['warn', 'Bukan Google', 'Domainnya tidak memakai Google. Hanya bisa masuk bila alamat itu sudah dijadikan Akun Google. Paling mudah: ganti ke Gmail.'],
     tidakDicek: ['warn', 'Tidak dapat dicek', 'Domain email tidak dapat diperiksa. Tanyakan ke anggota apakah email ini akun Google.'],
-    pengurus: ['info', 'Akun Pengurus', 'Masuk lewat tab Pengurus dengan kata sandi (peran ganda).'],
+    pengurus: ['info', 'Akun Pengurus', 'Masuk lewat tab Pengurus dengan tombol Masuk dengan Google (peran ganda).'],
     workspace: ['ok', 'Google Workspace', 'Domain kantor yang memakai Google. Siap.'],
     gmail: ['ok', 'Gmail', 'Siap.']
   };

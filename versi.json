@@ -1,9 +1,18 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "2.0.0",
+  "versi": "2.0.1",
   "tanggal": "2026-11-18",
   "server_min": "1.8.0",
   "riwayat": [
+    {
+      "versi": "2.0.1",
+      "tanggal": "2026-11-18",
+      "judul": "Perbaikan status Client ID Google",
+      "poin": [
+        "Pengaturan → Keamanan: status \"Login dengan Google\" kini tetap \"Aktif\" dan Client ID tetap terisi setelah data panel dimuat ulang atau setelah masuk ulang. Sebelumnya tampil \"Belum aktif\" dengan kotak kosong padahal login Google berjalan normal (hanya salah tampilan; Client ID di server tidak berubah).",
+        "Cek Kesiapan: keterangan kategori \"Akun Pengurus\" disesuaikan (masuk dengan Google, bukan kata sandi)."
+      ]
+    },
     {
       "versi": "2.0.0",
       "tanggal": "2026-11-18",

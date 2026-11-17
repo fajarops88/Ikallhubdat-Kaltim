@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '2.0.0';
+  const VERSI = '2.0.1';
   const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -188,7 +188,7 @@
       return this.pub && !paksa ? this.pub : p;
     },
     setAdm(d) {
-      const b = { anggota: this.urai(d.anggota), pengajuan: this.urai(d.pengajuan), akun: this.urai(d.akun), setting: d.setting || {}, log: this.urai(d.log), dibuat: d.dibuat, antrianAda: d.antrianAda };
+      const b = { anggota: this.urai(d.anggota), pengajuan: this.urai(d.pengajuan), akun: this.urai(d.akun), setting: d.setting || {}, log: this.urai(d.log), dibuat: d.dibuat, antrianAda: d.antrianAda, googleClientId: d.googleClientId || '' };
       this.adm = b; this.admAt = Date.now();
       if (d.me && Sesi.data && Sesi.data.me && d.me.email === Sesi.data.me.email && (d.me.id_record !== Sesi.data.me.id_record || d.me.nama !== Sesi.data.me.nama)) {
         Sesi.data.me = Object.assign({}, Sesi.data.me, { id_record: d.me.id_record || '', nama: d.me.nama || Sesi.data.me.nama }); LS.set('sesi', Sesi.data);
@@ -224,7 +224,7 @@
     simpanAdmLokal: debounce(function () {
       const a = Store.adm; if (!a) return;
       const pack = (rows) => { const h = rows.length ? Object.keys(rows[0]) : []; return { h, r: rows.map((o) => h.map((k) => o[k])) }; };
-      LS.set('adm_' + (Sesi.me ? Sesi.me.email : ''), { d: { anggota: pack(a.anggota), pengajuan: pack(a.pengajuan), akun: pack(a.akun), setting: a.setting, log: pack(a.log), dibuat: a.dibuat }, at: Store.admAt });
+      LS.set('adm_' + (Sesi.me ? Sesi.me.email : ''), { d: { anggota: pack(a.anggota), pengajuan: pack(a.pengajuan), akun: pack(a.akun), setting: a.setting, log: pack(a.log), dibuat: a.dibuat, antrianAda: a.antrianAda, googleClientId: a.googleClientId || '' }, at: Store.admAt });
     }, 500),
     menu: {}     // cache per menu sekunder {key: {d, at}}
   };
