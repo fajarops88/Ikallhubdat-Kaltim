@@ -1,9 +1,24 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.9.0",
+  "versi": "2.0.0",
   "tanggal": "2026-11-18",
-  "server_min": "1.7.0",
+  "server_min": "1.8.0",
   "riwayat": [
+    {
+      "versi": "2.0.0",
+      "tanggal": "2026-11-18",
+      "judul": "Pengurus juga masuk dengan akun Google",
+      "poin": [
+        "Pengurus/admin kini masuk dengan tombol \"Masuk dengan Google\" di tab Pengurus (\"Khusus Admin. Masuk dengan akun Google yang terdaftar (OAuth 2.0)\"). Tidak ada lagi kata sandi Pengurus.",
+        "Kata sandi hanya untuk Akses darurat (tab Pengurus → Akses darurat), dipakai bila login Google bermasalah.",
+        "Sesi Pengurus lama (masuk dengan kata sandi) berakhir; masuk ulang dengan Google. Sesi Pengurus tetap 12 jam.",
+        "Tambah Pengurus tanpa kata sandi awal; email pemberitahuan berisi cara masuk dengan Google. Anggota yang dinaikkan menjadi Pengurus tetap memakai akun Google yang sama.",
+        "Pengaturan → Akun Pengurus dan Data Alumni: tombol \"Reset Tautan Google\" menggantikan \"Reset Sandi\". Pengaturan → Keamanan menampilkan akun Google Anda.",
+        "Cek Kesiapan Anggota kini juga memeriksa email akun Pengurus.",
+        "Lupa sandi & tautan atur sandi dihapus.",
+        "Butuh backend v1.8.0."
+      ]
+    },
     {
       "versi": "1.9.0",
       "tanggal": "2026-11-18",

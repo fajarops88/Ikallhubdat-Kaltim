@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.9.0';
+  const VERSI = '2.0.0';
   const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -67,11 +67,11 @@
     get me() { return this.data && this.data.exp > Date.now() ? this.data.me : null; },
     simpan(token, me) { this.data = { token, me, exp: me.exp || Date.now() + 12 * 3600e3 }; LS.set('sesi', this.data); },
     keluar(kedaluwarsa) {
-      const peran = this.me && this.me.peran;
+      const peran = this.me && this.me.peran, darurat = !!(this.me && this.me.darurat);
       this.data = null; LS.del('sesi'); LS.hapusSemua('adm'); LS.hapusSemua('agt'); Store.adm = null; Store.agt = null;
       if (IKH.Google) IKH.Google.keluar();
       if (kedaluwarsa) UI.toast('Sesi berakhir. Silakan masuk kembali.', 'warn');
-      Router.go(peran === 'pengurus' ? '/masuk?p=pengurus' : peran === 'anggota' ? '/masuk' : '/');
+      Router.go(darurat ? '/masuk?darurat=1' : peran === 'pengurus' ? '/masuk?p=pengurus' : peran === 'anggota' ? '/masuk' : '/');
     }
   };
   IKH.Sesi = Sesi;

@@ -78,7 +78,7 @@
         svc('edit_note', 'Ajukan Pembaruan Data', 'Mutasi instansi, jabatan, nomor WhatsApp, email, atau foto. Berlaku setelah disetujui Pengurus.', pending ? '1 menunggu' : 'Buat pengajuan', '#/anggota/profil') +
         svc('badge', 'KTA Digital', 'Tampilkan kartu di layar penuh, atau simpan sebagai gambar/PDF ukuran kartu.', 'Buka kartu', '#/anggota/kta') +
         svc('qr_code_scanner', 'Verifikasi KTA', 'Periksa keaslian KTA anggota lain dengan memindai QR.', 'Pindai sekarang', '#/verifikasi') +
-        (pengurus() ? svc('admin_panel_settings', 'Panel Pengurus', 'Kembali ke panel. Kata sandi akun diatur di Pengaturan → Keamanan.', 'Buka panel', '#/admin')
+        (pengurus() ? svc('admin_panel_settings', 'Panel Pengurus', 'Kembali ke Panel Pengurus.', 'Buka panel', '#/admin')
           : svc('lock', 'Keamanan Akun', 'Akun Google yang dipakai masuk, dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan')) + '</div>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:start" id="g2"><section class="card"><div class="card-h"><div><h3>Data Profil Resmi</h3><div class="sub">Data yang terverifikasi Pengurus</div></div><a class="btn btn-ghost btn-sm" href="#/anggota/profil">' + ic('edit', 'sm') + 'Ajukan Perubahan</a></div>' +
         '<div class="card-b grid g2"><div><h4 class="row">' + ic('school', 'sm') + 'Akademik Kedinasan</h4><div class="kv box">' + kv([['NOTAR', a.nomor_taruna], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div></div>' +
@@ -208,7 +208,7 @@
   }
 
   /* Pengurus mengganti kata sandi di Panel Pengurus (respons auth.ganti untuk Pengurus berisi data panel) */
-  function PG_AMAN() { UI.toast('Kata sandi akun Pengurus diatur di Pengaturan → Keamanan.', 'warn'); Router.go('/admin/pengaturan'); }
+  function PG_AMAN() { UI.toast('Akun Pengurus masuk dengan Google; pengaturan keamanan ada di Pengaturan → Keamanan.', 'warn'); Router.go('/admin/pengaturan'); }
 
   IKH.Anggota = { hal: { dasbor, kta, profil, keamanan } };
 })();
