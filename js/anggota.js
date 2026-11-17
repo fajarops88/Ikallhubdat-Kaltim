@@ -79,7 +79,7 @@
         svc('badge', 'KTA Digital', 'Tampilkan kartu di layar penuh, atau simpan sebagai gambar/PDF ukuran kartu.', 'Buka kartu', '#/anggota/kta') +
         svc('qr_code_scanner', 'Verifikasi KTA', 'Periksa keaslian KTA anggota lain dengan memindai QR.', 'Pindai sekarang', '#/verifikasi') +
         (pengurus() ? svc('admin_panel_settings', 'Panel Pengurus', 'Kembali ke panel. Kata sandi akun diatur di Pengaturan → Keamanan.', 'Buka panel', '#/admin')
-          : svc('lock', 'Keamanan Akun', 'Ganti kata sandi dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan')) + '</div>' +
+          : svc('lock', 'Keamanan Akun', 'Akun Google yang dipakai masuk, dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan')) + '</div>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:start" id="g2"><section class="card"><div class="card-h"><div><h3>Data Profil Resmi</h3><div class="sub">Data yang terverifikasi Pengurus</div></div><a class="btn btn-ghost btn-sm" href="#/anggota/profil">' + ic('edit', 'sm') + 'Ajukan Perubahan</a></div>' +
         '<div class="card-b grid g2"><div><h4 class="row">' + ic('school', 'sm') + 'Akademik Kedinasan</h4><div class="kv box">' + kv([['NOTAR', a.nomor_taruna], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div></div>' +
         '<div><h4 class="row">' + ic('work', 'sm') + 'Kepegawaian & Kontak</h4><div class="kv box">' + kv([['Status', a.status_kepegawaian], ['Instansi', a.instansi], ['Jabatan', a.jabatan_terakhir], ['WhatsApp', a.no_hp], ['Email', a.email]]) + '</div></div></div></section>' +
@@ -151,6 +151,8 @@
       if (window.innerWidth < 1024) $('#g3').style.gridTemplateColumns = '1fr';
       el.dataset.ubah = '';
       const frm = $('#frm-ubah'); let foto = null;
+      IKH.pantauEmailGoogle(frm);
+      { const em = $('#f-email', frm); if (em) { const fl = em.closest('.fld'), h = $('.hint', fl); if (h && !$('.hint-g', fl)) h.innerHTML = 'Email ini dipakai untuk <b>Masuk dengan Google</b>. Bila diubah dan disetujui, Anda masuk dengan akun Google yang baru.'; } }
       const hitung = () => {
         const o = IKH.ambilForm(frm, FIELD); if (o.no_hp) o.no_hp = IKH.hp08(o.no_hp);
         const beda = FIELD.filter((k) => (o[k] || '') !== String(a[k] || '') && !(o[k] === '' && !a[k]));
@@ -192,22 +194,12 @@
     return halaman('Keamanan Akun', (el, d) => {
       const me = Sesi.me || {};
       el.innerHTML = '<div class="ph"><div class="ttl"><span class="ico">' + ic('lock') + '</span><div><h1>Keamanan Akun</h1><div class="sub">' + esc(me.email || '') + '</div></div></div></div>' +
-        '<div class="grid g2" style="max-width:1000px;align-items:start"><form class="card" id="frm-pw"><div class="card-h"><h3>Ganti Kata Sandi</h3></div><div class="card-b col gap-lg">' +
-        '<div class="fld"><label for="pw-l">Kata sandi saat ini</label><input class="inp" id="pw-l" type="password" autocomplete="current-password"></div>' +
-        '<div class="fld"><label for="pw-b">Kata sandi baru</label><input class="inp" id="pw-b" type="password" autocomplete="new-password"><span class="hint">Minimal 8 karakter, huruf dan angka.</span></div>' +
-        '<div class="fld"><label for="pw-k">Ulangi kata sandi baru</label><input class="inp" id="pw-k" type="password" autocomplete="new-password"></div></div>' +
-        '<div class="card-f right"><button class="btn btn-primary" type="submit">' + ic('check_circle') + 'Simpan</button></div></form>' +
+        '<div class="grid g2" style="max-width:1000px;align-items:start"><div class="card" id="kt-google"><div class="card-h"><h3>Masuk dengan Google</h3></div><div class="card-b col gap-lg">' +
+        '<div class="kv"><div>Akun Google</div><div><b>' + esc(me.email || '-') + '</b></div><div>Kata sandi</div><div>Tidak ada. Akun anggota hanya bisa dibuka lewat akun Google ini.</div></div>' +
+        '<div class="alert info small">' + ic('info', 'sm') + '<div><b>Ingin memakai akun Google lain?</b> Ajukan perubahan email di <a href="#/anggota/profil">Profil & Pengajuan</a>. Setelah disetujui Pengurus, masuk dengan akun Google yang baru; sesi dengan email lama berakhir.</div></div>' +
+        '<p class="small muted mb-0">Jaga keamanan akun Google Anda: aktifkan <b>Verifikasi 2 Langkah</b> di pengaturan akun Google. Siapa pun yang bisa masuk ke akun Google itu juga bisa membuka KTA Anda.</p></div></div>' +
         '<div class="col gap-lg"><div class="card card-b"><h4>Sesi saat ini</h4><div class="kv"><div>Masuk sebagai</div><div>' + esc(me.email || '-') + '</div><div>Berakhir</div><div>' + fmt.waktu(new Date(Sesi.data ? Sesi.data.exp : Date.now()).toISOString()) + '</div></div></div>' +
         '<div class="card card-b"><h4>Keluar dari semua perangkat</h4><p class="small muted">Gunakan bila Anda pernah masuk di perangkat lain/umum. Semua sesi akan berakhir.</p><button class="btn btn-danger" id="b-semua">' + ic('logout') + 'Keluar dari Semua Perangkat</button></div></div></div>';
-      $('#frm-pw').onsubmit = async (e) => {
-        e.preventDefault();
-        const b = $('#pw-b').value;
-        if (b !== $('#pw-k').value) return UI.toast('Konfirmasi kata sandi tidak sama.', 'bad');
-        const r = await UI.tombol($('#frm-pw button[type=submit]'), () => api('auth.ganti', { lama: $('#pw-l').value, baru: b }));
-        if (!UI.hasil(r)) return;
-        Sesi.simpan(r.data.token, r.data.me); if (r.data.boot) Store.setAgt(r.data.boot);
-        $('#frm-pw').reset();
-      };
       $('#b-semua').onclick = async () => {
         if (!(await UI.konfirmasi('Semua sesi Anda (termasuk perangkat ini) akan berakhir. Lanjutkan?', { bahaya: true, ya: 'Keluar dari semua' })).ok) return;
         await api('auth.logout', { semua: true }); Sesi.keluar();

@@ -366,7 +366,7 @@
       identitas: '<div class="form-grid">' + f('nama', 'Nama lengkap & gelar', t('nama', 'Sesuai ijazah, beserta gelar', 'text', 'autocomplete="name" maxlength="150"'), 'Nama ini tampil pada KTA.', true) +
         f('jenis_kelamin', 'Jenis kelamin', s('jenis_kelamin', ['Laki-laki', 'Perempuan'])) + f('tempat_lahir', 'Tempat lahir', t('tempat_lahir', 'Kota kelahiran')) +
         f('tanggal_lahir', 'Tanggal lahir', t('tanggal_lahir', '', 'date', 'max="' + (tahun - 15) + '-12-31"')) + f('no_hp', 'Nomor WhatsApp aktif', t('no_hp', '08xxxxxxxxxx', 'tel', 'autocomplete="tel" inputmode="tel"'), 'Untuk notifikasi status verifikasi.') +
-        f('email', 'Email aktif', t('email', 'nama@email.com', 'email', 'autocomplete="email"'), 'Akun & KTA digital dikirim ke email ini.') + f('kota_domisili', 'Domisili (kab/kota)', s('kota_domisili', daftar(st.DAFTAR_KOTA))) +
+        f('email', 'Email akun Google (Gmail)', t('email', 'nama@gmail.com', 'email', 'autocomplete="email"'), 'Dipakai untuk <b>Masuk dengan Google</b>. Gunakan Gmail, atau email lain yang terdaftar sebagai Akun Google.') + f('kota_domisili', 'Domisili (kab/kota)', s('kota_domisili', daftar(st.DAFTAR_KOTA))) +
         f('alamat', 'Alamat lengkap', '<textarea class="inp" id="f-alamat" name="alamat" rows="2" maxlength="300" placeholder="Jalan, RT, kelurahan, kecamatan">' + esc(v.alamat || '') + '</textarea>', '', true) + '</div>',
       akademik: '<div class="form-grid">' + f('nomor_taruna', 'NOTAR (Nomor Taruna)', t('nomor_taruna', 'Contoh: 1902044', 'text', 'maxlength="30"')) + f('angkatan', 'Angkatan', t('angkatan', 'Contoh: 38', 'text', 'maxlength="10"')) +
         f('prodi', 'Program studi', sLain('prodi', daftar(st.DAFTAR_PRODI), 'Tulis nama program studi')) + f('tahun_kelulusan', 'Tahun lulus', t('tahun_kelulusan', 'TTTT', 'text', 'inputmode="numeric" maxlength="4"')) + '</div>',
@@ -392,6 +392,18 @@
     inp.classList.toggle('hide', !on);
     if (on && !inp.value) inp.focus();
   });
+  /** v1.9.0: peringatan lunak bila email bukan Gmail (anggota hanya bisa masuk dengan akun Google) */
+  IKH.pantauEmailGoogle = function (el) {
+    const inp = $('#f-email', el); if (!inp) return;
+    const fld = inp.closest('.fld');
+    const cek = () => {
+      const v = inp.value.trim(), lama = $('.hint-g', fld);
+      const perlu = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && !IKH.Google.gmail(v);
+      if (!perlu) { if (lama) lama.remove(); return; }
+      if (!lama) fld.insertAdjacentHTML('beforeend', '<span class="hint hint-g" role="status">' + ic('info', 'sm') + ' Bukan alamat Gmail. Pastikan email ini sudah terdaftar sebagai Akun Google; bila belum, pemiliknya tidak bisa masuk ke Ruang Anggota.</span>');
+    };
+    inp.addEventListener('blur', cek); inp.addEventListener('change', cek); cek();
+  };
   IKH.ambilForm = function (el, fields) { const o = {}; fields.forEach((k) => { const x = $('[name="' + k + '"]', el); if (x) o[k] = pilihLain(x) ? nilaiLain(x) : x.value.trim(); }); return o; };
   IKH.validasiForm = function (el, o, wajib) {
     $$('.fld.err', el).forEach((x) => { x.classList.remove('err'); const m = $('.msg-err', x); if (m) m.remove(); });
@@ -432,6 +444,7 @@
         '</form></div></div>';
       if (window.innerWidth < 900) { $('#dft-grid', main).style.gridTemplateColumns = '1fr'; $('.steps', main).style.position = 'static'; }
       const frm = $('#frm-daftar', main);
+      IKH.pantauEmailGoogle(frm);
       let foto = null, berkas = [];
       $$('[data-go]', main).forEach((a) => a.onclick = () => $('#sec-' + a.dataset.go).scrollIntoView({ behavior: 'smooth' }));
       frm.addEventListener('input', IKH.debounce(() => { if (!document.body.contains(frm)) return; LS.set('draf_daftar', IKH.ambilForm(frm, FIELD_DAFTAR)); tandaiLangkah(); }, 400));
@@ -467,7 +480,7 @@
         main.dataset.form = '';
         main.innerHTML = pageHead('Pendaftaran Alumni', 'Pendaftaran terkirim') + '<div class="wrap sec" style="max-width:720px"><div class="res"><div class="hd ok">' + ic('task_alt') + '<div><h3>Terima kasih, ' + esc(o.nama) + '!</h3><div>Pendaftaran Anda sedang menunggu verifikasi Pengurus.</div></div></div>' +
           '<div class="bd"><div class="kv box"><div>Nomor registrasi</div><div class="mono">' + esc(r.data.id_record) + '</div><div>Email</div><div>' + esc(o.email) + '</div><div>Status</div><div>' + UI.badgeStatus('Menunggu Verifikasi') + '</div></div>' +
-          '<p class="mt small muted">Simpan nomor registrasi untuk mengecek status. Setelah disetujui, Anda menerima email berisi kata sandi awal dan KTA digital (PDF).</p>' +
+          '<p class="mt small muted">Simpan nomor registrasi untuk mengecek status. Setelah disetujui, masuk ke Ruang Anggota dengan tombol <b>Masuk dengan Google</b> memakai akun Google ' + esc(o.email) + '. KTA digital tersedia di sana; tidak ada kata sandi.</p>' +
           '<div class="row wrap"><a class="btn btn-primary" href="#/status?id=' + encodeURIComponent(r.data.id_record) + '&e=' + encodeURIComponent(o.email) + '">' + ic('fact_check') + 'Cek Status</a><a class="btn btn-ghost" href="#/">Kembali ke Beranda</a></div></div></div></div>';
         window.scrollTo(0, 0);
       };
@@ -492,7 +505,7 @@
         el.innerHTML = '<div class="res"><div class="hd ' + (s === 'Disetujui' ? 'ok' : s === 'Ditolak' ? 'bad' : 'warn') + '">' + ic(s === 'Disetujui' ? 'verified' : s === 'Ditolak' ? 'cancel' : 'hourglass_top') + '<div><h3>' + esc(s) + '</h3><div>' + esc(d.nama) + '</div></div></div>' +
           '<div class="bd"><div class="kv"><div>Nomor registrasi</div><div class="mono">' + esc(d.id_record) + '</div><div>Tanggal daftar</div><div>' + fmt.waktu(d.tgl_daftar) + '</div>' + (d.id_member ? '<div>Nomor anggota</div><div class="mono">' + esc(d.id_member) + '</div>' : '') + (d.tgl_verifikasi ? '<div>Diverifikasi</div><div>' + fmt.waktu(d.tgl_verifikasi) + '</div>' : '') + '</div>' +
           (s === 'Ditolak' ? '<div class="alert warn mt">' + ic('info') + '<div><b>Catatan Pengurus:</b> ' + esc(d.catatan || '-') + '<br>Silakan perbaiki lalu daftar kembali.</div></div><a class="btn btn-primary mt" href="#/daftar">Daftar Ulang</a>' : '') +
-          (s === 'Disetujui' ? '<p class="mt small">Info akun telah dikirim ke email Anda; KTA digital tersedia di Ruang Anggota. Belum menerima? Gunakan <a href="#/lupa">Lupa / Aktivasi Kata Sandi</a>.</p><a class="btn btn-primary" href="#/masuk">Masuk ke Ruang Anggota</a>' : '') +
+          (s === 'Disetujui' ? '<p class="mt small">Masuk ke Ruang Anggota dengan tombol <b>Masuk dengan Google</b> memakai akun Google yang emailnya sama dengan email pendaftaran. KTA digital tersedia di sana.</p><a class="btn btn-primary" href="#/masuk">Masuk ke Ruang Anggota</a>' : '') +
           (s === 'Menunggu Verifikasi' ? '<p class="mt small muted mb-0">Pengurus sedang memeriksa data Anda. Anda akan menerima notifikasi melalui email/WhatsApp.</p>' : '') + '</div></div>';
       };
       if ((q.get('id') || last.id) && (q.get('e') || last.email) && q.get('id')) frm.requestSubmit();
@@ -603,13 +616,14 @@
     } catch (e) { return null; } finally { URL.revokeObjectURL(url); }
   }
 
-  /* ---------------- Autentikasi ---------------- */
+  /* ---------------- Autentikasi ----------------
+     v1.9.0: Anggota HANYA masuk dengan akun Google (butuh backend v1.7.0). Pengurus & akses darurat tetap email + kata sandi. */
   function layoutAuth(kanan) {
     const st = IKH.setPub();
     return '<div class="auth"><div class="kiri"><span class="pill" style="align-self:flex-start">' + ic('shield', 'sm') + 'Portal Layanan Alumni</span><h1 class="mt">Sistem Informasi Manajemen Keanggotaan ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</h1>' +
       '<p>Satu akun untuk melihat KTA digital, mengunduh kartu, dan mengajukan pembaruan data yang diverifikasi Pengurus.</p>' +
-      '<div class="ft">' + ic('verified_user') + '<div><b>Akun dibuat otomatis</b>setelah pendaftaran disetujui. Kata sandi awal dikirim ke email terdaftar.</div></div>' +
-      '<div class="ft">' + ic('lock_reset') + '<div><b>Data lama sudah diimpor?</b>Aktifkan akun lewat menu "Lupa / Aktivasi Kata Sandi" memakai email terdaftar.</div></div>' +
+      '<div class="ft">' + ic('verified_user') + '<div><b>Masuk dengan akun Google</b>Anggota tidak memakai kata sandi. Pilih akun Google yang emailnya sama dengan email saat mendaftar.</div></div>' +
+      '<div class="ft">' + ic('how_to_reg') + '<div><b>Data lama sudah diimpor?</b>Langsung masuk dengan Google memakai email yang tercatat. Tidak perlu aktivasi.</div></div>' +
       '<div class="ft">' + ic('qr_code_2') + '<div><b>KTA ber-QR</b>dapat diperiksa keasliannya oleh siapa pun.</div></div></div><div class="kanan"><div class="box">' + kanan + '</div></div></div>';
   }
   function halAuth(judul, kanan, pasang) {
@@ -630,33 +644,91 @@
     Router.go(tujuan);
   }
   IKH.setelahMasuk = setelahMasuk;
-  function masuk() {
+  const G = IKH.Google;
+  function alertMasuk(jenis, ikon, isi) { return '<div class="alert ' + jenis + '">' + ic(ikon) + '<div>' + isi + '</div></div>'; }
+  /** Peringatan bila halaman dibuka di browser bawaan WhatsApp/Instagram/Facebook */
+  function peringatanDalamAplikasi() {
+    if (!G.dalamAplikasi()) return '';
+    return '<div class="alert warn" id="g-inapp">' + ic('open_in_new') + '<div><b>Buka di Chrome atau Safari dulu.</b> Google tidak mengizinkan login dari browser bawaan aplikasi seperti WhatsApp, Instagram, atau Facebook. ' +
+      (G.android() ? 'Tekan tombol di bawah, atau menu ⋮ lalu "Buka di Chrome".' : 'Tekan menu ••• atau ikon kompas lalu pilih "Buka di Safari", atau salin alamatnya.') +
+      '<div class="row wrap mt">' + (G.android() ? '<a class="btn btn-primary btn-sm" href="' + esc(G.keChrome()) + '">' + ic('open_in_new', 'sm') + 'Buka di Chrome</a>' : '') +
+      '<button class="btn btn-ghost btn-sm" type="button" id="g-salin">' + ic('content_copy', 'sm') + 'Salin alamat</button></div></div></div>';
+  }
+  function masuk(p, q) {
     if (Sesi.me && !Sesi.me.wajib) return Router.go(Sesi.me.peran === 'pengurus' ? '/admin' : '/anggota');
     IKH.warmUp('admin');
-    halAuth('Masuk', '<div class="kicker gold">Portal Masuk Terpadu</div><h2 class="mt">Masuk ke Akun Anda</h2><p class="muted">Gunakan email dan kata sandi yang terdaftar.</p>' +
-      '<div class="seg mb" role="tablist" aria-label="Jenis akun"><button class="on" data-p="anggota" type="button">' + 'Alumni / Anggota</button><button data-p="pengurus" type="button">Pengurus</button></div>' +
-      '<form id="frm-in" class="col gap-lg" novalidate><div class="fld"><label for="in-em">Email</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="in-em" type="email" autocomplete="username" placeholder="nama@email.com"></div></div>' +
-      '<div class="fld"><div class="row between"><label for="in-pw" class="lbl">Kata sandi</label><a href="#/lupa" class="small">Lupa / aktivasi?</a></div><div class="inp-ic">' + ic('lock') + '<input class="inp" id="in-pw" type="password" autocomplete="current-password">' + mata('in-pw') + '</div></div>' +
-      '<label class="cek" id="ingat-w"><input type="checkbox" id="in-ingat"><span>Ingat saya di perangkat ini (30 hari)</span></label>' +
-      '<button class="btn btn-primary btn-block" type="submit" data-busy="Memeriksa…">' + ic('login') + 'Masuk</button></form>' +
-      '<div class="alert info mt-lg small" id="in-info">' + ic('info', 'sm') + '<div>Akun anggota aktif setelah pendaftaran disetujui Pengurus. Belum terdaftar? <a href="#/daftar"><b>Daftar sekarang</b></a>.</div></div>', (el) => {
+    const awalPng = !!(q && q.get('p') === 'pengurus');            // bawaan selalu tab Anggota (pengunjung terbanyak)
+    halAuth('Masuk', '<div class="kicker gold">Portal Masuk Terpadu</div><h2 class="mt">Masuk ke Akun Anda</h2>' +
+      '<div class="seg mb" role="tablist" aria-label="Jenis akun"><button class="' + (awalPng ? '' : 'on') + '" data-p="anggota" type="button" role="tab">Alumni / Anggota</button><button class="' + (awalPng ? 'on' : '') + '" data-p="pengurus" type="button" role="tab">Pengurus</button></div>' +
+      // Panel anggota: tombol Google
+      '<div id="p-agt" class="col gap-lg' + (awalPng ? ' hide' : '') + '"><p class="muted mb-0">Masuk dengan akun Google yang emailnya <b>sama dengan email saat mendaftar</b>. Anggota tidak memakai kata sandi.</p>' +
+      peringatanDalamAplikasi() +
+      '<div class="g-wrap"><div id="g-btn" class="g-btn" aria-live="polite"><span class="g-muat"><span class="spin"></span>Menyiapkan tombol Google…</span></div></div>' +
+      '<label class="cek"><input type="checkbox" id="in-ingat"><span>Ingat saya di perangkat ini (30 hari)</span></label>' +
+      '<div id="g-hasil" aria-live="polite"></div>' +
+      '<div class="alert info small">' + ic('info', 'sm') + '<div>Akun aktif setelah pendaftaran disetujui Pengurus. Belum terdaftar? <a href="#/daftar"><b>Daftar sekarang</b></a>.</div></div></div>' +
+      // Panel pengurus: email + kata sandi
+      '<div id="p-png" class="' + (awalPng ? '' : 'hide') + '"><form id="frm-in" class="col gap-lg" novalidate><p class="muted mb-0">Khusus Pengurus: gunakan email dan kata sandi akun Pengurus.</p>' +
+      '<div class="fld"><label for="in-em">Email</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="in-em" type="email" autocomplete="username" placeholder="nama@email.com"></div></div>' +
+      '<div class="fld"><div class="row between"><label for="in-pw" class="lbl">Kata sandi</label><a href="#/lupa" class="small">Lupa kata sandi?</a></div><div class="inp-ic">' + ic('lock') + '<input class="inp" id="in-pw" type="password" autocomplete="current-password">' + mata('in-pw') + '</div></div>' +
+      '<button class="btn btn-primary btn-block" type="submit" data-busy="Memeriksa…">' + ic('login') + 'Masuk sebagai Pengurus</button></form>' +
+      '<div class="alert info mt-lg small">' + ic('info', 'sm') + '<div>Akun Pengurus dibuat oleh Pengurus lain. Pemasangan pertama: gunakan <b>akses darurat</b> dari log setup Apps Script, lalu buat akun Pengurus di menu Pengaturan.</div></div></div>', (el) => {
       pasangMata(el);
-      $$('[data-p]', el).forEach((b) => b.onclick = () => {
-        $$('[data-p]', el).forEach((x) => x.classList.toggle('on', x === b));
-        const png = b.dataset.p === 'pengurus';
-        $('#ingat-w').classList.toggle('hide', png);
-        $('#in-info').innerHTML = ic('info', 'sm') + (png ? '<div>Akun Pengurus dibuat oleh Pengurus lain. Pemasangan pertama: gunakan <b>akses darurat</b> dari log setup Apps Script, lalu buat akun Pengurus di menu Pengaturan.</div>' : '<div>Akun anggota aktif setelah pendaftaran disetujui Pengurus. Belum terdaftar? <a href="#/daftar"><b>Daftar sekarang</b></a>.</div>');
-      });
+      const pilihTab = (png) => {
+        $$('[data-p]', el).forEach((x) => x.classList.toggle('on', (x.dataset.p === 'pengurus') === png));
+        $('#p-agt', el).classList.toggle('hide', png); $('#p-png', el).classList.toggle('hide', !png);
+        if (png) setTimeout(() => $('#in-em').focus(), 30); else pasangGoogle();
+      };
+      $$('[data-p]', el).forEach((b) => b.onclick = () => pilihTab(b.dataset.p === 'pengurus'));
+      const salin = $('#g-salin', el);
+      if (salin) salin.onclick = () => UI.salin(location.origin + location.pathname + '#/masuk');
       $('#frm-in').onsubmit = async (e) => {
         e.preventDefault();
         const em = $('#in-em').value.trim(), pw = $('#in-pw').value;
         if (!em || !pw) return UI.toast('Isi email dan kata sandi.', 'bad');
-        const r = await UI.tombol($('#frm-in button[type=submit]'), () => api('auth.login', { email: em, sandi: pw, ingat: $('#in-ingat').checked, appUrl: location.origin + location.pathname }));
+        const r = await UI.tombol($('#frm-in button[type=submit]'), () => api('auth.login', { email: em, sandi: pw, pengurus: 1, appUrl: location.origin + location.pathname }));
         if (!r.ok) { $('#in-pw').value = ''; $('#in-pw').focus(); return UI.toast(r.msg, 'bad', 5000); }
         UI.toast(r.msg);
         setelahMasuk(r.data);
       };
-      setTimeout(() => $('#in-em').focus(), 50);
+      // ----- Google -----
+      let terpasang = '';
+      const hasil = (html) => { $('#g-hasil', el).innerHTML = html; };
+      async function kirimToken(idToken) {
+        if (!idToken) return hasil(alertMasuk('bad', 'error', 'Google tidak mengirim data login. Coba tekan tombolnya lagi.'));
+        hasil('');
+        const m = UI.muat('Memeriksa akun Google…');
+        let r;
+        try { r = await api('auth.google', { idToken: idToken, ingat: $('#in-ingat').checked }); } finally { m.tutup(); }
+        if (r.ok) { UI.toast(r.msg); return setelahMasuk(r.data); }
+        if (r.code === 'PAKAI_PENGURUS') {
+          pilihTab(true);
+          const em = (/Email (\S+@\S+) adalah/.exec(r.msg) || [])[1];
+          if (em) $('#in-em').value = em;
+          return UI.toast(r.msg, 'warn', 7000);
+        }
+        if (r.code === 'BELUM_TERDAFTAR') return hasil(alertMasuk('warn', 'person_search', esc(r.msg) + '<div class="row wrap mt"><a class="btn btn-primary btn-sm" href="#/daftar">' + ic('person_add', 'sm') + 'Daftar</a><a class="btn btn-ghost btn-sm" href="#/status">' + ic('fact_check', 'sm') + 'Cek status pendaftaran</a></div>'));
+        if (r.code === 'NOACT') return hasil(alertMasuk('bad', 'error', 'Server belum diperbarui ke versi yang mendukung Masuk dengan Google. Hubungi sekretariat.'));
+        hasil(alertMasuk(r.code === 'BELUM_DISETUJUI' ? 'info' : 'bad', r.code === 'BELUM_DISETUJUI' ? 'hourglass_top' : 'error', esc(r.msg)));
+      }
+      async function pasangGoogle() {
+        const kotak = $('#g-btn', el); if (!kotak) return;
+        try {
+          let cid = await G.clientId(false);
+          if (!cid) cid = await G.clientId(true);
+          if (!cid) { kotak.innerHTML = ''; return hasil(alertMasuk('warn', 'info', 'Masuk dengan Google belum diaktifkan oleh Pengurus. Silakan hubungi sekretariat.')); }
+          if (terpasang === cid && kotak.childElementCount && !$('.g-muat', kotak)) return;
+          await G.tombol(kotak, cid, kirimToken);
+          terpasang = cid;
+          // periksa di latar: Client ID bisa saja baru diganti Pengurus
+          G.clientId(true).then((baru) => { if (baru && baru !== terpasang && document.body.contains(kotak)) { terpasang = ''; pasangGoogle(); } }).catch(() => { });
+        } catch (er) {
+          kotak.innerHTML = '';
+          hasil(alertMasuk('bad', 'wifi_off', esc(er.message || 'Tombol Google gagal dimuat.') + ' <button class="btn btn-text btn-sm" type="button" id="g-ulang">Coba lagi</button>'));
+          const u = $('#g-ulang', el); if (u) u.onclick = () => { hasil(''); kotak.innerHTML = '<span class="g-muat"><span class="spin"></span>Menyiapkan tombol Google…</span>'; pasangGoogle(); };
+        }
+      }
+      if (!awalPng) pasangGoogle(); else setTimeout(() => $('#in-em').focus(), 50);
     });
   }
   function gantiSandiWajib() {
@@ -681,9 +753,10 @@
     });
   }
   function lupa() {
-    halAuth('Lupa Kata Sandi', '<div class="kicker gold">Pemulihan / Aktivasi Akun</div><h2 class="mt">Lupa atau Aktivasi Kata Sandi</h2><p class="muted">Masukkan email terdaftar. Kami akan mengirim tautan untuk mengatur kata sandi (berlaku 60 menit). Anggota dari data lama yang belum punya akun juga memakai menu ini.</p>' +
-      '<form id="frm-lp" class="col gap-lg"><div class="fld"><label for="lp-em">Email terdaftar</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="lp-em" type="email" autocomplete="email"></div></div>' +
-      '<button class="btn btn-primary btn-block" type="submit">' + ic('send') + 'Kirim Tautan</button><a class="btn btn-ghost btn-block" href="#/masuk">Kembali ke halaman masuk</a></form><div id="lp-hasil" class="mt" aria-live="polite"></div>', (el) => {
+    halAuth('Lupa Kata Sandi', '<div class="kicker gold">Khusus Pengurus</div><h2 class="mt">Lupa Kata Sandi Pengurus</h2><p class="muted">Masukkan email akun Pengurus. Kami akan mengirim tautan untuk mengatur kata sandi (berlaku 60 menit).</p>' +
+      '<div class="alert info small mb">' + ic('info', 'sm') + '<div>Anggota alumni tidak memakai kata sandi. <a href="#/masuk"><b>Kembali</b></a> lalu tekan <b>Masuk dengan Google</b>.</div></div>' +
+      '<form id="frm-lp" class="col gap-lg"><div class="fld"><label for="lp-em">Email akun Pengurus</label><div class="inp-ic">' + ic('mail') + '<input class="inp" id="lp-em" type="email" autocomplete="email"></div></div>' +
+      '<button class="btn btn-primary btn-block" type="submit">' + ic('send') + 'Kirim Tautan</button><a class="btn btn-ghost btn-block" href="#/masuk?p=pengurus">Kembali ke halaman masuk</a></form><div id="lp-hasil" class="mt" aria-live="polite"></div>', (el) => {
       $('#frm-lp').onsubmit = async (e) => {
         e.preventDefault();
         const r = await UI.tombol($('#frm-lp button[type=submit]'), () => api('auth.lupa', { email: $('#lp-em').value.trim() }));
@@ -705,7 +778,7 @@
         if (b !== $('#rs-k').value) return UI.toast('Konfirmasi kata sandi tidak sama.', 'bad');
         const r = await UI.tombol($('#frm-rs button[type=submit]'), () => api('auth.reset', { email: em, t: t, baru: b }));
         if (!UI.hasil(r)) return;
-        Router.go('/masuk');
+        Router.go('/masuk?p=pengurus');
       };
     });
   }

@@ -247,7 +247,7 @@
       berkas.map((b) => '<div class="bk"><div class="im">' + ic(b.tipe === 'application/pdf' ? 'picture_as_pdf' : 'image', 'xl') + '</div><b class="small trunc" title="' + esc(b.nama) + '">' + esc(b.nama) + '</b><button class="btn btn-ghost btn-xs" data-bk="' + esc(b.id) + '">' + ic('visibility', 'sm') + 'Lihat berkas</button></div>').join('') +
       (!berkas.length && !a.foto_id ? '<p class="small muted">Tidak ada berkas.</p>' : '') + '</div></div>' +
       (a.catatan_verifikasi ? '<div class="sect"><h4>' + ic('description') + 'Catatan verifikasi</h4><p class="mb-0">' + esc(a.catatan_verifikasi) + '</p><p class="small muted mb-0">Oleh ' + esc(a.diverifikasi_oleh || '-') + ' • ' + fmt.waktu(a.tgl_verifikasi) + '</p></div>' : '') +
-      (menunggu ? '<div class="sect" style="border:0"><div class="alert gold">' + ic('bolt') + '<div><b>Saat disetujui, sistem otomatis:</b> (1) menerbitkan nomor anggota, (2) membuat akun & mengirim kata sandi awal ke email, (3) membuat KTA PDF ber-QR dan melampirkannya di email, (4) mengirim WhatsApp bila aktif.</div></div></div>' +
+      (menunggu ? '<div class="sect" style="border:0"><div class="alert gold">' + ic('bolt') + '<div><b>Saat disetujui, sistem otomatis:</b> (1) menerbitkan nomor anggota & KTA digital ber-QR, (2) memberi tahu pendaftar lewat email (dan WhatsApp bila aktif) cara <b>Masuk dengan Google</b> memakai email ini. Tidak ada kata sandi.' + (a.email && !IKH.Google.gmail(a.email) ? '<br><b>Perhatian:</b> ' + esc(a.email) + ' bukan Gmail — pastikan alamat itu terdaftar sebagai Akun Google.' : '') + '</div></div></div>' +
         '<div class="sticky-act"><button class="btn btn-danger" id="v-tolak">' + ic('cancel') + 'Tolak</button><button class="btn btn-primary" id="v-setuju">' + ic('verified') + 'Setujui & Terbitkan KTA</button></div>'
         : (a.status_verifikasi === 'Disetujui' ? '<div class="sticky-act"><a class="btn btn-ghost" href="#/admin/alumni?id=' + esc(a.id_record) + '">' + ic('person') + 'Buka di Data Alumni</a></div>' : ''));
     const ft = $('#v-ft', el); if (ft && a.foto_id) ft.onclick = () => UI.lightbox(img(a.foto_id, 1200), a.nama);
@@ -323,20 +323,22 @@
     el.innerHTML = '<div class="detail-h"><div class="ft" ' + (a.foto_id ? bg(a.foto_id, 300) : '') + '></div><div class="grow"><div class="k">PENGAJUAN PERUBAHAN DATA <span class="mono" style="color:#B9C6E4">#' + esc(p.id_pengajuan) + '</span></div><h2>' + esc(p.nama) + '</h2><div class="s">' + esc(a.id_member || p.id_record) + ' • diajukan ' + fmt.waktu(p.diajukan_pada) + '</div></div>' + UI.badgeStatus(p.status) + '</div>' +
       '<div class="sect"><h4>' + ic('compare_arrows') + 'Rincian Perubahan</h4><div class="tbl-wrap"><table class="diff"><thead><tr><th>Isian</th><th>Data resmi saat pengajuan</th><th>Diajukan menjadi</th></tr></thead><tbody>' +
       keys.map((k) => '<tr><td>' + esc(LABEL[k] || k) + '</td><td class="lama">' + sel(k, lama[k]) + '</td><td class="baru">' + sel(k, baru[k]) + '</td></tr>').join('') + '</tbody></table></div>' +
-      (baru._alasan ? '<div class="alert info mt">' + ic('info') + '<div><b>Keterangan anggota:</b> ' + esc(baru._alasan) + '</div></div>' : '') + '</div>' +
+      (baru._alasan ? '<div class="alert info mt">' + ic('info') + '<div><b>Keterangan anggota:</b> ' + esc(baru._alasan) + '</div></div>' : '') +
+      (baru.email && p.status === 'Menunggu' ? '<div class="alert warn mt">' + ic('warning') + '<div><b>Email baru = akun Google baru untuk masuk.</b> Setelah disetujui, Ruang Anggota hanya bisa dibuka dengan akun Google <b>' + esc(baru.email) + '</b>. Pastikan email itu benar milik ' + esc(p.nama) + ' (mis. konfirmasi lewat WhatsApp).' + (IKH.Google.gmail(baru.email) ? '' : ' Alamat ini bukan Gmail; pastikan sudah terdaftar sebagai Akun Google.') + '</div></div>' : '') + '</div>' +
       '<div class="sect"><h4>' + ic('badge') + 'Data resmi saat ini</h4><div class="kv2">' + [['Nomor anggota', a.id_member], ['Instansi', a.instansi], ['Jabatan', a.jabatan_terakhir], ['WhatsApp', a.no_hp], ['Email', a.email], ['Status', statusKartu(a)]].map((r) => '<div><div class="k">' + r[0] + '</div><div class="v">' + esc(r[1] || '-') + '</div></div>').join('') + '</div></div>' +
       (p.status !== 'Menunggu' ? '<div class="sect" style="border:0"><p class="mb-0"><b>Keputusan:</b> ' + esc(p.status) + (p.catatan ? ' — ' + esc(p.catatan) : '') + '</p><p class="small muted mb-0">' + esc(p.diputuskan_oleh || '') + ' • ' + fmt.waktu(p.diputuskan_pada) + '</p></div>' :
         '<div class="sticky-act"><button class="btn btn-danger" id="c-tolak">' + ic('cancel') + 'Tolak</button><button class="btn btn-primary" id="c-setuju">' + ic('check_circle') + 'Setujui Perubahan</button></div>');
     $$('[data-zoom]', el).forEach((im) => im.onclick = () => UI.lightbox(img(im.dataset.zoom, 1200), 'Foto'));
     if (p.status === 'Menunggu') {
       $('#c-setuju').onclick = async () => {
-        const k = await UI.konfirmasi('Setujui perubahan data <b>' + esc(p.nama) + '</b>? Data resmi langsung diperbarui' + (keys.some((z) => ['nama', 'foto_id', 'prodi', 'angkatan', 'nomor_taruna', 'instansi'].indexOf(z) > -1) ? ' dan KTA akan dibuat ulang saat diunduh' : '') + '.', { ya: 'Setujui', input: { label: 'Catatan (opsional)', tipe: 'input' } });
+        const k = await UI.konfirmasi('Setujui perubahan data <b>' + esc(p.nama) + '</b>? Data resmi langsung diperbarui' + (keys.some((z) => ['nama', 'foto_id', 'prodi', 'angkatan', 'nomor_taruna', 'instansi'].indexOf(z) > -1) ? ' dan KTA akan dibuat ulang saat diunduh' : '') + '.' +
+          (baru.email ? '<p class="small mt mb-0"><b>Email masuk Google berubah</b> menjadi ' + esc(baru.email) + '. Sesi dengan email lama langsung berakhir.</p>' : ''), { ya: 'Setujui', input: { label: 'Catatan (opsional)', tipe: 'input' } });
         if (!k.ok) return;
         const lama2 = Object.assign({}, p);
         Store.patchPengajuan({ id_pengajuan: p.id_pengajuan, status: 'Disetujui', catatan: k.nilai, diputuskan_pada: new Date().toISOString() });
         PS.sel = null; daftarC(); bingkai('/admin/perubahan', 'Perubahan Data');
         const r = await api('adm.chg.setuju', { id_pengajuan: p.id_pengajuan, catatan: k.nilai });
-        if (r.ok) { Store.patchPengajuan(r.data.pengajuan); Store.patchAnggota(r.data.anggota); UI.toast(r.msg); }
+        if (r.ok) { Store.patchPengajuan(r.data.pengajuan); Store.patchAnggota(r.data.anggota); UI.toast(r.msg, /bukan alamat Gmail/.test(r.msg) ? 'warn' : 'ok', baru.email ? 9000 : 4000); if (baru.email) Store.admBoot(true); }
         else { Store.patchPengajuan(lama2); UI.toast(r.msg, 'bad', 6000); }
         if (Router.parse().path === '/admin/perubahan') daftarC();
       };
@@ -397,12 +399,13 @@
     const sc = document.createElement('div'); sc.className = 'scrim'; sc.style.placeItems = 'stretch end'; sc.style.padding = '0';
     const s = statusKartu(a);
     sc.innerHTML = '<aside class="drawer" role="dialog" aria-modal="true" aria-label="Detail alumni"><div class="modal-h"><h3>Detail Alumni</h3><button class="btn btn-ghost btn-icon btn-sm" data-x aria-label="Tutup">' + ic('close') + '</button></div>' +
-      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row wrap mt">' + UI.badgeStatus(s) + (a.status_verifikasi === 'Disetujui' ? IKH.badgeJenis(a) + IKH.badgePengurus(a) : '') + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
+      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row wrap mt">' + UI.badgeStatus(s) + (a.status_verifikasi === 'Disetujui' ? IKH.badgeJenis(a) + IKH.badgePengurus(a) : '') + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : akun.status !== 'Aktif' ? 'b-mute' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus ' + esc(akun.status) : akun.status !== 'Aktif' ? 'Akun ' + esc(akun.status) : akun.google ? 'Masuk dengan Google' : 'Belum pernah masuk') + '</span>' : (a.status_verifikasi === 'Disetujui' ? '<span class="badge b-mute">Belum pernah masuk</span>' : '')) + '</div></div></div>' +
       (a.status_verifikasi === 'Disetujui' ? '<div class="mt-lg" style="max-width:420px">' + Kta.depan(a, x.st) + '</div>' : '') +
       '<h4 class="mt-lg">Data Lengkap</h4><div class="kv">' + FIELD.map((k) => '<div>' + LABEL[k] + '</div><div>' + esc(a[k] || '-') + '</div>').join('') +
       '<div>Jenis anggota</div><div>' + esc('Anggota ' + IKH.jenisAgt(a)) + (a.tgl_penetapan ? '<div class="small muted">Ditetapkan ' + fmt.tgl(a.tgl_penetapan, true) + (a.no_sk_penetapan ? ' • SK ' + esc(a.no_sk_penetapan) : '') + (a.ket_penetapan ? '<br>' + esc(a.ket_penetapan) : '') + '</div>' : '') + '</div>' +
       IKH.kvPengurus(a) + '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div>' + (a.kta_sah_pada ? '<div>Pengesahan KTA</div><div>' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '<div class="small muted">' + esc(a.kta_sah_jabatan || '') + ' • ' + fmt.tgl(a.kta_sah_pada, true) + '</div></div>' : '') + '<div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
-      '<div class="modal-f"><button class="btn btn-danger" data-a="arsip">' + ic('inventory_2', 'sm') + 'Arsipkan</button>' + (akun ? '<button class="btn btn-ghost" data-a="reset">' + ic('lock_reset', 'sm') + 'Reset Sandi</button>' : '') +
+      '<div class="modal-f"><button class="btn btn-danger" data-a="arsip">' + ic('inventory_2', 'sm') + 'Arsipkan</button>' + (akun && akun.peran === 'pengurus' && akun.email !== (Sesi.me || {}).email ? '<button class="btn btn-ghost" data-a="reset">' + ic('lock_reset', 'sm') + 'Reset Sandi</button>' : '') +
+      (akun && akun.peran === 'anggota' && akun.google ? '<button class="btn btn-ghost" data-a="gReset" title="Bila anggota mengganti/membuat ulang akun Google-nya">' + ic('link_off', 'sm') + 'Reset Tautan Google</button>' : '') +
       (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="jenis">' + ic('workspace_premium', 'sm') + 'Jenis Anggota</button><button class="btn btn-ghost" data-a="kta">' + ic('badge', 'sm') + 'Kartu Digital</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
     document.body.appendChild(sc);
     const tutup = () => sc.remove();
@@ -414,7 +417,8 @@
       if (act === 'ubah') { tutup(); formAlumni(id); }
       if (act === 'kta') pratinjau(a);
       if (act === 'jenis') formJenis(a, () => { tutup(); drawerAlumni(id); });
-      if (act === 'reset') { const r = await UI.tombol(b, () => resetSandi(akun.email)); }
+      if (act === 'reset') { await UI.tombol(b, () => resetSandi(akun.email)); }
+      if (act === 'gReset') { if (await resetTautanGoogle(akun.email, a.nama)) { tutup(); drawerAlumni(id); } }
       if (act === 'arsip') {
         const k = await UI.konfirmasi('Pindahkan <b>' + esc(a.nama) + '</b> ke arsip? Akun login dinonaktifkan. Data dapat dipulihkan dari menu Arsip.', { bahaya: true, ya: 'Arsipkan', input: { label: 'Alasan', tipe: 'input' } });
         if (!k.ok) return;
@@ -471,6 +475,15 @@
     if (!r.ok) return UI.toast(r.msg, 'bad');
     tampilSandi(email, r.data.sandi, r.msg);
   }
+  /** v1.9.0: akun anggota tidak punya kata sandi — "reset" = lepas tautan ke akun Google tertentu */
+  async function resetTautanGoogle(email, nama) {
+    const k = await UI.konfirmasi('Atur ulang tautan Google untuk <b>' + esc(nama || email) + '</b>?<ul class="small mt mb-0"><li>Semua sesinya berakhir.</li><li>Ia bisa masuk lagi dengan akun Google ber-email <b>' + esc(email) + '</b>, walau akun Google itu baru dibuat ulang.</li><li>Pakai bila anggota melapor "Email ini sudah terhubung ke akun Google lain".</li></ul>', { ya: 'Atur Ulang Tautan' });
+    if (!k.ok) return false;
+    const r = await api('adm.akun.reset', { email });
+    if (!UI.hasil(r)) return false;
+    const ak = D().d.akun.find((x) => x.email === email); if (ak) { ak.google = ''; Store.simpanAdmLokal(); }
+    return true;
+  }
   function tampilSandi(email, sandi, msg) {
     UI.modal({ judul: 'Kata Sandi Sementara', isi: '<div class="alert warn">' + ic('warning') + '<div>' + esc(msg || 'Catat sekarang — hanya tampil sekali.') + '</div></div><div class="kv mt"><div>Email</div><div>' + esc(email) + '</div><div>Kata sandi</div><div class="mono" style="font-size:18px">' + esc(sandi) + '</div></div><p class="small muted mt mb-0">Pemilik akun wajib menggantinya saat pertama masuk.</p>',
       tombol: [{ teks: 'Salin', ikon: 'content_copy', aksi: () => { UI.salin(sandi); return false; } }, { teks: 'Selesai', kelas: 'btn-primary' }] });
@@ -487,7 +500,7 @@
       '<div class="col">' + (id ? '<div class="fld"><label for="fa-st">Status anggota</label><select class="inp" id="fa-st">' + opsi(['Aktif', 'Nonaktif', 'Kedaluwarsa'], a.status_anggota, false) + '</select></div>' : '') +
       '<div class="fld"><label for="fa-masa">Berlaku s.d.</label><input class="inp" type="date" id="fa-masa" value="' + esc(IKH.seumurHidup(a) ? '' : a.masa_berlaku_kartu || '') + '"' + (IKH.seumurHidup(a) ? ' disabled' : '') + '><span class="hint">' + (IKH.seumurHidup(a) ? 'Seumur hidup (Anggota Kehormatan). Ubah lewat tombol Jenis Anggota.' : id ? (IKH.jenisAgt(a) === 'Luar Biasa' ? 'Anggota Luar Biasa: 5 tahun sejak penetapan.' : '') : 'Kosongkan untuk default ' + esc(x.st.MASA_BERLAKU_TAHUN || 3) + ' tahun.') + '</span></div>' +
       '<div class="fld"><label for="fa-idm">Nomor anggota</label><input class="inp mono" id="fa-idm" value="' + esc(a.id_member || '') + '" placeholder="Otomatis bila kosong"></div></div></div>' +
-      (!id ? '<div class="col mt"><label class="cek"><input type="checkbox" id="fa-aktif" checked><span>Langsung aktif (terbitkan nomor anggota tanpa antrean verifikasi)</span></label><label class="cek"><input type="checkbox" id="fa-akun" checked><span>Buat akun login & kirim email berisi kata sandi awal + KTA (bila email diisi)</span></label></div>' +
+      (!id ? '<div class="col mt"><label class="cek"><input type="checkbox" id="fa-aktif" checked><span>Langsung aktif (terbitkan nomor anggota tanpa antrean verifikasi)</span></label><label class="cek"><input type="checkbox" id="fa-akun" checked><span>Beri tahu lewat email cara <b>Masuk dengan Google</b> (bila email diisi). Tanpa kata sandi.</span></label></div>' +
         (me.darurat ? '' : '<div class="alert info small mt">' + ic('link', 'sm') + '<div>Data Anda sendiri? Isi email dengan email akun Pengurus Anda (<b>' + esc(me.email || '') + '</b>). Data ini otomatis terhubung ke akun Anda dan bisa dibuka di menu <b>Data & KTA Saya</b> — tanpa akun atau kata sandi kedua.</div></div>') : '') + '</form>',
       tombol: [{ teks: 'Batal' }, { teks: id ? 'Simpan Perubahan' : 'Tambah Alumni', kelas: 'btn-primary', aksi: async (md) => {
         const frm = $('#fa', md), o = IKH.ambilForm(frm, FIELD);
@@ -505,7 +518,7 @@
         if (r.data.taut && r.data.taut === me.email) { LS.del('agt_' + me.email); Store.agt = null; }
         return true;
       } }],
-      onBuka: (md) => { $('#fa-foto', md).onchange = async (e) => { try { foto = await IKH.bacaGambar(e.target.files[0], 800, 0.86); $('#fa-pv', md).style.backgroundImage = 'url(' + foto.data + ')'; $('#fa-pv', md).innerHTML = ''; } catch (er) { UI.toast(er.message, 'bad'); } }; }
+      onBuka: (md) => { IKH.pantauEmailGoogle(md); $('#fa-foto', md).onchange = async (e) => { try { foto = await IKH.bacaGambar(e.target.files[0], 800, 0.86); $('#fa-pv', md).style.backgroundImage = 'url(' + foto.data + ')'; $('#fa-pv', md).innerHTML = ''; } catch (er) { UI.toast(er.message, 'bad'); } }; }
     });
   }
 
@@ -715,9 +728,9 @@
         t('APP_URL', 'URL aplikasi (GitHub Pages)', 'Dipakai pada QR KTA & tautan email. Terisi otomatis saat Pengurus pertama masuk.', 'url') + t('DAFTAR_KOTA', 'Pilihan domisili (satu per baris)', '', 'area') + '</div>' +
         '<div class="col gap-lg">' + t('DAFTAR_PRODI', 'Daftar program studi (satu per baris)', 'Muncul di formulir & filter.', 'area') + t('DAFTAR_KEPEGAWAIAN', 'Daftar status kepegawaian (satu per baris)', '', 'area') + '</div></div></div>' +
         '<div class="' + (PG.tab === 'akun' ? '' : 'hide') + '" data-p="akun"><div class="toolbar"><span class="grow small muted">Akun Pengurus memiliki akses penuh. Batasi hanya untuk orang yang berwenang.</span><button class="btn btn-primary btn-sm" id="ak-add">' + ic('person_add', 'sm') + 'Tambah Pengurus</button></div><div id="ak-tbl"></div></div>' +
-        '<div class="card-b ' + (PG.tab === 'aman' ? '' : 'hide') + '" data-p="aman"><div class="grid g2">' + (me.darurat ?
+        '<div class="card-b ' + (PG.tab === 'aman' ? '' : 'hide') + '" data-p="aman"><div class="grid g2"><div class="col gap-lg">' + kartuGoogle(x) + (me.darurat ?
           '<form class="card card-b col gap-lg" id="f-dar"><h4>Ganti Sandi Akses Darurat</h4><p class="small muted mb-0">Wajib dirotasi setelah pemakaian pertama. Minimal 12 karakter, huruf dan angka.</p><div class="fld"><label for="dar-b">Sandi darurat baru</label><input class="inp" id="dar-b" type="password" autocomplete="new-password"></div><button class="btn btn-primary" type="submit">Simpan Sandi Darurat</button></form>'
-          : '<form class="card card-b col gap-lg" id="f-pw"><h4>Ganti Kata Sandi Saya</h4><div class="fld"><label for="pw-l">Kata sandi saat ini</label><input class="inp" id="pw-l" type="password" autocomplete="current-password"></div><div class="fld"><label for="pw-b">Kata sandi baru</label><input class="inp" id="pw-b" type="password" autocomplete="new-password"><span class="hint">Min. 8 karakter, huruf & angka.</span></div><button class="btn btn-primary" type="submit">Simpan</button></form>') +
+          : '<form class="card card-b col gap-lg" id="f-pw"><h4>Ganti Kata Sandi Saya</h4><div class="fld"><label for="pw-l">Kata sandi saat ini</label><input class="inp" id="pw-l" type="password" autocomplete="current-password"></div><div class="fld"><label for="pw-b">Kata sandi baru</label><input class="inp" id="pw-b" type="password" autocomplete="new-password"><span class="hint">Min. 8 karakter, huruf & angka.</span></div><button class="btn btn-primary" type="submit">Simpan</button></form>') + '</div>' +
         '<div class="col gap-lg"><div class="card card-b"><h4>Sesi</h4><p class="small muted">Keluar dari semua perangkat bila Anda curiga akun dipakai orang lain.</p><button class="btn btn-danger" id="out-all">' + ic('logout', 'sm') + 'Keluar dari Semua Perangkat</button></div>' +
         '<div class="card card-b"><h4>Info Sistem</h4><div class="kv"><div>Versi aplikasi</div><div>' + IKH.chipVersi() + '</div><div>Versi server (Apps Script)</div><div>' + (IKH.Versi.server ? 'v' + esc(IKH.Versi.server) : '-') + '</div><div>Data panel dibuat</div><div>' + fmt.waktu(x.d.dibuat) + '</div><div>Sinkron terakhir</div><div>' + fmt.relatif(new Date(Store.admAt).toISOString()) + '</div></div><p class="small muted mt mb-0">Rahasia (token Fonnte, secret sesi, sandi darurat) disimpan di Script Properties Apps Script — tidak di spreadsheet maupun di browser.</p></div></div></div></div>' +
         '<div class="card-f row between wrap ' + (PG.tab === 'org' || PG.tab === 'kta' ? '' : 'hide') + '" id="s-foot"><span class="small muted" id="s-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="s-simpan">' + ic('check_circle') + 'Simpan Pengaturan</button></div></section>';
@@ -745,9 +758,66 @@
       [['#del-logo', 'logo'], ['#del-ttd', 'ttd']].forEach((d) => { const b = $(d[0], main); if (b) b.onclick = async () => { if (!(await UI.konfirmasi(d[1] === 'ttd' ? 'Hapus berkas tanda tangan ketua dari Drive? Berkas ini tidak dipakai lagi oleh aplikasi.' : 'Hapus gambar ini?', { bahaya: true, ya: 'Hapus' })).ok) return; const r = await api('adm.upload', { tujuan: d[1], hapus: true }); if (UI.hasil(r)) { Store.admBoot(true); } }; });
       tabelAkun(main);
       const fp = $('#f-pw', main); if (fp) fp.onsubmit = async (e) => { e.preventDefault(); const r = await UI.tombol($('button', fp), () => api('auth.ganti', { lama: $('#pw-l').value, baru: $('#pw-b').value })); if (UI.hasil(r)) { Sesi.simpan(r.data.token, r.data.me); if (r.data.boot) Store.setAdm(r.data.boot); fp.reset(); } };
+      pasangGoogle(main);
       const fd = $('#f-dar', main); if (fd) fd.onsubmit = async (e) => { e.preventDefault(); UI.hasil(await UI.tombol($('button', fd), () => api('adm.darurat.ganti', { baru: $('#dar-b').value }))); fd.reset(); };
       $('#out-all').onclick = async () => { if (!(await UI.konfirmasi('Semua sesi akun Anda akan berakhir, termasuk perangkat ini.', { bahaya: true, ya: 'Keluar dari semua' })).ok) return; await api('auth.logout', { semua: true }); Sesi.keluar(); };
     });
+  }
+  /* ---------- Login anggota dengan Google (v1.9.0, butuh backend v1.7.0) ---------- */
+  function kartuGoogle(x) {
+    const cid = x.d.googleClientId || '';
+    return '<form class="card card-b col gap-lg" id="f-g" autocomplete="off"><div class="row between wrap"><h4 class="mb-0">Login Anggota dengan Google</h4>' +
+      (cid ? '<span class="badge b-ok">Aktif</span>' : '<span class="badge b-wait">Belum aktif</span>') + '</div>' +
+      '<p class="small muted mb-0">Anggota hanya bisa masuk dengan akun Google. Pengurus & akses darurat tetap memakai email + kata sandi.</p>' +
+      '<div class="fld"><label for="g-cid">Google Client ID</label><input class="inp mono" id="g-cid" value="' + esc(cid) + '" placeholder="1234567890-xxxx.apps.googleusercontent.com" spellcheck="false">' +
+      '<span class="hint">Dari Google Cloud → Google Auth Platform → Clients, jenis <b>Web application</b>. Jangan tempel Client secret (berawalan GOCSPX-).</span></div>' +
+      '<div class="small">Authorized JavaScript origin yang wajib terdaftar di Client ID tersebut:<div class="row wrap mt"><span class="code-origin">' + esc(location.origin) + '</span><button class="btn btn-text btn-xs" type="button" id="g-salin-or">' + ic('content_copy', 'sm') + 'Salin</button></div></div>' +
+      '<div class="row wrap"><button class="btn btn-primary" type="submit">' + ic('check_circle', 'sm') + 'Simpan Client ID</button><button class="btn btn-ghost" type="button" id="g-cek">' + ic('fact_check', 'sm') + 'Cek Kesiapan Anggota</button></div></form>';
+  }
+  function pasangGoogle(main) {
+    const f = $('#f-g', main); if (!f) return;
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      if (IKH.butuhServer('1.7.0', 'Login anggota dengan Google')) return;
+      const v = $('#g-cid', f).value.trim();
+      if (!v) return UI.toast('Tempel Client ID dari Google Cloud.', 'warn');
+      const r = await UI.tombol($('button[type=submit]', f), () => api('adm.google.simpan', { clientId: v }));
+      if (!UI.hasil(r)) return;
+      Store.adm.googleClientId = r.data.googleClientId; Store.simpanAdmLokal();
+      if (Store.pub) Store.pub.google = r.data.googleClientId;
+      Store.pubBoot(true); pengaturan();
+    };
+    $('#g-salin-or', f).onclick = () => UI.salin(location.origin);
+    $('#g-cek', f).onclick = (e) => kesiapanGoogle(e.currentTarget);
+  }
+  // [kelas, judul, penjelasan] — urutan = urutan tampil (masalah paling berat dulu)
+  const KAT_G = {
+    kosong: ['bad', 'Tanpa email', 'Belum bisa masuk. Isi email akun Google-nya di Data Alumni.'],
+    format: ['bad', 'Format email salah', 'Perbaiki alamat email-nya di Data Alumni.'],
+    ganda: ['bad', 'Email dipakai 2 data', 'Satu email (titik & +alias Gmail disamakan) tercatat di lebih dari satu data anggota. Masuk ditolak sampai dirapikan.'],
+    lain: ['warn', 'Bukan Google', 'Domainnya tidak memakai Google. Hanya bisa masuk bila alamat itu sudah dijadikan Akun Google. Paling mudah: ganti ke Gmail.'],
+    tidakDicek: ['warn', 'Tidak dapat dicek', 'Domain email tidak dapat diperiksa. Tanyakan ke anggota apakah email ini akun Google.'],
+    pengurus: ['info', 'Akun Pengurus', 'Masuk lewat tab Pengurus dengan kata sandi (peran ganda).'],
+    workspace: ['ok', 'Google Workspace', 'Domain kantor yang memakai Google. Siap.'],
+    gmail: ['ok', 'Gmail', 'Siap.']
+  };
+  async function kesiapanGoogle(btn) {
+    if (IKH.butuhServer('1.7.0', 'Cek kesiapan Google')) return;
+    const r = await UI.tombol(btn, () => api('adm.google.kesiapan', {}));
+    if (!r.ok) return UI.toast(r.msg, 'bad', 5000);
+    const d = r.data, n = d.ringkas, urut = Object.keys(KAT_G);
+    const perlu = d.baris.filter((b) => ['bad', 'warn'].indexOf(KAT_G[b.kategori][0]) > -1).sort((p, q) => urut.indexOf(p.kategori) - urut.indexOf(q.kategori) || String(p.nama).localeCompare(String(q.nama)));
+    const siap = n.gmail + n.workspace, kartu = (k, angka, label) => '<div class="k ' + k + '"><b>' + fmt.angka(angka) + '</b><span>' + label + '</span></div>';
+    UI.modal({ judul: 'Kesiapan Masuk dengan Google', lebar: 'lg', isi:
+      (d.clientId ? '' : '<div class="alert warn mb">' + ic('warning') + '<div><b>Client ID belum diisi.</b> Anggota belum bisa masuk sama sekali sampai Client ID disimpan.</div></div>') +
+      '<div class="g-kat">' + kartu('', n.total, 'anggota aktif') + kartu('ok', siap, 'email Google (siap)') + kartu(perlu.length ? 'warn' : 'ok', perlu.length, 'perlu dicek / diperbaiki') + kartu('', n.pengurus, 'akun Pengurus') + kartu('ok', n.sudahMasuk, 'sudah pernah masuk') + '</div>' +
+      (perlu.length ? '<h4 class="mt-lg">Perlu dicek atau diperbaiki</h4><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Anggota</th><th>Email</th><th>Masalah</th><th></th></tr></thead><tbody>' +
+        perlu.map((b) => { const k = KAT_G[b.kategori]; return '<tr><td><div class="nm">' + esc(b.nama) + '</div><div class="small muted mono">' + esc(b.id_member || b.id_record) + '</div></td><td class="small">' + esc(b.email || '—') + '</td><td><span class="badge ' + (k[0] === 'bad' ? 'b-bad' : 'b-wait') + '">' + esc(k[1]) + '</span><div class="tiny muted">' + esc(k[2]) + '</div></td><td class="right"><button class="btn btn-ghost btn-xs" data-ubah="' + esc(b.id_record) + '">' + ic('edit', 'sm') + 'Buka</button></td></tr>'; }).join('') + '</tbody></table></div>'
+        : '<div class="alert ok mt-lg">' + ic('task_alt') + '<div>Semua anggota aktif memakai email Google (Gmail atau Google Workspace).</div></div>') +
+      '<p class="small muted mt mb-0">Domain kantor diperiksa lewat catatan MX (apakah emailnya dikelola Google). Pemeriksaan ini tidak bisa memastikan alamat non-Google sudah dijadikan Akun Google; tanyakan langsung ke anggotanya. Dicek ' + fmt.waktu(d.dicek) + '.</p>',
+      tombol: [{ teks: 'Unduh Excel', ikon: 'table_view', aksi: () => { IKH.Ekspor.excel(d.baris.map((b) => ({ 'No. Anggota': b.id_member, Nama: b.nama, Angkatan: b.angkatan, Email: b.email, Kategori: KAT_G[b.kategori][1], Keterangan: KAT_G[b.kategori][2], 'Sudah pernah masuk': b.masuk ? 'Ya' : 'Belum', 'Login terakhir': b.login_terakhir || '', 'Akun Google dipakai': b.google_email || '' })), 'kesiapan-login-google', 'Kesiapan Google'); return false; } },
+        { teks: 'Tutup', kelas: 'btn-primary' }],
+      onBuka: (md, tutup) => $$('[data-ubah]', md).forEach((b) => b.onclick = () => { tutup(null); Router.go('/admin/alumni?id=' + encodeURIComponent(b.dataset.ubah)); }) });
   }
   function tabelAkun(main) {
     const x = D(), me = Sesi.me || {};
@@ -768,7 +838,7 @@
         if (UI.hasil(r)) { a.status = st; Store.simpanAdmLokal(); tabelAkun(main); }
       } });
     $('#ak-add', main).onclick = () => UI.modal({ judul: 'Tambah Akun Pengurus', isi: '<div class="col gap-lg"><div class="fld"><label for="ak-n">Nama</label><input class="inp" id="ak-n"></div><div class="fld"><label for="ak-e">Email</label><input class="inp" id="ak-e" type="email"></div><div class="fld"><label for="ak-h">WhatsApp (untuk notifikasi Pengurus)</label><input class="inp" id="ak-h" type="tel"></div><label class="cek"><input type="checkbox" id="ak-m" checked><span>Kirim kata sandi awal ke email ini</span></label>' +
-      '<div class="alert info small">' + ic('info', 'sm') + '<div>Bila email ini milik alumni yang sudah terdata, akun otomatis <b>terhubung ke data alumninya</b>. Bila ia sudah punya akun anggota, akun itu <b>dinaikkan menjadi Pengurus</b> — kata sandinya tetap, tidak ada kata sandi baru.</div></div></div>',
+      '<div class="alert info small">' + ic('info', 'sm') + '<div>Bila email ini milik alumni yang sudah terdata, akun otomatis <b>terhubung ke data alumninya</b>. Bila ia sudah punya akun anggota, akun itu <b>dinaikkan menjadi Pengurus</b>: dibuatkan kata sandi awal (tampil sekali) dan ia tidak lagi masuk dengan Google.</div></div></div>',
       tombol: [{ teks: 'Batal' }, { teks: 'Buat Akun', kelas: 'btn-primary', aksi: async (md) => {
         const r = await api('adm.akun.simpan', { nama: $('#ak-n', md).value.trim(), email: $('#ak-e', md).value.trim(), no_hp: $('#ak-h', md).value.trim(), kirimEmail: $('#ak-m', md).checked });
         if (!UI.hasil(r)) return false;
@@ -784,13 +854,13 @@
     const lain = x.d.akun.filter((k) => k.peran === 'pengurus' && k.status === 'Aktif' && k.email !== a.email).length;
     if (!lain) return UI.toast('Minimal harus ada satu akun Pengurus aktif lain. Buat akun Pengurus pengganti dulu, baru lepas peran ini.', 'warn', 7000);
     const k = await UI.konfirmasi('Lepas peran Pengurus dari <b>' + esc(a.nama || a.email) + '</b>?' +
-      '<ul class="small mt mb-0"><li>Akses ke Panel Pengurus dicabut.</li><li>Akun kembali menjadi akun anggota biasa: data alumni, KTA, dan kata sandinya tetap.</li>' +
+      '<ul class="small mt mb-0"><li>Akses ke Panel Pengurus dicabut.</li><li>Akun kembali menjadi akun anggota biasa: data alumni & KTA tetap. <b>Kata sandinya dihapus</b>; selanjutnya ia masuk dengan tombol <b>Masuk dengan Google</b> memakai email data alumninya.</li>' +
       (a.id_record ? '' : '<li><b>Akun ini belum terhubung ke data alumni</b> — server akan menolak. Pakai Nonaktifkan bila orang ini tidak perlu masuk lagi.</li>') +
       (diri ? '<li><b>Ini akun Anda sendiri</b> — Anda akan langsung keluar dan masuk lagi sebagai anggota.</li>' : '') + '</ul>', { bahaya: true, ya: 'Lepas Peran' });
     if (!k.ok) return;
     const r = await api('adm.akun.lepas', { email: a.email });
     if (!UI.hasil(r)) return;
-    if (r.data && r.data.diriSendiri) return setTimeout(() => Sesi.keluar(), 1200);
+    if (r.data && r.data.diriSendiri) return setTimeout(() => Sesi.keluar(), 2500);
     Store.admBoot(true).then(() => { if (Router.parse().path === '/admin/pengaturan') pengaturan(); });
   }
 

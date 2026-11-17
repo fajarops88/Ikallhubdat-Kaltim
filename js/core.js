@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.8.1';
+  const VERSI = '1.9.0';
   const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -69,8 +69,9 @@
     keluar(kedaluwarsa) {
       const peran = this.me && this.me.peran;
       this.data = null; LS.del('sesi'); LS.hapusSemua('adm'); LS.hapusSemua('agt'); Store.adm = null; Store.agt = null;
+      if (IKH.Google) IKH.Google.keluar();
       if (kedaluwarsa) UI.toast('Sesi berakhir. Silakan masuk kembali.', 'warn');
-      Router.go(peran === 'pengurus' || peran === 'anggota' ? '/masuk' : '/');
+      Router.go(peran === 'pengurus' ? '/masuk?p=pengurus' : peran === 'anggota' ? '/masuk' : '/');
     }
   };
   IKH.Sesi = Sesi;
@@ -97,7 +98,7 @@
   const ALASAN_CFG = alasanUrl(GAS_URL);
   const KONFIG_OK = !ALASAN_CFG;
   IKH.KONFIG_OK = KONFIG_OK; IKH.GAS_URL = GAS_URL;
-  const BACA = /^(pub\.(boot|cekStatus|verifikasi|galeri|album|foto)|auth\.me|agt\.boot|adm\.(boot|konten|log|akun\.list|arsip\.list|galeri\.(list|album|foto|lama))|notif\.(config|queue|ringkas)|wa\.(audience|blastList)|crm\.(list|stats|detail)|imp\.inspect)$/;
+  const BACA = /^(pub\.(boot|cekStatus|verifikasi|galeri|album|foto)|auth\.(me|config)|agt\.boot|adm\.(boot|konten|log|akun\.list|arsip\.list|google\.kesiapan|galeri\.(list|album|foto|lama))|notif\.(config|queue|ringkas)|wa\.(audience|blastList)|crm\.(list|stats|detail)|imp\.inspect)$/;
   const _inflight = {}; let _epoch = 0;
   async function apiRun(action, data, extra) {
     const t0 = performance.now();
@@ -428,6 +429,46 @@
     autotable: ['https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js', 'https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js']
   };
   IKH.CDN = CDN;
+
+  /* ---------------- Masuk dengan Google (v1.9.0, butuh backend v1.7.0) ----------------
+     Tombol resmi Google Identity Services. ID token dari Google dikirim ke server (auth.google);
+     server memeriksanya ke Google lalu mencocokkan email dengan data anggota yang sudah disetujui. */
+  CDN.gsi = ['https://accounts.google.com/gsi/client'];
+  const Google = {
+    /** Browser bawaan aplikasi lain (WhatsApp, Instagram, Facebook, WebView). Google menolak login di sana. */
+    dalamAplikasi() {
+      const ua = navigator.userAgent || '';
+      const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (/FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|BytedanceWebview|Twitter|Snapchat|WhatsApp/i.test(ua)) return true;
+      if (/Android/.test(ua) && /; wv\)/.test(ua)) return true;                     // Android WebView
+      if (ios && !/Safari\//.test(ua) && !navigator.standalone) return true;          // iOS WKWebView di dalam aplikasi
+      return false;
+    },
+    android() { return /Android/.test(navigator.userAgent || ''); },
+    /** Buka situs ini di Chrome (Android) */
+    keChrome() { return 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end'; },
+    /** Client ID dari data beranda (cepat) atau langsung dari server (segar) */
+    async clientId(segar) {
+      if (!segar && Store.pub && Store.pub.google) return Store.pub.google;
+      const r = await api('auth.config', {});
+      if (!r.ok) throw new Error(r.code === 'NOACT' ? 'Server belum diperbarui ke versi yang mendukung Masuk dengan Google (backend v1.7.0).' : (r.msg || 'Gagal memeriksa pengaturan login.'));
+      if (Store.pub) Store.pub.google = r.data.googleClientId || '';
+      return r.data.googleClientId || '';
+    },
+    /** Pasang tombol resmi "Masuk dengan Google" di elemen el. onToken(idToken) dipanggil setelah pengguna memilih akun. */
+    async tombol(el, cid, onToken) {
+      await IKH.muat(CDN.gsi);
+      const g = window.google && window.google.accounts && window.google.accounts.id;
+      if (!g) throw new Error('Pustaka Google tidak termuat.');
+      g.initialize({ client_id: cid, callback: (res) => onToken(res && res.credential), ux_mode: 'popup', auto_select: false, cancel_on_tap_outside: true, context: 'signin', itp_support: true });
+      el.innerHTML = '';
+      g.renderButton(el, { type: 'standard', theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', logo_alignment: 'left', locale: 'id',
+        width: Math.max(220, Math.min(400, Math.floor(el.clientWidth || 320))) });
+    },
+    keluar() { try { if (window.google && window.google.accounts) window.google.accounts.id.disableAutoSelect(); } catch (e) { } },
+    gmail(e) { return /@(gmail|googlemail)\.com$/i.test(String(e || '').trim()); }
+  };
+  IKH.Google = Google;
 
   /* ---------------- QR & KTA ---------------- */
   async function qrBuat(teks) { await IKH.muat(CDN.qr); const q = window.qrcode(0, 'M'); q.addData(teks); q.make(); return q; }
@@ -1066,7 +1107,7 @@
         '<div>Versi server (Apps Script)</div><div>' + (srv ? 'v' + esc(srv) : '<span class="muted">belum terhubung</span>') + '</div>' +
         '<div>Cache offline (PWA)</div><div>' + (sw && sw.length ? esc(sw.join(', ')) : '<span class="muted">tidak aktif</span>') + '</div>' +
         '<div>Diperiksa</div><div>' + (this.cekAt ? fmt.relatif(new Date(this.cekAt).toISOString()) : '-') + '</div></div>' +
-        (riwayat.length ? '<h4 class="mt-lg mb">Riwayat Perubahan</h4><div class="ver-log">' + riwayat.slice(0, 12).map((r) =>
+        (riwayat.length ? '<h4 class="mt-lg mb">Riwayat Perubahan</h4><div class="ver-log">' + riwayat.slice(0, 20).map((r) =>
           '<div class="it ' + (r.versi === VERSI ? 'kini' : '') + '"><div class="row between"><b>v' + esc(r.versi) + (r.versi === VERSI ? ' <span class="badge b-gold">dipakai</span>' : '') + '</b><span class="small muted">' + esc(r.tanggal ? fmt.tgl(r.tanggal) : '') + '</span></div>' +
           (r.judul ? '<div class="small b mt">' + esc(r.judul) + '</div>' : '') + (Array.isArray(r.poin) && r.poin.length ? '<ul>' + r.poin.map((p) => '<li>' + esc(p) + '</li>').join('') + '</ul>' : '') + '</div>').join('') + '</div>' : '');
     },

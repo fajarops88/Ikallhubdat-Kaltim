@@ -643,3 +643,18 @@ select.inp.pilih-al option:checked { background: var(--navy-soft) linear-gradien
 .fu::before { inset: -14%; filter: blur(9px); }
 .fu::after { inset: 0; background-size: contain; }
 .foto-v { width: 96px; height: 120px; border-radius: 10px; flex: none; background-color: #E9EDF3; }
+
+/* ===== v1.9.0 Masuk dengan Google ===== */
+.g-wrap{display:flex;justify-content:center;min-height:48px}
+.g-btn{width:100%;max-width:400px;min-height:44px;display:flex;justify-content:center;align-items:center}
+.g-btn > div{max-width:100%}
+.g-muat{display:inline-flex;align-items:center;gap:10px;color:var(--muted,#55647C);font-size:14px;padding:10px 0}
+.g-muat .spin{width:18px;height:18px;border-width:2px}
+.hint.hint-g{color:#8A5A00;display:flex;gap:6px;align-items:flex-start}
+.hint.hint-g .ic{flex:0 0 auto;margin-top:1px}
+.g-kat{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.g-kat .k{border:1px solid var(--border,#E3E7EE);border-radius:12px;padding:10px 12px;background:#fff}
+.g-kat .k b{display:block;font-size:22px;line-height:1.2;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.g-kat .k span{font-size:12px;color:var(--muted,#55647C)}
+.g-kat .k.ok b{color:var(--ok,#1E7B4F)} .g-kat .k.warn b{color:#B26A00} .g-kat .k.bad b{color:var(--bad,#B3261E)}
+.code-origin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#F2F4F8;border:1px solid var(--border,#E3E7EE);border-radius:8px;padding:6px 10px;word-break:break-all;display:inline-block}

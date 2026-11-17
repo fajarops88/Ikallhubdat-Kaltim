@@ -1,9 +1,25 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.8.1",
+  "versi": "1.9.0",
   "tanggal": "2026-11-18",
-  "server_min": "1.6.0",
+  "server_min": "1.7.0",
   "riwayat": [
+    {
+      "versi": "1.9.0",
+      "tanggal": "2026-11-18",
+      "judul": "Anggota masuk dengan akun Google",
+      "poin": [
+        "Anggota alumni kini HANYA masuk dengan tombol \"Masuk dengan Google\". Tidak ada lagi kata sandi anggota, kata sandi awal di email, maupun menu aktivasi.",
+        "Pilih akun Google yang emailnya sama dengan email data anggota. Titik dan +alias pada Gmail disamakan (a.b@gmail.com = ab@gmail.com).",
+        "Akun anggota dibuat otomatis saat pertama kali masuk, lalu terikat ke akun Google itu. Data hasil impor langsung bisa masuk tanpa aktivasi.",
+        "Pengurus dan akses darurat tetap memakai email + kata sandi (tab \"Pengurus\"). Email Pengurus ditolak di tombol Google.",
+        "Bila halaman dibuka dari dalam WhatsApp, Instagram, atau Facebook, muncul petunjuk untuk membukanya di Chrome atau Safari (Google menolak login di browser bawaan aplikasi).",
+        "Pengaturan → Keamanan: isi Google Client ID dan \"Cek Kesiapan Anggota\" (daftar anggota yang emailnya kosong, ganda, atau bukan Google).",
+        "Data Alumni: tombol \"Reset Tautan Google\" untuk anggota yang mengganti/membuat ulang akun Google-nya. Pengajuan ganti email kini memperingatkan bahwa email baru = akun Google baru.",
+        "Lepas peran Pengurus menghapus kata sandinya (masuk lewat Google); menaikkan anggota menjadi Pengurus membuat kata sandi awal baru.",
+        "Butuh backend v1.7.0."
+      ]
+    },
     {
       "versi": "1.8.1",
       "tanggal": "2026-11-18",
