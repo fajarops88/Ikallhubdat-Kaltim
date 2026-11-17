@@ -2,16 +2,17 @@
    • Aset statis: tampil instan dari cache, diperbarui di latar (stale-while-revalidate)
    • Halaman, config.js & versi.json: selalu dicek ke server (perubahan langsung terlihat setelah push)
    • API Apps Script & gambar Drive: TIDAK pernah dicache oleh service worker
+   • Cache "ikh-galeri-…" (foto galeri yang sudah dimuat, diisi oleh publik.js) TIDAK dihapus saat versi berganti
    VERSI & ?v= di bawah disetel otomatis oleh skrip build (sama dengan versi.json & core.js) */
-const VERSI = 'ikh-v1.6.0';
-const SHELL = ['./', './index.html', './css/style.css?v=1.6.0', './js/config.js?v=1.6.0', './js/core.js?v=1.6.0', './js/publik.js?v=1.6.0',
+const VERSI = 'ikh-v1.7.0';
+const SHELL = ['./', './index.html', './css/style.css?v=1.7.0', './js/config.js?v=1.7.0', './js/core.js?v=1.7.0', './js/publik.js?v=1.7.0',
   './manifest.json', './img/logo.png', './img/favicon.png', './img/icon-192.png', './img/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSI).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSI).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSI && k.indexOf('ikh-galeri') !== 0).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 /* Jaringan dulu. mode 'no-cache' = tanya server apakah berkas berubah (murah, ±304),
    sehingga cache HTTP ±10 menit GitHub Pages tidak menahan versi lama. */

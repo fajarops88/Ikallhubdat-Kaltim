@@ -15,12 +15,13 @@
   const saklarKini = (el) => ({ TAMPIL_STATISTIK: $('#kb-stat', el).checked ? 'YA' : 'TIDAK', TAMPIL_PETA: $('#kb-peta', el).checked ? 'YA' : 'TIDAK',
     MENU_SEMBUNYI: kunciMenu().filter((k) => { const c = $('[data-menu="' + k + '"]', el); return c && !c.checked; }).join(',') });
   const KET_MENU = { beranda: 'Tautan Beranda di menu atas & footer (logo tetap mengarah ke beranda).', profil: 'Menu Profil Organisasi & tautan "Baca selengkapnya" sambutan.', berita: 'Menu Berita + bagian Berita & Pengumuman di beranda.',
-    daftar: 'Menu & tombol Pendaftaran / "Daftar Sekarang". Untuk menutup formulirnya, matikan "Formulir pendaftaran publik dibuka" di Pengaturan.', status: 'Tautan Cek Status Pendaftaran di footer.', verifikasi: 'Menu & tombol Verifikasi KTA. Pindai QR pada KTA tetap berfungsi.', masuk: 'Tombol Masuk di menu atas, beranda & footer.' };
+    galeri: 'Menu Galeri + bagian Galeri Kegiatan di beranda. Bila dimatikan, halaman Galeri dan fotonya juga DITUTUP (alamat langsung tidak bisa dibuka). Album tetap bisa disiapkan di tab Galeri.',
+    daftar: 'Tombol "Daftar" di ujung menu atas, ajakan daftar di beranda & tautan footer. Untuk menutup formulirnya, matikan "Formulir pendaftaran publik dibuka" di Pengaturan.', status: 'Tautan Cek Status Pendaftaran di footer.', verifikasi: 'Menu & tombol Verifikasi KTA. Pindai QR pada KTA tetap berfungsi.', masuk: 'Tombol Masuk di menu atas, beranda & footer.' };
   function panelTampilan(st) {
     const sem = IKH.menuTersembunyi(st);
     const sakl = (id, on, label, ket, attr) => '<label class="saklar-baris"><span class="switch"><input type="checkbox" ' + (id ? 'id="' + id + '" ' : '') + (attr || '') + (on ? ' checked' : '') + '><span class="tr"></span></span><span><b>' + label + '</b><span class="hint">' + ket + '</span></span></label>';
     return '<div class="card-b" data-p="tampilan"><div class="grid g2" style="align-items:start">' +
-      '<div><h4 class="row">' + ic('menu_open') + 'Menu situs publik</h4><p class="small muted">Matikan untuk menyembunyikan dari menu atas (termasuk menu HP), footer, dan tombol di beranda. Halamannya tetap bisa dibuka lewat tautan langsung.</p><div class="col">' +
+      '<div><h4 class="row">' + ic('menu_open') + 'Menu situs publik</h4><p class="small muted">Matikan untuk menyembunyikan dari menu atas (termasuk menu HP), footer, dan tombol di beranda. Halamannya tetap bisa dibuka lewat tautan langsung, <b>kecuali Galeri</b> (ikut ditutup).</p><div class="col">' +
       kunciMenu().map((k) => sakl('', !sem(k), IKH.MENU_PUB[k], KET_MENU[k] || '', 'data-menu="' + k + '"')).join('') + '</div>' +
       '<div class="alert warn small mt hide" id="kb-warn-masuk">' + ic('info', 'sm') + '<div>Tombol Masuk disembunyikan. Pengurus & anggota tetap bisa masuk lewat <b class="mono">' + esc(location.href.split('#')[0]) + '#/masuk</b> — simpan alamat ini.</div></div></div>' +
       '<div><h4 class="row">' + ic('home') + 'Bagian beranda</h4><p class="small muted">Bagian yang ditampilkan di halaman depan situs publik.</p><div class="col">' +
@@ -30,7 +31,7 @@
   const peringatanMenu = (el) => { const c = $('[data-menu="masuk"]', el), w = $('#kb-warn-masuk', el); if (c && w) w.classList.toggle('hide', c.checked); };
   function beranda() {
     return halaman('/admin/beranda', 'Kelola Beranda', async (main, x, awal) => {
-      if (!awal && KB.edit) return;
+      if (!awal && (KB.edit || GA.sibuk)) return;
       const st = x.st;
       const tabs = [['hero', 'Beranda', 'home'], ['tampilan', 'Menu & Tampilan', 'tune'], ['profil', 'Profil Organisasi', 'domain'], ['sambutan', 'Sambutan Ketua', 'person'], ['struktur', 'Struktur & Pengurus', 'account_tree'], ['berita', 'Berita', 'newspaper'], ['galeri', 'Galeri', 'photo_library']];
       const t = (k, label, hint, area, rows) => '<div class="fld"><label for="kb-' + k + '">' + label + '</label>' + (area ? '<textarea class="inp" id="kb-' + k + '" data-k="' + k + '" rows="' + (rows || 5) + '">' + esc(st[k] || '') + '</textarea>' : '<input class="inp" id="kb-' + k + '" data-k="' + k + '" value="' + esc(st[k] || '') + '">') + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
@@ -49,9 +50,9 @@
         (st.STRUKTUR_BAGAN_ID ? '<img src="' + esc(img(st.STRUKTUR_BAGAN_ID, 900)) + '" alt="Bagan" style="max-height:220px;border-radius:10px;border:1px solid var(--border)">' : '') +
         '<hr class="sep"><div class="row between mb"><h4 class="mb-0">Pengurus</h4><button class="btn btn-primary btn-sm" data-baru="struktur">' + ic('person_add', 'sm') + 'Tambah Pengurus</button></div><div id="kb-str">' + UI.skel(3) + '</div></div>' +
         '<div class="card-b" data-p="berita"><div class="row between mb"><h4 class="mb-0">Berita & Pengumuman</h4><button class="btn btn-primary btn-sm" data-baru="berita">' + ic('add', 'sm') + 'Tulis Berita</button></div><div id="kb-brt">' + UI.skel(3) + '</div></div>' +
-        '<div class="card-b" data-p="galeri"><div class="row between mb"><h4 class="mb-0">Galeri Kegiatan</h4><button class="btn btn-primary btn-sm" data-baru="galeri">' + ic('add_photo_alternate', 'sm') + 'Tambah Foto</button></div><div id="kb-gal">' + UI.skel(3) + '</div></div>' +
+        '<div class="card-b" data-p="galeri"><div id="kb-gal">' + UI.skel(3) + '</div></div>' +
         '<div class="card-f row between wrap" id="kb-foot"><span class="small muted" id="kb-ubah">Tidak ada perubahan.</span><button class="btn btn-primary" id="kb-simpan">' + ic('check_circle') + 'Simpan Perubahan</button></div></section>';
-      const tampilTab = () => { $$('[data-tab]', main).forEach((y) => y.classList.toggle('on', y.dataset.tab === KB.tab)); $$('[data-p]', main).forEach((p) => p.classList.toggle('hide', p.dataset.p !== KB.tab)); $('#kb-foot').classList.toggle('hide', ['struktur', 'berita', 'galeri'].indexOf(KB.tab) > -1); };
+      const tampilTab = () => { $$('[data-tab]', main).forEach((y) => y.classList.toggle('on', y.dataset.tab === KB.tab)); $$('[data-p]', main).forEach((p) => p.classList.toggle('hide', p.dataset.p !== KB.tab)); $('#kb-foot').classList.toggle('hide', ['struktur', 'berita', 'galeri'].indexOf(KB.tab) > -1); if (KB.tab === 'galeri') GA.buka($('#kb-gal', main)); };
       $$('[data-tab]', main).forEach((b) => b.onclick = () => { KB.tab = b.dataset.tab; tampilTab(); });
       tampilTab();
       const kartu = $('section.card', main);
@@ -85,8 +86,6 @@
         { k: 'tanggal', label: 'Tanggal', render: (b) => fmt.tgl(b.tanggal) }, { k: 'status', label: 'Status', render: (b) => UI.badgeStatus(b.status) },
         { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="ubah">' + ic('edit', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="hapus">' + ic('delete', 'sm') + '</button>' }],
       onAksi: (a, b) => a === 'ubah' ? formKonten('berita', b) : hapusKonten('berita', b) });
-    $('#kb-gal').innerHTML = k.galeri.length ? '<div class="gal">' + k.galeri.map((g) => '<div class="g" ' + bg(g.gambar_id, 500) + ' style="cursor:default"><span class="cap">' + esc(g.judul) + '<span class="row" style="margin-top:4px"><button class="btn btn-ghost btn-xs" data-g="' + esc(g.id) + '" data-a="ubah">' + ic('edit', 'sm') + '</button><button class="btn btn-ghost btn-xs" data-g="' + esc(g.id) + '" data-a="hapus">' + ic('delete', 'sm') + '</button></span></span></div>').join('') + '</div>' : UI.kosong('Belum ada foto.', 'photo_library');
-    $$('[data-g]', $('#kb-gal')).forEach((b) => b.onclick = () => { const g = k.galeri.find((y) => y.id === b.dataset.g); b.dataset.a === 'ubah' ? formKonten('galeri', g) : hapusKonten('galeri', g); });
     IKH.Tabel($('#kb-str'), { data: k.struktur, idKey: 'id', per: 30, kosong: 'Belum ada data pengurus.', cari: (s) => [strTampil(s).nama, s.jabatan, s.bidang].join(' '),
       kolom: [{ k: 'urutan', label: '#', w: '50px' }, { k: 'nama', label: 'Nama', render: (s) => { const t = strTampil(s); return '<div class="person">' + UI.ava(t.nama, t.foto) + '<div style="min-width:0"><div class="nm">' + esc(t.nama) + '</div><div class="sb row" style="gap:6px;flex-wrap:wrap">' + LABEL_TAUT[t.status] + (s.periode ? '<span>' + esc(s.periode) + '</span>' : '') + '</div></div></div>'; } },
         { k: 'jabatan', label: 'Jabatan', render: (s) => esc(s.jabatan) + '<div class="small muted">' + esc(s.bidang || '') + '</div>' },
@@ -95,6 +94,221 @@
       onAksi: (a, s) => a === 'ubah' ? formStruktur(s) : hapusKonten('struktur', s) });
     baganAdmin(k.struktur);
   }
+  /* ======================= GALERI ALBUM (v1.7.0) =======================
+     Pengurus membuat album per kegiatan lalu mengunggah foto. Browser menyiapkan 2 ukuran (± 480 px untuk grid,
+     ± 1280 px untuk tampilan diperbesar) sehingga unggahan ringan; berkas disimpan PRIVAT di Drive oleh server. */
+  const GA = { view: 'daftar', id: '', list: null, alb: null, pilih: new Set(), sibuk: false, el: null };
+  const UK_KECIL = 480, UK_BESAR = 1280;
+  /** File/Blob gambar → { kecil:{data}, besar:{data}, lebar, tinggi } (JPEG) */
+  async function siapkanFoto(file) {
+    if (!file || !/^image\//.test(file.type || 'image/')) throw new Error('Bukan berkas gambar.');
+    if (file.size > 30 * 1048576) throw new Error('Ukuran berkas di atas 30 MB.');
+    const url = URL.createObjectURL(file);
+    try {
+      const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Gambar tidak dapat dibaca (format tidak didukung browser).')); i.src = url; });
+      const W = im.naturalWidth, H = im.naturalHeight;
+      const buat = (maks, mutu) => { const r = Math.min(1, maks / Math.max(W, H)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W * r)); c.height = Math.max(1, Math.round(H * r));
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, c.width, c.height); return { c, data: c.toDataURL('image/jpeg', mutu) }; };
+      let b = buat(UK_BESAR, 0.82);
+      if (b.data.length > 1.3 * 1048576 * 4 / 3) b = buat(UK_BESAR, 0.7);
+      const k = buat(UK_KECIL, 0.72);
+      return { kecil: { data: k.data }, besar: { data: b.data }, lebar: b.c.width, tinggi: b.c.height };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  const tglAlb = (a) => [a.tanggal ? fmt.tgl(a.tanggal, true) : '', a.lokasi].filter(Boolean).map(esc).join(' • ');
+  GA.buka = function (el) {
+    GA.el = el || GA.el; if (!GA.el) return;
+    if (IKH.butuhServer('1.5.0', 'Galeri album')) { GA.el.innerHTML = '<div class="alert warn">' + ic('info') + '<div>Galeri album membutuhkan backend Apps Script v1.5.0. Tempel kode backend terbaru lalu deploy ulang.</div></div>'; return; }
+    return GA.view === 'album' && GA.id ? GA.albumHal(GA.id) : GA.daftarHal();
+  };
+  GA.daftarHal = async function (paksa) {
+    GA.view = 'daftar'; GA.pilih.clear();
+    const el = GA.el;
+    if (GA.list) GA.gambarDaftar(); else el.innerHTML = UI.skel(4);
+    const d = await IKH.ambil('galeri', 'adm.galeri.list', {}, 30000, { paksa: !!paksa || !GA.list });
+    if (!d || GA.view !== 'daftar' || !document.body.contains(el)) return;
+    GA.list = d; GA.gambarDaftar();
+  };
+  GA.gambarDaftar = function () {
+    const d = GA.list, el = GA.el, al = d.album || [];
+    el.innerHTML = (d.tampil === false ? '<div class="alert warn mb">' + ic('visibility_off') + '<div>Menu <b>Galeri</b> sedang disembunyikan, sehingga halaman Galeri tertutup bagi pengunjung. Album tetap bisa disiapkan; tampilkan lagi di tab <b>Menu &amp; Tampilan</b>.</div></div>' : '') +
+      ((d.lama || []).length ? '<div class="alert info mb">' + ic('move_up') + '<div class="grow"><b>' + d.lama.length + ' foto galeri format lama</b> belum dipindahkan. Foto lama berupa tautan Drive terbuka dan tidak tampil di Galeri album. ' +
+        'Pindahkan agar dikelompokkan per judul kegiatan menjadi album, disimpan privat, dan tautan lamanya ditutup.<div class="mt"><button class="btn btn-primary btn-sm" id="ga-lama">' + ic('drive_file_move', 'sm') + 'Pindahkan ke album</button></div></div></div>' : '') +
+      '<div class="row between wrap mb"><div><h4 class="mb-0 row">' + ic('photo_library') + 'Album Kegiatan <span class="badge b-mute">' + al.length + '</span></h4><div class="hint">Foto disimpan privat di Drive (tanpa tautan berbagi) dan hanya tampil lewat situs. Maksimal ' + (d.maks || 60) + ' foto per album.</div></div>' +
+      '<div class="row"><button class="btn btn-ghost btn-sm" id="ga-segar" title="Muat ulang">' + ic('refresh', 'sm') + '</button><a class="btn btn-ghost btn-sm" href="#/galeri" target="_blank">' + ic('open_in_new', 'sm') + 'Lihat Galeri</a><button class="btn btn-primary btn-sm" id="ga-baru">' + ic('create_new_folder', 'sm') + 'Album Baru</button></div></div>' +
+      (al.length ? '<div class="ga-albums">' + al.map((a) => '<button type="button" class="alb" data-al="' + esc(a.id) + '"><span class="sp" ' + (a.sampul ? 'data-gf="' + esc(a.sampul) + '"' : '') + '>' + ic('photo_library', 'xl') + '</span>' +
+        '<span class="bd"><b>' + esc(a.judul) + '</b><span class="meta">' + (tglAlb(a) || '&nbsp;') + '</span><span class="row"><span class="badge ' + (a.tampil === 'TIDAK' ? 'b-mute">Disembunyikan' : a.jumlah ? 'b-ok">Tampil' : 'b-wait">Belum ada foto') + '</span><span class="badge b-info">' + a.jumlah + '/' + (d.maks || 60) + ' foto</span></span></span></button>').join('') + '</div>'
+        : UI.kosong('Belum ada album. Klik "Album Baru" untuk mulai — misalnya "Musda IV 2026".', 'photo_library'));
+    IKH.GF.pasang(el, true);
+    $$('[data-al]', el).forEach((b) => b.onclick = () => GA.albumHal(b.dataset.al));
+    $('#ga-baru', el).onclick = () => GA.formAlbum(null);
+    $('#ga-segar', el).onclick = () => GA.daftarHal(true);
+    const bl = $('#ga-lama', el); if (bl) bl.onclick = () => GA.pindahLama();
+  };
+  /** Form album (baru/ubah). Album baru → langsung dibuka untuk unggah foto. */
+  GA.formAlbum = function (a) {
+    const v = a || { tanggal: hariIni(), tampil: 'YA' };
+    UI.modal({ judul: a ? 'Ubah Album' : 'Album Baru', isi: '<div class="col gap-lg"><div class="fld"><label for="ga-j">Judul kegiatan<span class="req">*</span></label><input class="inp" id="ga-j" maxlength="150" value="' + esc(v.judul || '') + '" placeholder="mis. Musda IV DPD Kaltim 2026"></div>' +
+      '<div class="grid g2"><div class="fld"><label for="ga-t">Tanggal kegiatan</label><input class="inp" type="date" id="ga-t" value="' + esc(v.tanggal || '') + '"></div><div class="fld"><label for="ga-l">Lokasi</label><input class="inp" id="ga-l" maxlength="150" value="' + esc(v.lokasi || '') + '" placeholder="mis. Samarinda"></div></div>' +
+      '<div class="fld"><label for="ga-k">Keterangan</label><textarea class="inp" id="ga-k" rows="3" maxlength="1000">' + esc(v.keterangan || '') + '</textarea></div>' +
+      '<label class="saklar-baris"><span class="switch"><input type="checkbox" id="ga-tp"' + (v.tampil !== 'TIDAK' ? ' checked' : '') + '><span class="tr"></span></span><span><b>Tampilkan di situs</b><span class="hint">Matikan untuk menyiapkan album dulu (album tanpa foto juga belum tampil).</span></span></label></div>',
+      tombol: [{ teks: 'Batal' }, { teks: a ? 'Simpan' : 'Buat Album', kelas: 'btn-primary', aksi: async (md) => {
+        const judul = $('#ga-j', md).value.trim();
+        if (!judul) { $('#ga-j', md).classList.add('err'); $('#ga-j', md).focus(); return false; }
+        const r = await api('adm.album.simpan', { id: a ? a.id : undefined, judul, tanggal: $('#ga-t', md).value, lokasi: $('#ga-l', md).value, keterangan: $('#ga-k', md).value, tampil: $('#ga-tp', md).checked ? 'YA' : 'TIDAK' });
+        if (!UI.hasil(r)) return false;
+        GA.list = null; Store.pubBoot(true);
+        GA.albumHal(r.data.album.id, true);
+        return true;
+      } }] });
+  };
+  GA.albumHal = async function (id, paksa) {
+    const el = GA.el;
+    if (GA.id !== id) GA.pilih.clear();
+    GA.view = 'album'; GA.id = id;
+    if (!(GA.alb && GA.alb.album.id === id)) el.innerHTML = UI.skel(5);
+    else GA.gambarAlbum();
+    if (GA.alb && GA.alb.album.id === id && !paksa) return;
+    const r = await api('adm.galeri.album', { id });
+    if (GA.view !== 'album' || GA.id !== id || !document.body.contains(el)) return;
+    if (!r.ok) { UI.toast(r.msg || 'Album tidak dapat dimuat.', 'bad'); GA.id = ''; GA.alb = null; return GA.daftarHal(true); }
+    GA.alb = r.data; GA.gambarAlbum();
+  };
+  GA.gambarAlbum = function () {
+    const el = GA.el, a = GA.alb.album, foto = GA.alb.foto || [], maks = GA.alb.maks || 60, sisa = Math.max(0, maks - foto.length);
+    const sampul = a.sampul_pilih || (foto[0] && foto[0].id);
+    for (const x of Array.from(GA.pilih)) if (!foto.some((f) => f.id === x)) GA.pilih.delete(x);
+    el.innerHTML = '<div class="row between wrap mb"><div class="row" style="gap:.6rem"><button class="btn btn-ghost btn-sm" id="ga-kembali">' + ic('arrow_back', 'sm') + 'Semua album</button>' +
+      '<div><h4 class="mb-0">' + esc(a.judul) + ' <span class="badge ' + (a.tampil === 'TIDAK' ? 'b-mute">Disembunyikan' : foto.length ? 'b-ok">Tampil' : 'b-wait">Belum tampil (belum ada foto)') + '</span></h4><div class="hint">' + (tglAlb(a) || '') + (a.keterangan ? ' — ' + esc(a.keterangan) : '') + '</div></div></div>' +
+      '<div class="row wrap"><button class="btn btn-ghost btn-sm" id="ga-ubah">' + ic('edit', 'sm') + 'Ubah</button><button class="btn btn-ghost btn-sm" id="ga-tampil">' + ic(a.tampil === 'TIDAK' ? 'visibility' : 'visibility_off', 'sm') + (a.tampil === 'TIDAK' ? 'Tampilkan' : 'Sembunyikan') + '</button>' +
+      '<a class="btn btn-ghost btn-sm" href="#/galeri/' + esc(a.id) + '" target="_blank">' + ic('open_in_new', 'sm') + 'Lihat</a><button class="btn btn-ghost btn-sm" id="ga-hapus" style="color:var(--bad)">' + ic('delete', 'sm') + 'Hapus Album</button></div></div>' +
+      '<div class="ga-drop mb" id="ga-drop">' + (sisa ? '<div class="row center wrap" style="justify-content:center">' + ic('add_photo_alternate', 'lg') + '<div style="text-align:left"><b>Tarik foto ke sini</b> atau <label class="btn btn-primary btn-sm" style="vertical-align:middle">' + ic('upload', 'sm') + 'Pilih Foto<input type="file" accept="image/*" multiple class="hide" id="ga-file"></label>' +
+        '<div class="hint">Bisa pilih banyak sekaligus. Sisa ' + sisa + ' dari ' + maks + ' foto. Foto diperkecil otomatis sebelum diunggah.</div></div></div>' : '<b>Album penuh (' + maks + ' foto).</b> Buat album baru untuk foto berikutnya.') +
+        '<div id="ga-prog" class="hide mt"><div class="ga-prog"><i></i></div><div class="row between mt small"><span id="ga-prog-t" aria-live="polite"></span><button class="btn btn-text btn-sm" id="ga-stop">Hentikan</button></div></div></div>' +
+      '<div class="row between wrap mb" id="ga-bar"><span class="small muted">' + (foto.length ? 'Klik foto untuk memilih. Ikon ' + ic('zoom_in', 'sm') + ' untuk memperbesar.' : '') + '</span><div class="row wrap hide" id="ga-aksi"><b class="small" id="ga-n"></b>' +
+        '<button class="btn btn-ghost btn-xs" data-ga="sampul">' + ic('star', 'sm') + 'Jadikan sampul</button><button class="btn btn-ghost btn-xs" data-ga="ket">' + ic('edit_note', 'sm') + 'Keterangan</button>' +
+        '<button class="btn btn-ghost btn-xs" data-ga="semua">Pilih semua</button><button class="btn btn-ghost btn-xs" data-ga="batal">Batal pilih</button><button class="btn btn-ghost btn-xs" data-ga="hapus" style="color:var(--bad)">' + ic('delete', 'sm') + 'Hapus</button></div></div>' +
+      (foto.length ? '<div class="fotos ga-fotos">' + foto.map((f, i) => '<div class="ft' + (GA.pilih.has(f.id) ? ' dipilih' : '') + '" data-f="' + esc(f.id) + '" data-gf="' + esc(f.id) + '" data-i="' + i + '" role="checkbox" tabindex="0" aria-checked="' + GA.pilih.has(f.id) + '" aria-label="Foto ' + (i + 1) + (f.ket ? ': ' + esc(f.ket) : '') + '">' + ic('image') +
+        '<span class="pil">' + ic('check', 'sm') + '</span>' + (f.id === sampul ? '<span class="sb badge b-gold">' + ic('star', 'sm') + 'Sampul</span>' : '') + '<button type="button" class="tg btn btn-ghost btn-xs" data-zoom title="Perbesar" aria-label="Perbesar foto ' + (i + 1) + '">' + ic('zoom_in', 'sm') + '</button>' +
+        (f.ket ? '<span class="cap">' + esc(f.ket) + '</span>' : '') + '</div>').join('') + '</div>' : UI.kosong('Album masih kosong. Unggah foto kegiatan di atas.', 'add_photo_alternate'));
+    IKH.GF.pasang(el, true);
+    const bar = () => { const n = GA.pilih.size; $('#ga-aksi', el).classList.toggle('hide', !n); $('#ga-n', el).textContent = n + ' dipilih'; $$('[data-ga="sampul"],[data-ga="ket"]', el).forEach((b) => b.classList.toggle('hide', n !== 1)); };
+    $$('.ga-fotos .ft', el).forEach((t) => {
+      const ubah = () => { const id = t.dataset.f; GA.pilih.has(id) ? GA.pilih.delete(id) : GA.pilih.add(id); t.classList.toggle('dipilih', GA.pilih.has(id)); t.setAttribute('aria-checked', GA.pilih.has(id)); bar(); };
+      t.onclick = (e) => { if (e.target.closest('[data-zoom]')) { e.stopPropagation(); return IKH.GF.lihat(foto, +t.dataset.i, { judul: a.judul, admin: true }); } ubah(); };
+      t.onkeydown = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); ubah(); } };
+    });
+    bar();
+    $('#ga-kembali', el).onclick = () => { GA.id = ''; GA.daftarHal(true); };
+    $('#ga-ubah', el).onclick = () => GA.formAlbum(a);
+    $('#ga-tampil', el).onclick = (e) => UI.tombol(e.currentTarget, async () => { const r = await api('adm.album.simpan', { id: a.id, tampil: a.tampil === 'TIDAK' ? 'YA' : 'TIDAK' }); if (UI.hasil(r)) { GA.list = null; Store.pubBoot(true); GA.albumHal(a.id, true); } });
+    $('#ga-hapus', el).onclick = async () => {
+      const k = await UI.konfirmasi('Hapus album <b>' + esc(a.judul) + '</b> beserta <b>' + foto.length + ' foto</b>?<br><span class="small muted">Berkas foto dipindah ke Sampah Google Drive (masih bisa dipulihkan dari Drive selama 30 hari), lalu hilang dari situs.</span>', { ya: 'Hapus Album', bahaya: true });
+      if (!k.ok) return;
+      const m = UI.muat('Menghapus album…'); const r = await api('adm.album.hapus', { id: a.id }); m.tutup();
+      if (UI.hasil(r)) { GA.id = ''; GA.alb = null; GA.list = null; Store.pubBoot(true); GA.daftarHal(true); }
+    };
+    $$('[data-ga]', el).forEach((b) => b.onclick = () => GA.aksi(b.dataset.ga));
+    const inp = $('#ga-file', el); if (inp) inp.onchange = (e) => { const f = Array.from(e.target.files || []); e.target.value = ''; GA.unggah(f); };
+    const dz = $('#ga-drop', el);
+    if (sisa) {
+      ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('on'); }));
+      ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('on'); }));
+      dz.addEventListener('drop', (e) => GA.unggah(Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter((f) => /^image\//.test(f.type))));
+    }
+  };
+  GA.aksi = async function (act) {
+    const ids = Array.from(GA.pilih), a = GA.alb.album;
+    if (act === 'semua') { (GA.alb.foto || []).forEach((f) => GA.pilih.add(f.id)); return GA.gambarAlbum(); }
+    if (act === 'batal') { GA.pilih.clear(); return GA.gambarAlbum(); }
+    if (act === 'sampul') { const r = await api('adm.album.simpan', { id: a.id, sampul: ids[0] }); if (UI.hasil(r)) { GA.pilih.clear(); GA.list = null; Store.pubBoot(true); GA.albumHal(a.id, true); } return; }
+    if (act === 'ket') {
+      const f = GA.alb.foto.find((x) => x.id === ids[0]);
+      const k = await UI.konfirmasi('Keterangan singkat foto (tampil di bawah foto saat diperbesar).', { judul: 'Keterangan Foto', ya: 'Simpan', input: { label: 'Keterangan', tipe: 'input', nilai: f ? f.ket : '', ph: 'mis. Pembukaan oleh Ketua DPD' } });
+      if (!k.ok) return;
+      const r = await api('adm.foto.ubah', { id: ids[0], keterangan: k.nilai });
+      if (UI.hasil(r)) { if (f) f.ket = r.data.foto.ket; GA.pilih.clear(); GA.gambarAlbum(); }
+      return;
+    }
+    if (act === 'hapus') {
+      const k = await UI.konfirmasi('Hapus <b>' + ids.length + ' foto</b> dari album <b>' + esc(a.judul) + '</b>?<br><span class="small muted">Berkasnya dipindah ke Sampah Google Drive.</span>', { ya: 'Hapus', bahaya: true });
+      if (!k.ok) return;
+      const m = UI.muat('Menghapus foto…'); const r = await api('adm.foto.hapus', { ids }); m.tutup();
+      if (UI.hasil(r)) { GA.pilih.clear(); GA.list = null; Store.pubBoot(true); GA.albumHal(a.id, true); }
+    }
+  };
+  /** Unggah banyak foto: 2 sekaligus, progres, bisa dihentikan. Satu permintaan per foto. */
+  GA.unggah = async function (files) {
+    if (!files.length || GA.sibuk) return;
+    const a = GA.alb.album, maks = GA.alb.maks || 60, sisa = maks - (GA.alb.foto || []).length;
+    if (sisa <= 0) return UI.toast('Album sudah penuh (' + maks + ' foto).', 'warn');
+    let antre = files.slice(0, sisa);
+    if (files.length > sisa) UI.toast('Hanya ' + sisa + ' foto pertama yang diunggah (batas ' + maks + ' foto per album).', 'warn', 6000);
+    GA.sibuk = true;
+    const el = GA.el, prog = $('#ga-prog', el), bar = $('#ga-prog i', el), teks = $('#ga-prog-t', el);
+    prog.classList.remove('hide'); const lbl = $('#ga-drop label', el); if (lbl) lbl.classList.add('hide');
+    const total = antre.length, gagal = []; let selesai = 0, henti = false;
+    $('#ga-stop', el).onclick = () => { henti = true; teks.textContent = 'Menghentikan setelah foto yang sedang diunggah…'; };
+    const jalan = async () => {
+      while (antre.length && !henti) {
+        const f = antre.shift();
+        try {
+          const x = await siapkanFoto(f);
+          const r = await api('adm.foto.unggah', Object.assign({ album_id: a.id }, x));
+          if (!r.ok) { gagal.push(f.name + ': ' + r.msg); if (r.code === 'PENUH' || r.code === 'HILANG') henti = true; }
+        } catch (e) { gagal.push(f.name + ': ' + e.message); }
+        selesai++;
+        bar.style.width = Math.round(selesai / total * 100) + '%';
+        if (!henti) teks.textContent = 'Mengunggah ' + selesai + ' / ' + total + ' foto…';
+      }
+    };
+    teks.textContent = 'Menyiapkan foto…';
+    await Promise.all([jalan(), jalan()]);
+    GA.sibuk = false;
+    const ok = selesai - gagal.length;
+    if (gagal.length) UI.modal({ judul: 'Sebagian foto gagal diunggah', isi: '<p>' + ok + ' foto berhasil, ' + gagal.length + ' gagal:</p><ul class="small">' + gagal.slice(0, 20).map((g) => '<li>' + esc(g) + '</li>').join('') + '</ul>', tombol: [{ teks: 'Tutup', kelas: 'btn-primary' }] });
+    else UI.toast(ok + ' foto diunggah ke album "' + a.judul + '".', 'ok');
+    GA.list = null; Store.pubBoot(true);
+    if (GA.view === 'album' && GA.id === a.id && document.body.contains(el)) GA.albumHal(a.id, true);
+  };
+  /** Pindahkan galeri format lama (1 foto per baris, berkas bertautan) → album per judul kegiatan */
+  GA.pindahLama = async function () {
+    const d = GA.list, lama = (d && d.lama) || [];
+    if (!lama.length) return;
+    const grup = {};
+    lama.forEach((g) => { const k = String(g.judul || 'Galeri Kegiatan').trim().toLowerCase(); (grup[k] = grup[k] || { judul: String(g.judul || 'Galeri Kegiatan').trim(), item: [] }).item.push(g); });
+    const kunci = Object.keys(grup);
+    const ok = await UI.konfirmasi('<b>' + lama.length + ' foto lama</b> akan dikelompokkan menjadi <b>' + kunci.length + ' album</b> menurut judul kegiatan, diperkecil, dan disimpan privat. Setelah setiap foto berhasil dipindah, baris lama dan berkas bertautannya dibuang.<br><span class="small muted">Biarkan halaman ini terbuka sampai selesai.</span>', { ya: 'Pindahkan' });
+    if (!ok.ok) return;
+    GA.sibuk = true;
+    const m = UI.muat('Memindahkan foto lama…'); let n = 0; const gagal = [];
+    try {
+      for (const k of kunci) {
+        const g = grup[k];
+        let al = (d.album || []).find((x) => String(x.judul).trim().toLowerCase() === k);
+        if (!al) {
+          const tgl = g.item.map((x) => x.tanggal).filter(Boolean).sort()[0] || '', lok = (g.item.find((x) => x.lokasi) || {}).lokasi || '';
+          const r = await api('adm.album.simpan', { judul: g.judul, tanggal: tgl, lokasi: lok });
+          if (!r.ok) { g.item.forEach((x) => gagal.push((x.judul || x.id) + ': ' + r.msg)); continue; }
+          al = r.data.album; (d.album = d.album || []).push(al);
+        }
+        for (const x of g.item) {
+          m.teks('Memindahkan foto ' + (++n) + ' / ' + lama.length + '…');
+          try {
+            const r0 = await api('adm.galeri.lama', { id: x.id });
+            if (!r0.ok) { gagal.push((x.judul || x.id) + ': ' + r0.msg); continue; }
+            const siap = await siapkanFoto(IKH.GF.keBlob(r0.data.data));
+            const r = await api('adm.foto.unggah', Object.assign({ album_id: al.id, keterangan: x.keterangan || '', lama_id: x.id }, siap));
+            if (!r.ok) gagal.push((x.judul || x.id) + ': ' + r.msg);
+          } catch (e) { gagal.push((x.judul || x.id) + ': ' + e.message); }
+        }
+      }
+    } finally { m.tutup(); GA.sibuk = false; }
+    if (gagal.length) UI.modal({ judul: 'Pemindahan selesai sebagian', isi: '<p>' + (lama.length - gagal.length) + ' foto dipindah, ' + gagal.length + ' gagal (tetap tersimpan sebagai foto lama, bisa dicoba lagi):</p><ul class="small">' + gagal.slice(0, 20).map((g) => '<li>' + esc(g) + '</li>').join('') + '</ul>', tombol: [{ teks: 'Tutup', kelas: 'btn-primary' }] });
+    else UI.toast(lama.length + ' foto lama dipindahkan ke album.', 'ok', 5000);
+    GA.list = null; Store.pubBoot(true); GA.daftarHal(true);
+  };
+
   /* ---- Struktur ↔ data alumni (v1.4.0): nama & foto yang tampil sama dengan situs publik ---- */
   const LABEL_TAUT = { ok: '<span class="badge b-ok">' + ic('link', 'sm') + 'Alumni</span>', manual: '<span class="badge b-mute">Manual</span>',
     belum: '<span class="badge b-wait">Alumni belum terverifikasi</span>', hilang: '<span class="badge b-bad">Data alumni terhapus</span>' };

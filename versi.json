@@ -1,9 +1,26 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.6.0",
-  "tanggal": "2026-11-16",
-  "server_min": "1.4.0",
+  "versi": "1.7.0",
+  "tanggal": "2026-11-17",
+  "server_min": "1.5.0",
   "riwayat": [
+    {
+      "versi": "1.7.0",
+      "tanggal": "2026-11-17",
+      "judul": "Galeri album kegiatan, menu publik interaktif, KTA belakang lebih ringkas",
+      "poin": [
+        "Menu \"Pendaftaran Alumni\" diganti \"Galeri\". Pendaftaran tetap lewat tombol \"Daftar\" (sebelumnya \"Daftar Sekarang\") di ujung menu, yang kini berkilau dan berdenyut agar mencolok.",
+        "Menu situs publik interaktif: membesar dan menyala saat disorot mouse; di ponsel bereaksi saat disentuh. Animasi otomatis mati bila perangkat memakai pengaturan \"kurangi gerakan\".",
+        "Tiga tombol di bagian atas beranda (Daftar Jadi Anggota, Verifikasi KTA, Masuk) dihapus karena sudah ada di menu atas.",
+        "Galeri per album kegiatan: Pengurus membuat album, mengunggah banyak foto sekaligus (diperkecil otomatis), memilih sampul, memberi keterangan, menyembunyikan atau menghapus album. Maksimal 60 foto per album.",
+        "Foto galeri disimpan PRIVAT di Google Drive tanpa tautan berbagi; situs hanya menampilkan fotonya (dimuat lewat server, lalu disimpan di browser pengunjung agar cepat dibuka lagi).",
+        "Kelola Beranda → Menu & Tampilan: Galeri bisa disembunyikan/ditampilkan. Saat disembunyikan, halaman & fotonya ikut ditutup, bukan hanya menunya.",
+        "Foto galeri format lama (tautan terbuka) bisa dipindahkan ke album dengan satu tombol; tautan lamanya ditutup setelah dipindah.",
+        "Peta sebaran di beranda: wilayah yang disorot terangkat, membesar dan menyala; bulatan angka berdenyut; baris daftar di samping peta ikut menyorot wilayahnya.",
+        "KTA sisi belakang: QR kecil pengesahan dan tanggal pengesahan dihapus. Tersisa \"Disahkan secara elektronik\", jabatan, dan nama Ketua. Siapa yang mengesahkan dan kapan tetap tampil saat QR verifikasi dipindai.",
+        "Membutuhkan backend Apps Script v1.5.0."
+      ]
+    },
     {
       "versi": "1.6.0",
       "tanggal": "2026-11-16",

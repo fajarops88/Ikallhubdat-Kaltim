@@ -5,8 +5,8 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.6.0';
-  const RILIS = '2026-11-16';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
+  const VERSI = '1.7.0';
+  const RILIS = '2026-11-17';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
   IKH.VERSI = VERSI; IKH.RILIS = RILIS;
@@ -95,7 +95,7 @@
   const ALASAN_CFG = alasanUrl(GAS_URL);
   const KONFIG_OK = !ALASAN_CFG;
   IKH.KONFIG_OK = KONFIG_OK; IKH.GAS_URL = GAS_URL;
-  const BACA = /^(pub\.(boot|cekStatus|verifikasi)|auth\.me|agt\.boot|adm\.(boot|konten|log|akun\.list|arsip\.list)|notif\.(config|queue|ringkas)|wa\.(audience|blastList)|crm\.(list|stats|detail)|imp\.inspect)$/;
+  const BACA = /^(pub\.(boot|cekStatus|verifikasi|galeri|album|foto)|auth\.me|agt\.boot|adm\.(boot|konten|log|akun\.list|arsip\.list|galeri\.(list|album|foto|lama))|notif\.(config|queue|ringkas)|wa\.(audience|blastList)|crm\.(list|stats|detail)|imp\.inspect)$/;
   const _inflight = {}; let _epoch = 0;
   async function apiRun(action, data, extra) {
     const t0 = performance.now();
@@ -453,7 +453,9 @@
   /* ---------------- KTA digital (v1.6.0) ----------------
      Kartu hanya digital: tampil di layar (HTML) dan disimpan sebagai gambar/PDF ukuran kartu ID-1 (85,6 × 54 mm).
      Isi keduanya berasal dari Kta.isi() dan warna dari TEMA, sehingga yang dilihat = yang disimpan.
-     Tanda tangan ketua diganti pengesahan elektronik: nama & jabatan ketua saat kartu terbit + QR pengesahan. */
+     Tanda tangan ketua diganti pengesahan elektronik: nama & jabatan ketua saat kartu terbit.
+     v1.7.0: sisi belakang hanya memuat SATU QR (verifikasi); QR kecil pengesahan & tanggal pengesahan tidak dicetak lagi.
+     Siapa yang mengesahkan & kapan tetap tampil di halaman hasil pindai QR (dari basis data, bukan dari gambar kartu). */
   const TEMA = {
     b: { g: ['#183F86', '#0A2A63', '#001640'], dasar: '#0A2A63', lbl: '#A9BCEB', foto: '#2B4B8C' },
     lb: { g: ['#1E6B55', '#0B4A3A', '#05261D'], dasar: '#0B4A3A', lbl: '#A8D5C2', foto: '#2A6B58' },
@@ -484,7 +486,7 @@
         seumur: IKH.seumurHidup(a), masa: a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu).toUpperCase() : '—',
         terbit: a.tgl_verifikasi ? 'Terbit ' + fmt.tgl(a.tgl_verifikasi) : '',
         ketentuan: ['1. Kartu ini milik ' + (st.ORG_NAMA || 'organisasi') + ' dan tidak dapat dipindahtangankan.',
-          '2. QR besar untuk memeriksa status kartu; QR kecil untuk memeriksa pengesahan Ketua.',
+          '2. Pindai QR untuk memeriksa status keanggotaan dan pengesahan kartu ini.',
           '3. Bila menemukan kartu ini, mohon kembalikan ke sekretariat.'],
         sahOleh: p.oleh, sahJabatan: p.jabatan, sahPada: p.pada ? fmt.tgl(p.pada, true) : ''
       };
@@ -503,7 +505,7 @@
         '<div class="bw"><span>' + (x.seumur ? 'BERLAKU <b>SEUMUR HIDUP</b>' : 'BERLAKU S.D. <b>' + esc(x.masa) + '</b>') + '</span>' +
         '<span class="kn"><span class="jn">' + x.jenis + '</span><span class="st ' + (s === 'AKTIF' ? '' : 'bad') + '">' + s + '</span></span></div></div>';
     },
-    /** o = { sah, qr, qrSah } — qr/qrSah berupa SVG (boleh kosong, lalu diisi Kta.pasang) */
+    /** o = { sah, qr } — qr berupa SVG (boleh kosong, lalu diisi Kta.pasang) */
     belakang(a, st, o) {
       st = st || {}; o = o || {};
       const x = Kta.isi(a, st, o.sah);
@@ -512,18 +514,18 @@
         '<button type="button" class="qr" data-qr="v" aria-label="Perbesar QR verifikasi keanggotaan">' + (o.qr || '') + '</button><div class="qrl">PINDAI UNTUK VERIFIKASI</div>' +
         '<div class="qrn">' + esc(x.nomor) + '</div><div class="qrt">' + esc(x.terbit) + '</div>' +
         '<div class="kt"><b>KETENTUAN</b>' + x.ketentuan.map((k) => '<div>' + esc(k) + '</div>').join('') + '</div>' +
-        '<div class="sg"></div><button type="button" class="qs" data-qr="s" aria-label="Perbesar QR pengesahan ketua">' + (o.qrSah || '') + '</button>' +
-        '<div class="sah"><div class="s1">DISAHKAN SECARA ELEKTRONIK</div><div class="s2">' + esc(x.sahJabatan) + ',</div><div class="s3">' + esc(x.sahOleh || '(nama ketua belum diisi)') + '</div><div class="s4">' + esc(x.sahPada) + '</div></div>' +
+        '<div class="sg"></div>' +
+        '<div class="sah"><div class="s1">DISAHKAN SECARA ELEKTRONIK</div><div class="s2">' + esc(x.sahJabatan) + ',</div><div class="s3">' + esc(x.sahOleh || '(nama ketua belum diisi)') + '</div></div>' +
         '<div class="bwh"></div></div>';
     },
-    /** Isi kedua QR pada semua sisi belakang di dalam el. d = { qr, qrSah } (tautan dari server). */
+    /** Isi QR verifikasi pada semua sisi belakang di dalam el. d = { qr } (tautan dari server). */
     async pasang(el, d) {
       const blk = $$('.kta.belakang', el); if (!blk.length || !d) return;
       const isi = async (sel, teks) => {
         if (!teks) return;
         try { const svg = await IKH.qrSvg(teks); blk.forEach((b) => { const q = $(sel, b); if (q) { q.innerHTML = svg; q.dataset.teks = teks; } }); } catch (e) { }
       };
-      await Promise.all([isi('.qr', d.qr), isi('.qs', d.qrSah)]);
+      await isi('.qr', d.qr);
     }
   };
   IKH.Kta = Kta;
@@ -532,8 +534,7 @@
     const b = e.target && e.target.closest && e.target.closest('.kta [data-qr]');
     if (!b || !b.querySelector('svg')) return;
     e.preventDefault(); e.stopPropagation();
-    Kartu.perbesarQr(b.innerHTML, b.dataset.qr === 's' ? 'QR Pengesahan Ketua' : 'QR Verifikasi Keanggotaan',
-      b.dataset.qr === 's' ? 'Pindai untuk melihat siapa yang mengesahkan kartu ini dan kapan.' : 'Pindai untuk memeriksa status keanggotaan langsung ke basis data organisasi.');
+    Kartu.perbesarQr(b.innerHTML, 'QR Verifikasi Keanggotaan', 'Pindai untuk memeriksa status keanggotaan dan pengesahan kartu langsung ke basis data organisasi.');
   });
 
   const GOLD = '#F6C12B';
@@ -551,8 +552,8 @@
     /** Respons server → bahan gambar (matriks QR + objek gambar) */
     async bahan(d) {
       const st = d.setting || {};
-      const [qr, qrSah, foto, logo] = await Promise.all([IKH.qrMatriks(d.qr), IKH.qrMatriks(d.qrSah), muatGambar(d.foto), muatGambar(d.logo || 'img/logo.png'), Kartu.siapFont()]);
-      return { a: d.anggota, st: st, sah: d.sah, qr: qr, qrSah: qrSah, foto: foto, logo: logo };
+      const [qr, foto, logo] = await Promise.all([IKH.qrMatriks(d.qr), muatGambar(d.foto), muatGambar(d.logo || 'img/logo.png'), Kartu.siapFont()]);
+      return { a: d.anggota, st: st, sah: d.sah, qr: qr, foto: foto, logo: logo };
     },
     /** Gambar satu sisi kartu. Satuan tata letak = 1% lebar kartu (sama dengan cqw di style.css).
      *  o.sudut === false → sudut siku & tanpa bingkai (halaman PDF); o.lebar = lebar piksel. */
@@ -651,15 +652,13 @@
         font(400, 2, F_BODY); g.fillStyle = REDUP;
         let sisa = 7;
         x.ketentuan.forEach((k) => { if (sisa <= 0) return; const b = bungkus(k, 57 * u, sisa); b.forEach((s) => { g.fillText(s, 38 * u, (y + 1.4) * u); y += 2.8; }); sisa -= b.length; });
-        // pengesahan elektronik: QR 2 + nama & jabatan ketua saat kartu disahkan
+        // pengesahan elektronik (v1.7.0: teks saja — tanpa QR kecil & tanggal): nama & jabatan ketua saat kartu disahkan
         g.fillStyle = TEPI; g.fillRect(38 * u, 37.8 * u, 57 * u, .2 * u);
-        kotakQr(B.qrSah, 38, 39.6, 18.6, 1.2, 1.4, '#CDD3DE');
-        font(800, 2.6, F_BODY); const nama = bungkus(x.sahOleh || '(nama ketua belum diisi)', 36.2 * u, 2);
-        const tinggi = 2.6 + .5 + 3 + 3.12 * nama.length + .5 + 2.7; let ys = 39.6 + (18.6 - tinggi) / 2;
-        font(800, 1.7, F_BODY); g.fillStyle = T.dasar; tulis('DISAHKAN SECARA ELEKTRONIK', 58.8 * u, (ys + 1.3) * u, 1.7 * .07); ys += 2.6 + .5;
-        font(400, 2.1, F_BODY); g.fillStyle = REDUP; g.fillText(pangkas(x.sahJabatan + ',', 36.2 * u), 58.8 * u, (ys + 1.5) * u); ys += 3;
-        font(800, 2.6, F_BODY); g.fillStyle = TEKS; nama.forEach((s) => { g.fillText(s, 58.8 * u, (ys + 1.56) * u); ys += 3.12; }); ys += .5;
-        font(400, 1.9, F_BODY); g.fillStyle = REDUP; g.fillText(x.sahPada, 58.8 * u, (ys + 1.35) * u);
+        font(800, 3, F_BODY); const nama = bungkus(x.sahOleh || '(nama ketua belum diisi)', 57 * u, 2);
+        const tinggi = 2.85 + .6 + 3.36 + 3.6 * nama.length; let ys = 39 + (19.6 - tinggi) / 2;
+        font(800, 1.9, F_BODY); g.fillStyle = T.dasar; tulis('DISAHKAN SECARA ELEKTRONIK', 38 * u, (ys + 1.425) * u, 1.9 * .07); ys += 2.85 + .6;
+        font(400, 2.4, F_BODY); g.fillStyle = REDUP; g.fillText(pangkas(x.sahJabatan + ',', 57 * u), 38 * u, (ys + 1.68) * u); ys += 3.36;
+        font(800, 3, F_BODY); g.fillStyle = TEKS; nama.forEach((s) => { g.fillText(s, 38 * u, (ys + 1.8) * u); ys += 3.6; });
         // pita emas bawah + bingkai tipis
         g.fillStyle = GOLD; g.fillRect(0, H - 3 * u, W, 3 * u);
         if (sudut) { g.lineWidth = .3 * u; g.strokeStyle = TEPI; rr(.15 * u, .15 * u, W - .3 * u, H - .3 * u, rad - .15 * u); g.stroke(); }
@@ -712,7 +711,7 @@
       doc.save(dasar + '.pdf');
       UI.toast('PDF kartu disimpan.');
     },
-    /** Mode layar penuh untuk diperlihatkan dari ponsel. d = data boot anggota { anggota, setting, qr, qrSah, sah }.
+    /** Mode layar penuh untuk diperlihatkan dari ponsel. d = data boot anggota { anggota, setting, qr, sah }.
      *  Di layar tegak kartu diputar 90° supaya memenuhi layar. */
     tunjuk(d) {
       const a = d.anggota, st = d.setting || {};
@@ -839,7 +838,7 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { try { Store.simpanAdmLokal.segera(); } catch (e) { } } });
 
   /* ---------------- Menu situs publik yang bisa disembunyikan (Kelola Beranda → Menu & Tampilan) ---------------- */
-  IKH.MENU_PUB = { beranda: 'Beranda', profil: 'Profil Organisasi', berita: 'Berita', daftar: 'Pendaftaran Alumni', status: 'Cek Status Pendaftaran', verifikasi: 'Verifikasi KTA', masuk: 'Masuk' };
+  IKH.MENU_PUB = { beranda: 'Beranda', profil: 'Profil Organisasi', berita: 'Berita', galeri: 'Galeri', daftar: 'Tombol Daftar', status: 'Cek Status Pendaftaran', verifikasi: 'Verifikasi KTA', masuk: 'Masuk' };
   IKH.menuTersembunyi = (st) => { const s = String((st && st.MENU_SEMBUNYI) || '').toLowerCase().split(/[\s,]+/).filter(Boolean); return (k) => s.indexOf(k) > -1; };
 
   /* ---------------- Peta sebaran per kab/kota (Dasbor Pengurus & Beranda publik) ----------------
@@ -849,38 +848,78 @@
     SKALA: SKALA_PETA,
     muat() { return window.PETA_KALTIM ? Promise.resolve(window.PETA_KALTIM) : IKH.muat(['js/peta-kaltim.js?v=' + VERSI]).then(() => window.PETA_KALTIM); },
     warna(v, maks) { return !v ? '#EEF1F5' : SKALA_PETA[Math.min(4, Math.floor((v / maks) * 5 - 1e-9))]; },
-    /** n = {kodeBPS: jumlah}. opsi.klik = wilayah bisa diklik; opsi.aria = deskripsi peta */
+    /** n = {kodeBPS: jumlah}. opsi.klik = wilayah bisa diklik; opsi.aria = deskripsi peta; opsi.denyut = bulatan angka berdenyut (beranda) */
     html(P, n, o) {
       o = o || {};
       const maks = Math.max(1, ...P.wilayah.map((w) => n[w.kode] || 0));
-      return '<svg viewBox="0 0 ' + P.w + ' ' + P.h + '" role="img" aria-label="' + esc(o.aria || 'Peta sebaran per kabupaten/kota di Kalimantan Timur') + '">' +
-        '<g class="wil">' + P.wilayah.map((w) => '<path d="' + w.d + '" fill="' + this.warna(n[w.kode] || 0, maks) + '" data-k="' + w.kode + '" tabindex="0"' + (o.klik ? ' role="button"' : '') + ' aria-label="' + esc(w.nama + ': ' + (n[w.kode] || 0) + ' orang') + '"></path>').join('') + '</g>' +
-        '<g class="lbl" aria-hidden="true">' + P.wilayah.filter((w) => !w.kota).map((w) => '<text x="' + w.x + '" y="' + (w.y + ((n[w.kode] || 0) ? 30 : 4)) + '" text-anchor="middle">' + esc(w.singkat) + '</text>').join('') + '</g>' +
-        '<g class="gel" aria-hidden="true">' + P.wilayah.filter((w) => n[w.kode]).map((w) => { const r = 11 + 9 * Math.sqrt(n[w.kode] / maks); return '<g data-k="' + w.kode + '"><circle cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '"/><text x="' + w.x + '" y="' + (w.y + 4.5) + '" text-anchor="middle">' + n[w.kode] + '</text></g>'; }).join('') + '</g></svg>' +
+      return '<svg viewBox="0 0 ' + P.w + ' ' + P.h + '" role="img" aria-label="' + esc(o.aria || 'Peta sebaran per kabupaten/kota di Kalimantan Timur') + '"' + (o.denyut ? ' class="hidup"' : '') + '>' +
+        '<g class="wil">' + P.wilayah.map((w) => '<path d="' + w.d + '" fill="' + this.warna(n[w.kode] || 0, maks) + '" data-k="' + w.kode + '"' + (w.kota ? ' data-kota="1"' : '') + ' tabindex="0"' + (o.klik ? ' role="button"' : '') + ' aria-label="' + esc(w.nama + ': ' + (n[w.kode] || 0) + ' orang') + '"></path>').join('') + '</g>' +
+        '<g class="angkat" aria-hidden="true"></g>' +
+        '<g class="lbl" aria-hidden="true">' + P.wilayah.filter((w) => !w.kota).map((w) => '<text x="' + w.x + '" y="' + (w.y + ((n[w.kode] || 0) ? 30 : 4)) + '" text-anchor="middle" data-k="' + w.kode + '">' + esc(w.singkat) + '</text>').join('') + '</g>' +
+        '<g class="gel" aria-hidden="true">' + P.wilayah.filter((w) => n[w.kode]).map((w, i) => { const r = 11 + 9 * Math.sqrt(n[w.kode] / maks); return '<g data-k="' + w.kode + '">' + (o.denyut ? '<circle class="rg" cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '" style="animation-delay:' + (i * .45).toFixed(2) + 's"/>' : '') + '<circle class="bl" cx="' + w.x + '" cy="' + w.y + '" r="' + r.toFixed(1) + '"/><text x="' + w.x + '" y="' + (w.y + 4.5) + '" text-anchor="middle">' + n[w.kode] + '</text></g>'; }).join('') + '</g></svg>' +
         '<div class="pt-tip hide" role="status"></div>' +
         '<div class="pt-leg" aria-hidden="true"><span>0</span><i style="background:#EEF1F5"></i>' + SKALA_PETA.map((c) => '<i style="background:' + c + '"></i>').join('') + '<span>' + fmt.angka(maks) + '</span></div>';
     },
-    /** Pasang sorotan + tooltip. o.tip(k) → HTML isi tooltip; o.klik(k) opsional; o.sorot(k, nyala) opsional. Mengembalikan fungsi sorot(k, nyala). */
+    /** Pasang sorotan + tooltip. o.tip(k) → HTML isi tooltip; o.klik(k) opsional; o.sorot(k, nyala) opsional.
+     *  Wilayah yang disorot "terangkat": salinannya digambar di lapisan .angkat (membesar & menyala), batas aslinya tetap.
+     *  Mengembalikan fungsi sorot(k, nyala, tampilkanTip). */
     pasang(box, o) {
-      const tip = $('.pt-tip', box), svg = $('svg', box);
-      const sorot = (k, on) => { $$('[data-k="' + k + '"]', svg).forEach((el) => el.classList.toggle('on', on)); if (o.sorot) o.sorot(k, on); };
+      const tip = $('.pt-tip', box), svg = $('svg', box), lapis = $('.angkat', svg);
+      let aktif = null;
+      const diDalam = (luar, p) => {
+        try {
+          const b = p.getBBox(), x = b.x + b.width / 2, y = b.y + b.height / 2;
+          // kota "terkurung" wilayah (mis. Samarinda di dalam Kukar): ≥ 3 dari 4 titik di sekelilingnya berada di dalam wilayah
+          if (!luar.isPointInFill) return false;
+          const d = 3, titik = [[b.x - d, y], [b.x + b.width + d, y], [x, b.y - d], [x, b.y + b.height + d]];
+          return titik.filter((q) => { const t = svg.createSVGPoint(); t.x = q[0]; t.y = q[1]; return luar.isPointInFill(t); }).length >= 3;
+        } catch (e) { return false; }
+      };
       const tampil = (k, e) => {
         const r = box.getBoundingClientRect();
+        let px, py;
+        if (e && e.clientX) { px = e.clientX - r.left; py = e.clientY - r.top; }
+        else { const p = $('.wil path[data-k="' + k + '"]', svg), b = p ? p.getBoundingClientRect() : r; px = b.left + b.width / 2 - r.left; py = b.top + b.height / 2 - r.top; }
         tip.innerHTML = o.tip(k); tip.classList.remove('hide');
-        const px = (e && e.clientX ? e.clientX - r.left : r.width / 2) + 12, py = (e && e.clientY ? e.clientY - r.top : 20) + 12;
-        tip.style.left = Math.max(0, Math.min(px, r.width - 200)) + 'px'; tip.style.top = py + 'px';
+        tip.style.left = Math.max(0, Math.min(px + 12, r.width - 200)) + 'px'; tip.style.top = (py + 12) + 'px';
+      };
+      const nyala = (k, on) => {
+        $$('[data-k="' + k + '"]', svg).forEach((el) => el.classList.toggle('on', on));
+        if (lapis) {
+          if (on) {
+            const asal = $('.wil path[data-k="' + k + '"]', svg);
+            if (asal) {
+              // satu grup diangkat bersama: wilayah + kota yang berada di dalamnya (mis. Samarinda di dalam Kukar), agar kota tidak tertutup
+              const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('data-k', k); if (asal.dataset.kota) g.setAttribute('data-kota', '1');
+              const salin = (p) => { const c = p.cloneNode(false); ['tabindex', 'role', 'aria-label'].forEach((x) => c.removeAttribute(x)); return c; };
+              const utama = salin(asal); utama.classList.add('utama'); g.appendChild(utama);
+              if (!asal.dataset.kota) $$('.wil path[data-kota]', svg).forEach((p) => { if (p !== asal && diDalam(asal, p)) g.appendChild(salin(p)); });
+              lapis.innerHTML = ''; lapis.appendChild(g);
+            }
+          } else if (lapis.firstChild && lapis.firstChild.getAttribute('data-k') === k) lapis.innerHTML = '';
+        }
+        if (o.sorot) o.sorot(k, on);
+      };
+      const sorot = (k, on, denganTip) => {
+        if (on && aktif && aktif !== k) nyala(aktif, false);
+        if (on && aktif === k && !denganTip) return;
+        nyala(k, on); aktif = on ? k : (aktif === k ? null : aktif);
+        if (on && denganTip) tampil(k); else if (!on) tip.classList.add('hide');
       };
       $$('[data-k]', svg).forEach((el) => {
+        if (el.closest('.angkat')) return;
         const k = el.dataset.k;
         el.addEventListener('mousemove', (e) => { sorot(k, true); tampil(k, e); });
-        el.addEventListener('mouseleave', () => { sorot(k, false); tip.classList.add('hide'); });
-        el.addEventListener('focus', () => { sorot(k, true); tampil(k); });
-        el.addEventListener('blur', () => { sorot(k, false); tip.classList.add('hide'); });
+        el.addEventListener('mouseleave', (e) => { const ke = e.relatedTarget; if (ke && ke.closest && ke.closest('[data-k="' + k + '"]')) return; sorot(k, false); });
+        el.addEventListener('focus', () => sorot(k, true, true));
+        el.addEventListener('blur', () => sorot(k, false));
         if (o.klik) {
           el.addEventListener('click', () => o.klik(k));
           el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); o.klik(k); } });
-        } else el.addEventListener('click', (e) => { sorot(k, true); tampil(k, e); });   // layar sentuh: ketuk = tampilkan angka
+        } else el.addEventListener('click', (e) => { sorot(k, true); tampil(k, e); });   // layar sentuh: ketuk = wilayah terangkat + angka
       });
+      // ketuk di luar wilayah (layar sentuh) → lepaskan sorotan
+      box.addEventListener('click', (e) => { if (aktif && !(e.target.closest && e.target.closest('[data-k]'))) sorot(aktif, false); });
       return sorot;
     }
   };

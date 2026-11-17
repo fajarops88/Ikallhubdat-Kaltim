@@ -6,8 +6,9 @@
   const { $, $$, esc, ic, img, bg, fmt, UI, api, Store, Sesi, Router, Kta, daftar, LS, hariIni } = IKH;
 
   /* ---------------- Bingkai publik ---------------- */
-  const NAV = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi', 'profil'], ['/berita', 'Berita', 'berita'], ['/daftar', 'Pendaftaran Alumni', 'daftar'], ['/verifikasi', 'Verifikasi KTA', 'verifikasi']];
-  const TAUTAN_FOOT = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi & Kepengurusan', 'profil'], ['/berita', 'Berita & Pengumuman', 'berita'], ['/daftar', 'Pendaftaran Alumni Baru', 'daftar'], ['/status', 'Cek Status Pendaftaran', 'status'], ['/verifikasi', 'Verifikasi Keaslian KTA', 'verifikasi'], ['/masuk', 'Masuk Anggota / Pengurus', 'masuk']];
+  // v1.7.0: menu "Pendaftaran Alumni" diganti "Galeri" (pendaftaran lewat tombol "Daftar" di ujung menu)
+  const NAV = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi', 'profil'], ['/berita', 'Berita', 'berita'], ['/galeri', 'Galeri', 'galeri'], ['/verifikasi', 'Verifikasi KTA', 'verifikasi']];
+  const TAUTAN_FOOT = [['/', 'Beranda', 'beranda'], ['/profil', 'Profil Organisasi & Kepengurusan', 'profil'], ['/berita', 'Berita & Pengumuman', 'berita'], ['/galeri', 'Galeri Kegiatan', 'galeri'], ['/daftar', 'Pendaftaran Alumni Baru', 'daftar'], ['/status', 'Cek Status Pendaftaran', 'status'], ['/verifikasi', 'Verifikasi Keaslian KTA', 'verifikasi'], ['/masuk', 'Masuk Anggota / Pengurus', 'masuk']];
   function logoHtml(st, kelas) {
     return '<span class="lg img ' + (kelas || '') + '" ' + IKH.logoBg(st, 160) + ' role="img" aria-label="Logo ' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT') + '"></span>';
   }
@@ -23,7 +24,7 @@
     brand.innerHTML = logoHtml(st) + '<div class="grow"><div class="t1">SIM IKALLHUBDAT</div><div class="t2">' + esc((st.ORG_NAMA || 'DPD Kalimantan Timur').replace(/^DPD IKALLHUBDAT\s*/i, 'DPD ')) + '</div></div>';
     $('#pubnav').innerHTML = NAV.filter((n) => !sem(n[2])).map((n) => '<a href="#' + n[0] + '" class="' + ((n[0] === '/' ? path === '/' : path.indexOf(n[0]) === 0) ? 'on' : '') + '">' + n[1] + '</a>').join('') +
       (me ? '<a class="btn btn-primary btn-sm" href="#' + (me.peran === 'pengurus' ? '/admin' : '/anggota') + '">' + ic('person', 'sm') + (me.peran === 'pengurus' ? 'Panel Pengurus' : 'Ruang Anggota') + '</a>'
-        : (sem('masuk') ? '' : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a>') + (sem('daftar') ? '' : '<a class="btn btn-gold btn-sm" href="#/daftar">Daftar Sekarang</a>'));
+        : (sem('masuk') ? '' : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a>') + (sem('daftar') ? '' : '<a class="btn btn-gold btn-sm btn-daftar" href="#/daftar">' + ic('how_to_reg', 'sm') + '<span>Daftar</span></a>'));
     const tahun = new Date().getFullYear();
     $('#foot').innerHTML = '<div class="wrap"><div><a class="brand" href="#/" style="color:#fff">' + logoHtml(st) + '<div><div class="t1" style="color:#fff">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</div><div class="t2" style="color:#93A6D4">' + esc(st.ORG_NAMA_PANJANG || '') + '</div></div></a>' +
       '<p class="mt" style="font-size:13.5px;max-width:420px">Portal resmi keanggotaan alumni: pendaftaran mandiri, verifikasi berjenjang oleh Pengurus, dan KTA digital ber-QR yang dapat diperiksa keasliannya.</p>' +
@@ -66,7 +67,8 @@
   /* ---------------- Beranda ---------------- */
   function beranda() {
     return halamanPub('Beranda', (main, d) => {
-      const st = d.setting || {}, berita = (d.berita || []).slice(0, 3), gal = (d.galeri || []).slice(0, 8), stat = d.stat, sem = IKH.menuTersembunyi(st);
+      const st = d.setting || {}, berita = (d.berita || []).slice(0, 3), stat = d.stat, sem = IKH.menuTersembunyi(st);
+      const alb = sem('galeri') ? [] : (d.album || []).slice(0, 4);
       const sb = st.TAMPIL_PETA !== 'TIDAK' && d.sebaran && d.sebaran.n ? d.sebaran : null;
       const ctaDaftar = st.PENDAFTARAN_DIBUKA !== 'TIDAK' && !sem('daftar');
       const judul = String(st.HERO_JUDUL || 'Sistem Informasi Manajemen Ikatan Alumni Lalu Lintas & Perhubungan Darat');
@@ -74,8 +76,6 @@
       main.innerHTML =
         '<section class="hero"><div class="wrap"><div><span class="pill">' + ic('verified', 'sm') + esc(st.HERO_LABEL || 'Portal Resmi Keanggotaan') + '</span>' +
         '<h1 class="mt">' + esc(pisah[0]) + (pisah[1] ? '<span>' + esc(pisah[1]) + '</span>' : '') + '</h1><p class="lead">' + esc(st.HERO_SUBJUDUL || '') + '</p>' +
-        '<div class="row wrap">' + (ctaDaftar ? '<a class="btn btn-primary" href="#/daftar">' + ic('how_to_reg') + 'Daftar Jadi Anggota</a>' : '') +
-        (sem('verifikasi') ? '' : '<a class="btn btn-outline" href="#/verifikasi">' + ic('qr_code_scanner') + 'Verifikasi KTA</a>') + (sem('masuk') ? '' : '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk</a>') + '</div>' +
         '<div class="trust"><span>' + ic('verified_user', 'sm') + 'Diverifikasi Pengurus</span><span>' + ic('qr_code_2', 'sm') + 'KTA ber-QR bertanda tangan digital</span><span>' + ic('lock', 'sm') + 'Data tersimpan aman</span></div></div>' +
         '<div class="kartu-hero" aria-hidden="true"><div class="kicker center" style="margin-bottom:.5rem">Contoh tampilan KTA digital</div>' + Kta.depan(contohKta(st), st) + '</div></div></section>' +
         (stat ? '<div class="wrap"><div class="stats">' +
@@ -89,11 +89,11 @@
           '<div><div class="kicker gold">' + esc(st.SAMBUTAN_JUDUL || 'Sambutan Ketua') + '</div><div class="quote mt">' + esc(potong(st.SAMBUTAN_ISI, 420)) + '</div>' +
           '<div class="mt"><b>' + esc(st.KETUA_NAMA || '') + '</b><div class="muted small">' + esc(st.KETUA_JABATAN || '') + ' ' + esc(st.ORG_SINGKAT || '') + '</div></div>' +
           (sem('profil') ? '' : '<a class="btn btn-text mt" href="#/profil?s=sambutan">Baca selengkapnya' + ic('arrow_forward', 'sm') + '</a>') + '</div></div></section>' : '') +
-        (gal.length ? '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Dokumentasi</div><h2>Galeri Kegiatan</h2></div></div><div class="gal">' +
-          gal.map((g) => '<button class="g" ' + bg(g.gambar_id, 700) + ' data-src="' + esc(img(g.gambar_id, 1400)) + '" data-cap="' + esc(g.judul) + '" aria-label="Perbesar foto ' + esc(g.judul) + '"><span class="cap">' + esc(g.judul) + (g.lokasi ? '<br><span style="font-weight:400;opacity:.8">' + esc(g.lokasi) + '</span>' : '') + '</span></button>').join('') + '</div></div></section>' : '') +
-        (!ctaDaftar && sem('masuk') ? '' : '<section class="sec" style="padding-top:' + (gal.length ? '0' : '2rem') + '"><div class="wrap"><div class="cta"><div><div class="kicker" style="color:var(--gold)">Digitalisasi Keanggotaan</div><h2 class="mt">Belum terdata sebagai anggota?</h2><p>Daftar mandiri untuk memperoleh KTA digital ber-QR. Sudah menjadi anggota? Masuk untuk melihat kartu dan mengajukan pembaruan data.</p></div>' +
-        '<div class="row wrap">' + (ctaDaftar ? '<a class="btn btn-gold" href="#/daftar">' + ic('person_add') + 'Daftar Sekarang</a>' : '') + (sem('masuk') ? '' : '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk Anggota</a>') + '</div></div></div></section>');
-      $$('.gal .g', main).forEach((b) => b.onclick = () => UI.lightbox(b.dataset.src, b.dataset.cap));
+        (alb.length ? '<section class="sec"><div class="wrap"><div class="sec-h"><div><div class="kicker gold">Dokumentasi</div><h2>Galeri Kegiatan</h2></div><a class="btn btn-ghost btn-sm" href="#/galeri">Semua album' + ic('arrow_forward', 'sm') + '</a></div>' +
+          '<div class="albums">' + alb.map(kartuAlbum).join('') + '</div></div></section>' : '') +
+        (!ctaDaftar && sem('masuk') ? '' : '<section class="sec" style="padding-top:' + (alb.length ? '0' : '2rem') + '"><div class="wrap"><div class="cta"><div><div class="kicker" style="color:var(--gold)">Digitalisasi Keanggotaan</div><h2 class="mt">Belum terdata sebagai anggota?</h2><p>Daftar mandiri untuk memperoleh KTA digital ber-QR. Sudah menjadi anggota? Masuk untuk melihat kartu dan mengajukan pembaruan data.</p></div>' +
+        '<div class="row wrap">' + (ctaDaftar ? '<a class="btn btn-gold btn-daftar" href="#/daftar">' + ic('person_add') + '<span>Daftar</span></a>' : '') + (sem('masuk') ? '' : '<a class="btn btn-ghost" href="#/masuk">' + ic('lock') + 'Masuk Anggota</a>') + '</div></div></div></section>');
+      if (alb.length) GF.pasang(main);
       if (sb) petaBeranda(sb);
     });
   }
@@ -106,7 +106,7 @@
     const n = sb.n || {}, total = sb.total || 0;
     const dalam = P.wilayah.reduce((t, w) => t + (n[w.kode] || 0), 0);
     const persen = (v) => total ? Math.round(v / total * 1000) / 10 : 0;
-    box.innerHTML = IKH.Peta.html(P, n, { aria: 'Peta sebaran alumni terverifikasi per kabupaten/kota di Kalimantan Timur' });
+    box.innerHTML = IKH.Peta.html(P, n, { aria: 'Peta sebaran alumni terverifikasi per kabupaten/kota di Kalimantan Timur', denyut: true });
     const rows = P.wilayah.map((w) => ({ k: w.kode, nama: w.nama, v: n[w.kode] || 0 })).sort((a, b) => b.v - a.v || a.nama.localeCompare(b.nama));
     const isi = rows.filter((r) => r.v);
     const maks = Math.max(1, ...rows.map((r) => r.v));
@@ -114,9 +114,14 @@
       '<ol class="pb-list">' + isi.map((r) => '<li data-k="' + r.k + '"><span class="nm">' + esc(r.nama) + '</span><span class="br"><i style="width:' + Math.max(4, r.v / maks * 100) + '%"></i></span><b class="tnum">' + fmt.angka(r.v) + '</b></li>').join('') + '</ol>'
       : UI.kosong('Belum ada data domisili alumni terverifikasi.', 'map')) +
       ((sb.luar || sb.kosong || sb.lain) ? '<p class="small muted mt mb-0">' + [sb.luar ? fmt.angka(sb.luar) + ' alumni berdomisili di luar Kalimantan Timur' : '', (sb.kosong || 0) + (sb.lain || 0) ? fmt.angka((sb.kosong || 0) + (sb.lain || 0)) + ' belum tercatat domisilinya' : ''].filter(Boolean).join(' • ') + '.</p>' : '');
-    IKH.Peta.pasang(box, {
+    const sorot = IKH.Peta.pasang(box, {
       tip: (k) => { const w = P.wilayah.find((x) => x.kode === k); return '<b>' + esc(w ? w.nama : k) + '</b><br>' + fmt.angka(n[k] || 0) + ' alumni' + (total ? ' • ' + persen(n[k] || 0) + '%' : ''); },
       sorot: (k, on) => $$('#pb-list li[data-k="' + k + '"]').forEach((el) => el.classList.toggle('on', on))
+    });
+    // arahkan ke baris daftar → wilayahnya ikut terangkat & menyala di peta
+    $$('#pb-list li[data-k]').forEach((li) => {
+      li.addEventListener('mouseenter', () => sorot(li.dataset.k, true, true));
+      li.addEventListener('mouseleave', () => sorot(li.dataset.k, false));
     });
   }
   const periodeStr = (str) => { const n = {}; (str || []).forEach((r) => { if (r.periode) n[r.periode] = (n[r.periode] || 0) + 1; }); return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || ''; };
@@ -125,6 +130,165 @@
     return '<a class="news-c" href="#/berita/' + esc(b.id) + '"><div class="im" ' + (b.gambar_id ? bg(b.gambar_id, 800) : '') + '>' + (b.gambar_id ? '' : ic('newspaper', 'xl')) + '</div>' +
       '<div class="bd"><div class="meta">' + ic('calendar_month', 'sm') + fmt.tgl(b.tanggal, true) + (b.kategori ? ' • <span class="badge b-info">' + esc(b.kategori) + '</span>' : '') + '</div>' +
       '<h3>' + esc(b.judul) + '</h3><p>' + esc(potong(b.ringkasan || b.isi, 160)) + '</p></div></a>';
+  }
+
+  /* ---------------- Galeri album (v1.7.0) ----------------
+     Foto disimpan privat di Drive. Server mengirim data gambar (bukan tautan); browser menyimpannya di
+     Cache Storage "ikh-galeri-v1" agar album yang sama tidak diunduh ulang, lalu memakai URL blob: lokal.
+     Ukuran "k" (± 480 px) untuk grid, "b" (± 1280 px) untuk tampilan diperbesar. */
+  const GF = {
+    NAMA: 'ikh-galeri-v1', url: {}, janji: {}, antre: [], jalan: 0, t: null, MAKS_JALAN: 2,
+    kunci(id, uk) { return location.origin + location.pathname.replace(/[^/]*$/, '') + '__galeri/' + uk + '/' + encodeURIComponent(id); },
+    async dariCache(id, uk) { try { if (!window.caches) return null; const c = await caches.open(this.NAMA); const r = await c.match(this.kunci(id, uk)); return r ? await r.blob() : null; } catch (e) { return null; } },
+    async keCache(id, uk, blob) {
+      try {
+        if (!window.caches) return;
+        const c = await caches.open(this.NAMA);
+        await c.put(this.kunci(id, uk), new Response(blob, { headers: { 'Content-Type': blob.type || 'image/jpeg' } }));
+        if (Math.random() < 0.05) { const k = await c.keys(); if (k.length > 900) await Promise.all(k.slice(0, k.length - 700).map((x) => c.delete(x))); }   // batasi ± 700 foto
+      } catch (e) { }
+    },
+    keBlob(du) { const i = du.indexOf(','), tipe = du.slice(5, i).split(';')[0], bin = atob(du.slice(i + 1)), arr = new Uint8Array(bin.length); for (let j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j); return new Blob([arr], { type: tipe }); },
+    /** Promise → URL blob: foto (null bila gagal). admin = rute Pengurus (album tersembunyi ikut). */
+    ambil(id, uk, admin) {
+      const k = uk + ':' + id;
+      if (this.url[k]) return Promise.resolve(this.url[k]);
+      if (this.janji[k]) return this.janji[k];
+      this.janji[k] = (async () => {
+        let b = await this.dariCache(id, uk);
+        if (!b) b = await new Promise((res) => { this.antre.push({ id, uk, admin: !!admin, res }); this.jadwal(); });
+        if (!b) { delete this.janji[k]; return null; }
+        return (this.url[k] = URL.createObjectURL(b));
+      })();
+      return this.janji[k];
+    },
+    jadwal() { if (!this.t) this.t = setTimeout(() => { this.t = null; this.alir(); }, 40); },
+    async alir() {
+      while (this.antre.length && this.jalan < this.MAKS_JALAN) {
+        const a = this.antre[0], maks = a.uk === 'b' ? 2 : 12;
+        const grup = this.antre.filter((x) => x.uk === a.uk && x.admin === a.admin).slice(0, maks);
+        this.antre = this.antre.filter((x) => grup.indexOf(x) === -1);
+        this.jalan++;
+        api(a.admin ? 'adm.galeri.foto' : 'pub.foto', { ids: grup.map((x) => x.id), ukuran: a.uk }).then((r) => {
+          const f = (r && r.ok && r.data && r.data.foto) || {};
+          grup.forEach((x) => { const du = f[x.id]; if (!du) return x.res(null); const b = this.keBlob(du); this.keCache(x.id, x.uk, b); x.res(b); });
+        }, () => grup.forEach((x) => x.res(null))).finally(() => { this.jalan--; this.alir(); });
+      }
+    },
+    /** Muat foto untuk semua elemen [data-gf] di dalam root saat mendekati layar */
+    pasang(root, admin) {
+      const isi = (el) => {
+        el.dataset.gfOn = '1';
+        GF.ambil(el.dataset.gf, el.dataset.uk || 'k', admin).then((u) => {
+          if (!u) { el.classList.add('gagal'); return; }
+          const im = el.tagName === 'IMG' ? el : (el.querySelector('img') || el.appendChild(Object.assign(document.createElement('img'), { alt: el.dataset.alt || '' })));
+          im.draggable = false; im.onload = () => el.classList.add('siap'); im.src = u;
+        });
+      };
+      const el = $$('[data-gf]:not([data-gf-on])', root);
+      if (!('IntersectionObserver' in window)) return el.forEach(isi);
+      const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); isi(e.target); } }), { rootMargin: '400px 0px' });
+      el.forEach((x) => io.observe(x));
+    },
+    /** Penampil foto layar penuh: geser/tombol panah/keyboard; foto besar dimuat saat dibuka */
+    lihat(list, i, o) {
+      o = o || {};
+      const prev = document.activeElement;
+      const v = document.createElement('div'); v.className = 'gv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); v.setAttribute('aria-label', 'Foto ' + (o.judul || 'galeri'));
+      v.innerHTML = '<div class="gv-top"><span class="gv-n" aria-live="polite"></span><span class="gv-j">' + esc(o.judul || '') + '</span><button class="gv-x" type="button" aria-label="Tutup">' + ic('close') + '</button></div>' +
+        '<button class="gv-nav kiri" type="button" aria-label="Foto sebelumnya">' + ic('chevron_left', 'lg') + '</button><figure class="gv-fig"><img class="gv-img" alt="" draggable="false"><span class="spin"></span><figcaption class="gv-cap"></figcaption></figure>' +
+        '<button class="gv-nav kanan" type="button" aria-label="Foto berikutnya">' + ic('chevron_right', 'lg') + '</button>';
+      document.body.appendChild(v); document.body.style.overflow = 'hidden';
+      const im = $('.gv-img', v), fig = $('.gv-fig', v);
+      let kini = i, giliran = 0;
+      const tampil = async (j) => {
+        kini = (j + list.length) % list.length; const f = list[kini], g = ++giliran;
+        $('.gv-n', v).textContent = (kini + 1) + ' / ' + list.length; $('.gv-cap', v).textContent = f.ket || '';
+        im.alt = f.ket || 'Foto ' + (kini + 1); fig.classList.add('muat');
+        const kecil = GF.url['k:' + f.id];
+        if (kecil) { im.src = kecil; im.classList.add('buram'); } else im.removeAttribute('src');
+        const u = await GF.ambil(f.id, 'b', o.admin) || await GF.ambil(f.id, 'k', o.admin);
+        if (g !== giliran) return;
+        if (u) im.src = u; im.classList.remove('buram'); fig.classList.remove('muat');
+        if (list.length > 1) GF.ambil(list[(kini + 1) % list.length].id, 'b', o.admin);          // siapkan foto berikutnya
+      };
+      const tutup = () => { v.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', key); if (prev && prev.focus) prev.focus(); };
+      const key = (e) => { if (e.key === 'Escape') tutup(); else if (e.key === 'ArrowLeft') tampil(kini - 1); else if (e.key === 'ArrowRight') tampil(kini + 1); };
+      document.addEventListener('keydown', key);
+      $('.gv-x', v).onclick = tutup; $('.gv-nav.kiri', v).onclick = () => tampil(kini - 1); $('.gv-nav.kanan', v).onclick = () => tampil(kini + 1);
+      v.addEventListener('click', (e) => { if (e.target === v || e.target === fig) tutup(); });
+      v.addEventListener('contextmenu', (e) => { if (e.target === im) e.preventDefault(); });
+      let x0 = null;
+      v.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+      v.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) tampil(kini + (dx < 0 ? 1 : -1)); });
+      if (list.length < 2) $$('.gv-nav', v).forEach((b) => b.classList.add('hide'));
+      tampil(i); setTimeout(() => $('.gv-x', v).focus(), 30);
+    }
+  };
+  IKH.GF = GF;
+  const fotoN = (n) => fmt.angka(n) + ' foto';
+  function kartuAlbum(a) {
+    return '<a class="alb" href="#/galeri/' + esc(a.id) + '"><span class="sp" ' + (a.sampul ? 'data-gf="' + esc(a.sampul) + '" data-alt="' + esc(a.judul) + '"' : '') + '>' + ic('photo_library', 'xl') + '</span>' +
+      '<span class="bd"><b>' + esc(a.judul) + '</b><span class="meta">' + [a.tanggal ? fmt.tgl(a.tanggal, true) : '', a.lokasi].filter(Boolean).map(esc).join(' • ') + '</span><span class="jml">' + ic('photo_camera', 'sm') + fotoN(a.jumlah) + '</span></span></a>';
+  }
+  const galTutup = () => '<div class="wrap sec"><div class="empty">' + ic('visibility_off') + '<div>Galeri sedang tidak ditampilkan.</div><a class="btn btn-ghost btn-sm mt" href="#/">Kembali ke beranda</a></div></div>';
+  /* data galeri: SWR singkat (2 menit) + simpanan lokal agar tampil instan */
+  const Gal = {
+    daftar: LS.get('gal', null),
+    async muatDaftar(paksa) {
+      if (this.daftar && !paksa && Date.now() - this.daftar.at < 120000) return this.daftar;
+      const r = await api('pub.galeri', {});
+      if (r.ok) { this.daftar = { d: r.data, at: Date.now() }; LS.set('gal', this.daftar); return this.daftar; }
+      if (r.code === 'TUTUP') { this.daftar = null; LS.del('gal'); }
+      return { err: r };
+    },
+    album: {},
+    async muatAlbum(id) {
+      const x = this.album[id];
+      if (x && Date.now() - x.at < 120000) return x;
+      const r = await api('pub.album', { id });
+      if (r.ok) return (this.album[id] = { d: r.data, at: Date.now() });
+      return { err: r };
+    }
+  };
+  function galeriPage() {
+    return halamanPub('Galeri', async (main, d) => {
+      const st = d.setting || {}, sem = IKH.menuTersembunyi(st);
+      const kepala = pageHead('Galeri', 'Galeri Kegiatan', 'Dokumentasi kegiatan ' + (st.ORG_SINGKAT || 'organisasi') + ', dikelompokkan per album.');
+      if (sem('galeri')) { main.innerHTML = kepala + galTutup(); return; }
+      const gambar = (x) => {
+        const al = x.d.album || [];
+        main.innerHTML = kepala + '<section class="sec" style="padding-top:2rem"><div class="wrap">' + (al.length ? '<div class="albums">' + al.map(kartuAlbum).join('') + '</div>' : UI.kosong('Belum ada album kegiatan.', 'photo_library')) + '</div></section>';
+        GF.pasang(main);
+      };
+      if (Gal.daftar) gambar(Gal.daftar); else main.innerHTML = kepala + '<div class="wrap sec">' + UI.skel(4) + '</div>';
+      const awal = Gal.daftar && Gal.daftar.at;
+      const x = await Gal.muatDaftar();
+      if (!document.body.contains(main)) return;
+      if (x.err) { if (x.err.code === 'TUTUP') main.innerHTML = kepala + galTutup(); else if (!Gal.daftar) main.innerHTML = kepala + '<div class="wrap sec">' + UI.kosong(x.err.code === 'NOACT' ? 'Galeri belum aktif di server (butuh backend Apps Script v1.5.0).' : (x.err.msg || 'Galeri belum dapat dimuat.'), 'cloud_off') + '</div>'; return; }
+      if (x.at !== awal) gambar(x);
+    });
+  }
+  function albumPage(p) {
+    return halamanPub('Galeri', async (main, d) => {
+      const st = d.setting || {}, sem = IKH.menuTersembunyi(st);
+      const crumb = '<section class="page-h"><div class="wrap"><div class="crumb"><a href="#/">Beranda</a>' + ic('chevron_right', 'sm') + '<a href="#/galeri">Galeri</a>' + ic('chevron_right', 'sm') + '<span>Album</span></div>';
+      if (sem('galeri')) { main.innerHTML = crumb + '<h1>Galeri Kegiatan</h1></div></section>' + galTutup(); return; }
+      if (!main.querySelector('.fotos[data-id="' + CSS.escape(p.id) + '"]')) main.innerHTML = crumb + '<h1>Memuat album…</h1></div></section><div class="wrap sec">' + UI.skel(4) + '</div>';
+      const x = await Gal.muatAlbum(p.id);
+      if (!document.body.contains(main)) return;
+      if (x.err) { main.innerHTML = crumb + '<h1>Album tidak tersedia</h1></div></section>' + (x.err.code === 'TUTUP' ? galTutup() : '<div class="wrap sec"><div class="empty">' + ic('photo_library') + '<div>' + esc(x.err.msg || 'Album tidak ditemukan.') + '</div><a class="btn btn-ghost btn-sm mt" href="#/galeri">Lihat album lain</a></div></div>'); return; }
+      if (main.querySelector('.fotos[data-k="' + CSS.escape(p.id + '|' + x.at) + '"]')) return;     // sudah tergambar dari data yang sama
+      const a = x.d.album, foto = x.d.foto || [];
+      IKH.judul(a.judul + ' — Galeri');
+      main.innerHTML = crumb + '<h1>' + esc(a.judul) + '</h1><div class="alb-meta">' +
+        (a.tanggal ? '<span>' + ic('calendar_month', 'sm') + fmt.tgl(a.tanggal, true) + '</span>' : '') + (a.lokasi ? '<span>' + ic('location_on', 'sm') + esc(a.lokasi) + '</span>' : '') + '<span>' + ic('photo_camera', 'sm') + fotoN(foto.length) + '</span></div>' +
+        (a.keterangan ? '<p class="muted mb-0 mt" style="max-width:760px">' + esc(a.keterangan) + '</p>' : '') + '</div></section>' +
+        '<section class="sec" style="padding-top:2rem"><div class="wrap"><div class="fotos" data-id="' + esc(a.id) + '" data-k="' + esc(a.id + '|' + x.at) + '">' + foto.map((f, i) => '<button type="button" class="ft" data-i="' + i + '" data-gf="' + esc(f.id) + '" data-alt="' + esc(f.ket || a.judul) + '" aria-label="Perbesar foto ' + (i + 1) + (f.ket ? ': ' + esc(f.ket) : '') + '">' + ic('image') + (f.ket ? '<span class="cap">' + esc(f.ket) + '</span>' : '') + '</button>').join('') + '</div>' +
+        '<div class="mt-lg"><a class="btn btn-ghost btn-sm" href="#/galeri">' + ic('arrow_back', 'sm') + 'Semua album</a></div></div></section>';
+      GF.pasang(main);
+      $$('.fotos .ft', main).forEach((b) => { b.onclick = () => GF.lihat(foto, +b.dataset.i, { judul: a.judul }); b.addEventListener('contextmenu', (e) => e.preventDefault()); });
+    });
   }
 
   /* ---------------- Berita ---------------- */
@@ -549,6 +713,7 @@
   /* ---------------- Rute ---------------- */
   const R = IKH.Router;
   R.add('/', beranda); R.add('/profil', profil); R.add('/berita', beritaList); R.add('/berita/:id', beritaDetail);
+  R.add('/galeri', galeriPage); R.add('/galeri/:id', albumPage);
   R.add('/daftar', daftarPage); R.add('/status', statusPage); R.add('/verifikasi', verifikasiPage); R.add('/v/:kode', verifikasiPage); R.add('/s/:kode', pengesahanPage);
   R.add('/masuk', masuk); R.add('/lupa', lupa); R.add('/reset', reset); R.add('/ganti-sandi', gantiSandiWajib);
   // pengurusBoleh: Pengurus yang akunnya terhubung ke data alumni membuka "Data & KTA Saya" (peran ganda)

@@ -69,11 +69,11 @@
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start" id="g1">' +
         '<section><div class="row between mb"><h3 class="mb-0 row">' + ic('badge') + 'KTA Digital Anggota</h3><div class="seg" role="tablist"><button class="on" data-sisi="depan">Sisi Depan</button><button data-sisi="belakang">Sisi Belakang</button></div></div>' +
         '<div class="kta-flip" id="flip">' + Kta.depan(a, st, { langsung: true }) + Kta.belakang(a, st, { sah: d.sah }).replace('class="kta belakang"', 'class="kta belakang off"') + '</div></section>' +
-        '<section class="col gap-lg"><div class="card card-b"><div class="kicker gold">Aksi Dokumen Identitas</div><h3 class="mt">Tunjukkan & Simpan KTA Digital</h3><p class="small muted">Kartu berukuran kartu identitas, disahkan secara elektronik oleh Ketua, dengan QR verifikasi dan QR pengesahan.</p>' +
+        '<section class="col gap-lg"><div class="card card-b"><div class="kicker gold">Aksi Dokumen Identitas</div><h3 class="mt">Tunjukkan & Simpan KTA Digital</h3><p class="small muted">Kartu berukuran kartu identitas, disahkan secara elektronik oleh Ketua, dengan QR verifikasi.</p>' +
         '<button class="btn btn-gold btn-block" id="b-layar">' + ic('fullscreen') + 'Tampilkan Layar Penuh</button>' +
         '<button class="btn btn-ghost btn-block mt" id="b-simpan">' + ic('download') + 'Simpan Kartu (Gambar / PDF)</button>' +
         '<div class="row mt"><button class="btn btn-ghost grow" id="b-link">' + ic('link', 'sm') + 'Salin Tautan Verifikasi</button><a class="btn btn-ghost btn-icon" href="' + esc(linkVerif(d)) + '" target="_blank" rel="noopener" aria-label="Buka halaman verifikasi">' + ic('open_in_new', 'sm') + '</a></div></div>' +
-        '<div class="card card-b" style="background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#DAE2FF;border:0"><div class="row top">' + ic('verified_user', 'lg') + '<div><b style="color:#fff">Keaslian kartu dapat diperiksa publik</b><div class="small mt-0">QR besar di sisi belakang memeriksa status keanggotaan; QR kecil memeriksa pengesahan Ketua. Jam berjalan di sudut kartu menandakan kartu tampil langsung dari aplikasi.</div></div></div></div></section></div>' +
+        '<div class="card card-b" style="background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#DAE2FF;border:0"><div class="row top">' + ic('verified_user', 'lg') + '<div><b style="color:#fff">Keaslian kartu dapat diperiksa publik</b><div class="small mt-0">QR di sisi belakang memeriksa status keanggotaan dan pengesahan Ketua langsung ke basis data organisasi. Jam berjalan di sudut kartu menandakan kartu tampil langsung dari aplikasi.</div></div></div></div></section></div>' +
         '<h3 class="mt-lg">Layanan Mandiri</h3><div class="grid g4">' +
         svc('edit_note', 'Ajukan Pembaruan Data', 'Mutasi instansi, jabatan, nomor WhatsApp, email, atau foto. Berlaku setelah disetujui Pengurus.', pending ? '1 menunggu' : 'Buat pengajuan', '#/anggota/profil') +
         svc('badge', 'KTA Digital', 'Tampilkan kartu di layar penuh, atau simpan sebagai gambar/PDF ukuran kartu.', 'Buka kartu', '#/anggota/kta') +
@@ -109,7 +109,7 @@
   async function pasangFlip(el, d) {
     const flip = $('#flip', el); if (!flip) return;
     $$('[data-sisi]', el).forEach((b) => b.onclick = () => { $$('[data-sisi]', el).forEach((x) => x.classList.toggle('on', x === b)); $$('.kta', flip).forEach((k) => k.classList.toggle('off', !k.classList.contains(b.dataset.sisi))); });
-    Kta.pasang(flip, d);                                             // QR verifikasi + QR pengesahan
+    Kta.pasang(flip, d);                                             // QR verifikasi
   }
 
   /* ---------------- KTA ---------------- */
@@ -123,7 +123,7 @@
         '<div class="grid g2" style="max-width:1100px"><div><div class="kicker mb">Sisi depan</div>' + Kta.depan(a, st, { langsung: true }) + '</div><div><div class="kicker mb">Sisi belakang</div><div id="blk">' + Kta.belakang(a, st, { sah: d.sah }) + '</div></div></div>' +
         '<div class="grid g2 mt-lg" style="max-width:1100px;align-items:start"><div class="card card-b"><div class="row top">' + ic('verified_user', 'lg') + '<div><h4 class="mb-0">Pengesahan elektronik</h4>' +
         '<div class="kv mt"><div>Disahkan oleh</div><div><b>' + esc(sah.oleh || '(nama ketua belum diisi Pengurus)') + '</b><br><span class="muted">' + esc(sah.jabatan) + '</span></div><div>Tanggal pengesahan</div><div>' + (sah.pada ? fmt.tgl(sah.pada, true) : '-') + '</div><div>KTA terbit</div><div>' + (a.tgl_verifikasi ? fmt.tgl(a.tgl_verifikasi, true) : '-') + '</div></div>' +
-        '<p class="small muted mt mb-0">Pengesahan diperbarui otomatis saat kartu diperpanjang atau data di kartu berubah. Kartu ini tidak memakai tanda tangan basah.</p></div></div></div>' +
+        '<p class="small muted mt mb-0">Pengesahan diperbarui otomatis saat kartu diperpanjang atau data di kartu berubah. Kartu ini tidak memakai tanda tangan basah; siapa yang mengesahkan dan kapan tampil saat QR kartu dipindai.</p></div></div></div>' +
         '<div class="alert info">' + ic('info') + '<div><b>Cara memakai kartu digital</b><br>• <b>Layar Penuh</b> untuk memperlihatkan kartu dari ponsel. Ketuk QR untuk memperbesarnya.<br>• <b>Simpan Kartu</b> menghasilkan gambar sisi depan & belakang serta PDF berukuran kartu identitas (85,6 × 54 mm).<br>• Jam berjalan di sudut kartu menandakan kartu tampil langsung dari aplikasi, bukan tangkapan layar. Status terkini selalu mengikuti hasil pindai QR.</div></div></div>';
       Kta.pasang(el, d);
       $('#b-layar').onclick = () => IKH.Kartu.tunjuk(d);
