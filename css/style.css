@@ -246,30 +246,32 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .kta .hd { position: absolute; left: 5cqw; right: 5cqw; top: 4.5cqw; display: flex; align-items: center; gap: 2.6cqw; }
 .kta .hd .lg { width: 10.5cqw; height: 10.5cqw; border-radius: 2cqw; background: transparent center/contain no-repeat; display: grid; place-items: center; color: var(--gold); flex: none; }
 .kta .hd .lg .ic { width: 6cqw; height: 6cqw; }
-.kta .hd .t1 { color: var(--gold); font-weight: 800; font-size: 2.3cqw; letter-spacing: .12em; } .kta .hd .t2 { font-family: var(--f-head); font-weight: 800; font-size: 3.6cqw; line-height: 1.15; }
+.kta .hd .hdt { flex: 1 1 auto; min-width: 0; }
+.kta .hd .t1 { color: var(--gold); font-weight: 800; font-size: 2.3cqw; letter-spacing: .12em; } .kta .hd .t2 { font-family: var(--f-head); font-weight: 800; font-size: 3.6cqw; line-height: 4.14cqw; }
 .kta .chipg { position: absolute; right: 5cqw; top: 5cqw; width: 7.5cqw; height: 5.6cqw; border-radius: 1cqw; background: linear-gradient(135deg, #F9D86A, #D9A514); box-shadow: inset 0 0 0 .3cqw rgba(0, 0, 0, .1); }
 .kta .garis { position: absolute; left: 5cqw; right: 5cqw; top: 17cqw; height: .25cqw; background: linear-gradient(90deg, var(--gold), rgba(246, 193, 43, .1)); }
 .kta .ft { position: absolute; left: 5cqw; top: 20.5cqw; width: 20cqw; height: 25cqw; border-radius: 1.6cqw; background: #2B4B8C center/cover no-repeat; border: .45cqw solid rgba(255, 255, 255, .85); display: grid; place-items: center; color: rgba(255, 255, 255, .5); }
 .kta .ft .ic { width: 9cqw; height: 9cqw; }
 .kta .ft.fu { overflow: hidden; } .kta .ft.fu::before { inset: -14%; filter: blur(1.6cqw); }
-.kta .dt { position: absolute; left: 29cqw; right: 5cqw; top: 20cqw; display: grid; gap: 1.2cqw; }
-.kta .dt .l { font-size: 1.9cqw; letter-spacing: .09em; color: #A9BCEB; text-transform: uppercase; font-weight: 600; } .kta .dt .v { font-size: 3cqw; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kta .dt .v.nm { font-family: var(--f-head); font-size: 4.4cqw; font-weight: 800; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.kta .dt .v.no { color: var(--gold); font-family: ui-monospace, Menlo, monospace; font-size: 3.2cqw; letter-spacing: .04em; }
-.kta .dt .dua { display: grid; grid-template-columns: 24cqw 1fr; gap: 2cqw; }
-.kta .dt .v.pr { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }   /* program studi boleh 2 baris */
+.kta .dt { position: absolute; left: 29cqw; right: 5cqw; top: 20cqw; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.2cqw; }
+.kta .dt > *, .kta .dt .dua > * { min-width: 0; }   /* v1.8.1: kolom tidak ikut melebar oleh teks panjang */
+.kta .dt .l { font-size: 1.9cqw; letter-spacing: .09em; color: #A9BCEB; text-transform: uppercase; font-weight: 600; } .kta .dt .v { font-size: 3cqw; font-weight: 600; line-height: 3.6cqw; white-space: nowrap; }
+.kta .dt .v.nm { font-family: var(--f-head); font-size: 4.4cqw; font-weight: 800; line-height: 5.28cqw; }
+.kta .dt .v.no { color: var(--gold); font-family: ui-monospace, Menlo, monospace; font-size: 3.2cqw; line-height: 3.84cqw; letter-spacing: .04em; }
+.kta .dt .dua { display: grid; grid-template-columns: 24cqw minmax(0, 1fr); gap: 2cqw; }
 .kta .bw { position: absolute; left: 5cqw; right: 5cqw; bottom: 3.6cqw; display: flex; justify-content: space-between; align-items: center; border-top: .2cqw solid rgba(255, 255, 255, .15); padding-top: 2cqw; font-size: 2.1cqw; color: #A9BCEB; letter-spacing: .06em; }
 .kta .bw b { color: var(--gold); font-family: ui-monospace, Menlo, monospace; }
 .kta .bw .st { padding: .5cqw 1.8cqw; border-radius: 99px; background: rgba(27, 135, 85, .25); color: #86EFAC; font-weight: 700; letter-spacing: .08em; }
 .kta .bw .st.bad { background: rgba(220, 38, 38, .25); color: #FCA5A5; }
 .kta.belakang { background: #fff; color: var(--text); border: 1px solid var(--border); }
 .kta.belakang .pita { position: absolute; left: 0; right: 0; top: 0; height: 9cqw; background: var(--navy); display: flex; align-items: center; padding: 0 5cqw; color: var(--gold); font-weight: 800; font-size: 2.6cqw; letter-spacing: .14em; }
+.kta.belakang .pita > span { flex: 1 1 auto; min-width: 0; }
 .kta.belakang .qr { position: absolute; display: block; margin: 0; background: #fff; color: inherit; font: inherit; cursor: zoom-in; -webkit-appearance: none; appearance: none; }
 .kta.belakang .qr { left: 5cqw; top: 13cqw; width: 28cqw; height: 28cqw; border: .3cqw solid var(--border); border-radius: 2cqw; padding: 1.2cqw; }
 .kta.belakang .qr svg { width: 100%; height: 100%; display: block; }
 .kta.belakang .qr:focus-visible { outline: .5cqw solid var(--gold); outline-offset: .3cqw; }
 .kta.belakang .qrl { position: absolute; left: 5cqw; top: 42.5cqw; width: 28cqw; text-align: center; font-size: 1.9cqw; line-height: 2.85cqw; color: var(--muted); font-weight: 600; }
-.kta.belakang .qrn { position: absolute; left: 5cqw; top: 45.3cqw; width: 28cqw; text-align: center; font: 600 2.1cqw/3cqw ui-monospace, Menlo, monospace; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kta.belakang .qrn { position: absolute; left: 5cqw; top: 45.3cqw; width: 28cqw; text-align: center; font: 600 2.1cqw/3cqw ui-monospace, Menlo, monospace; color: var(--text); white-space: nowrap; }
 .kta.belakang .qrt { position: absolute; left: 5cqw; top: 48.4cqw; width: 28cqw; text-align: center; font-size: 1.8cqw; line-height: 2.7cqw; color: var(--muted); }
 .kta.belakang .kt { position: absolute; left: 38cqw; right: 5cqw; top: 13cqw; max-height: 23.6cqw; overflow: hidden; font-size: 2cqw; line-height: 2.8cqw; color: var(--muted); }
 .kta.belakang .kt b { color: var(--navy); font-size: 2.4cqw; line-height: 3.36cqw; display: block; margin-bottom: .6cqw; letter-spacing: .06em; }
@@ -278,8 +280,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .kta.belakang .sg { position: absolute; left: 38cqw; right: 5cqw; top: 37.8cqw; height: .2cqw; background: var(--border); }
 .kta.belakang .sah { position: absolute; left: 38cqw; right: 5cqw; top: 39cqw; height: 19.6cqw; display: flex; flex-direction: column; justify-content: center; }
 .kta.belakang .sah .s1 { font-size: 1.9cqw; line-height: 2.85cqw; font-weight: 800; letter-spacing: .07em; color: var(--navy); margin-bottom: .6cqw; white-space: nowrap; }
-.kta.belakang .sah .s2 { font-size: 2.4cqw; line-height: 3.36cqw; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kta.belakang .sah .s3 { font-size: 3cqw; line-height: 3.6cqw; font-weight: 800; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kta.belakang .sah .s2 { font-size: 2.4cqw; line-height: 3.36cqw; color: var(--muted); white-space: nowrap; }
+.kta.belakang .sah .s3 { font-size: 3cqw; line-height: 3.6cqw; font-weight: 800; color: var(--text); white-space: nowrap; }
 .kta.belakang .bwh { position: absolute; left: 0; right: 0; bottom: 0; height: 3cqw; background: var(--gold); }
 /* Jenis anggota (v1.3.0): Biasa biru-emas · Luar Biasa hijau tua · Kehormatan marun-emas */
 .kta .bw .kn { display: flex; align-items: center; gap: 1.2cqw; }
@@ -291,6 +293,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .kta[data-jn="lb"] .bw .jn { color: #0B4A3A; } .kta[data-jn="kh"] .bw .jn { color: #6A1525; }
 .kta.belakang[data-jn="lb"] .pita { background: #0B4A3A; } .kta.belakang[data-jn="kh"] .pita { background: #6A1525; }
 .kta.belakang[data-jn="lb"] .kt b, .kta.belakang[data-jn="lb"] .sah .s1 { color: #0B4A3A; } .kta.belakang[data-jn="kh"] .kt b, .kta.belakang[data-jn="kh"] .sah .s1 { color: #6A1525; }
+/* v1.8.1 — Teks KTA satu baris: diperkecil otomatis (min 45%) oleh IKH.pasKartu, tidak pernah dipotong "…".
+   Tinggi baris dikunci (cqw) agar tata letak kartu tidak bergeser saat huruf mengecil. Bila pada 45% masih belum muat
+   (data sangat panjang) teks turun ke baris berikutnya di dalam kartu (.pas-bungkus). */
+.kta [data-pas] { white-space: nowrap; }
+.kta [data-pas].pas-bungkus { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.2 !important; }
 /* v1.8.0 — KTA Pengurus (hitam–emas) */
 .kta.depan[data-jn="pg"] { background: radial-gradient(120% 120% at 100% 0%, #3B3B3B 0%, #1C1C1C 45%, #050505 100%); }
 .kta[data-jn="pg"] .dt .l, .kta[data-jn="pg"] .bw { color: #D8C58E; } .kta[data-jn="pg"] .ft { background-color: #2B2B2B; } .kta[data-jn="pg"] .bw .jn { color: #1C1C1C; }

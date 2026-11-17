@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.8.0';
+  const VERSI = '1.8.1';
   const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -488,7 +488,6 @@
       st = st || {};
       const J = JENIS[IKH.jenisAgt(a)], pg = IKH.pengurusAgt(a), p = Kta.sah(a, st, sah), nama = String(a.nama || 'NAMA ANGGOTA').toUpperCase();
       return {
-        namaUk: nama.length <= 30 ? 4.4 : nama.length <= 44 ? 3.7 : 3.1,        // nama bergelar panjang → huruf diperkecil agar muat 2 baris
         kode: pg ? 'pg' : J.kode, jenis: pg ? 'PENGURUS' : J.judul, status: Kta.statusTeks(a),         // Pengurus: tampilan saja; masa berlaku tetap jenis asli
         org: st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur', singkat: st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM',
         nama: nama, nomor: a.id_member || '—',
@@ -506,12 +505,12 @@
       st = st || {}; o = o || {};
       const x = Kta.isi(a, st), s = x.status;
       return '<div class="kta depan" data-jn="' + x.kode + '" role="img" aria-label="KTA sisi depan ' + esc(a.nama) + ', ' + x.jenis.toLowerCase() + '">' +
-        '<div class="hd"><div class="lg" ' + logoBg(st, 160) + '></div><div><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2">' + esc(x.org) + '</div></div></div>' +
+        '<div class="hd"><div class="lg" ' + logoBg(st, 160) + '></div><div class="hdt"><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2" data-pas="3.6">' + esc(x.org) + '</div></div></div>' +
         (o.langsung ? '<div class="live" title="Tampil langsung dari aplikasi"><i></i><span data-jam>' + jamKini() + '</span></div>' : '<div class="chipg"></div>') + '<div class="garis"></div>' +
         '<div class="ft' + (a.foto_id ? ' fu' : '') + '" ' + fotoUtuh(a.foto_id, 400) + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
-        '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm"' + (x.namaUk < 4.4 ? ' style="font-size:' + x.namaUk + 'cqw"' : '') + '>' + esc(x.nama) + '</div></div>' +
-        '<div><div class="l">Nomor Anggota</div><div class="v no">' + esc(x.nomor) + '</div></div>' +
-        '<div class="dua"><div><div class="l">NOTAR / Angkatan</div><div class="v">' + esc(x.nit) + '</div></div><div><div class="l">Program Studi</div><div class="v pr">' + esc(x.prodi) + '</div></div></div></div>' +
+        '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm" data-pas="4.4">' + esc(x.nama) + '</div></div>' +
+        '<div><div class="l">Nomor Anggota</div><div class="v no" data-pas="3.2">' + esc(x.nomor) + '</div></div>' +
+        '<div class="dua"><div><div class="l">NOTAR / Angkatan</div><div class="v" data-pas="3">' + esc(x.nit) + '</div></div><div><div class="l">Program Studi</div><div class="v pr" data-pas="3">' + esc(x.prodi) + '</div></div></div></div>' +
         '<div class="bw"><span>' + (x.seumur ? 'BERLAKU <b>SEUMUR HIDUP</b>' : 'BERLAKU S.D. <b>' + esc(x.masa) + '</b>') + '</span>' +
         '<span class="kn"><span class="jn">' + x.jenis + '</span><span class="st ' + (s === 'AKTIF' ? '' : 'bad') + '">' + s + '</span></span></div></div>';
     },
@@ -520,12 +519,12 @@
       st = st || {}; o = o || {};
       const x = Kta.isi(a, st, o.sah);
       return '<div class="kta belakang" data-jn="' + x.kode + '" role="group" aria-label="KTA sisi belakang: QR verifikasi, ketentuan, dan pengesahan elektronik">' +
-        '<div class="pita">' + esc(x.singkat) + '</div>' +
+        '<div class="pita"><span data-pas="2.6">' + esc(x.singkat) + '</span></div>' +
         '<button type="button" class="qr" data-qr="v" aria-label="Perbesar QR verifikasi keanggotaan">' + (o.qr || '') + '</button><div class="qrl">PINDAI UNTUK VERIFIKASI</div>' +
-        '<div class="qrn">' + esc(x.nomor) + '</div><div class="qrt">' + esc(x.terbit) + '</div>' +
+        '<div class="qrn" data-pas="2.1">' + esc(x.nomor) + '</div><div class="qrt">' + esc(x.terbit) + '</div>' +
         '<div class="kt"><b>KETENTUAN</b>' + x.ketentuan.map((k) => '<div>' + esc(k) + '</div>').join('') + '</div>' +
         '<div class="sg"></div>' +
-        '<div class="sah"><div class="s1">DISAHKAN SECARA ELEKTRONIK</div><div class="s2">' + esc(x.sahJabatan) + ',</div><div class="s3">' + esc(x.sahOleh || '(nama ketua belum diisi)') + '</div></div>' +
+        '<div class="sah"><div class="s1">DISAHKAN SECARA ELEKTRONIK</div><div class="s2" data-pas="2.4">' + esc(x.sahJabatan) + ',</div><div class="s3" data-pas="3">' + esc(x.sahOleh || '(nama ketua belum diisi)') + '</div></div>' +
         '<div class="bwh"></div></div>';
     },
     /** Isi QR verifikasi pada semua sisi belakang di dalam el. d = { qr } (tautan dari server). */
@@ -539,6 +538,37 @@
     }
   };
   IKH.Kta = Kta;
+
+  /* v1.8.1 — Teks KTA satu baris: bila terlalu panjang, ukuran huruf diperkecil otomatis (paling kecil 45% dari ukuran normal)
+     dan TIDAK PERNAH dipotong dengan "…". Elemen bertanda data-pas="<ukuran normal, cqw>".
+     Huruf memakai cqw (persen lebar kartu), sehingga hasil pengecilan berlaku di kartu sebesar apa pun (HP, laptop, layar penuh, cetak).
+     Diukur ulang otomatis saat kartu muncul, berubah ukuran, dan setelah font web selesai dimuat — berlaku di semua tempat kartu tampil.
+     Bila pada 45% masih belum muat (data sangat panjang), teks turun ke baris berikutnya di DALAM kartu: tetap utuh, tidak keluar tepi. */
+  const PAS_MIN = .45;
+  const pasSatu = (el) => {
+    const dasar = parseFloat(el.dataset.pas), w = el.clientWidth;
+    if (!dasar || !w) return;                                        // kartu belum tampil → diukur saat muncul
+    el.classList.remove('pas-bungkus'); el.style.fontSize = dasar + 'cqw';
+    let uk = dasar, sw = el.scrollWidth;
+    for (let i = 0; i < 5 && sw > w && uk > dasar * PAS_MIN; i++) {
+      uk = Math.max(dasar * PAS_MIN, uk * w / sw * .985);
+      el.style.fontSize = uk.toFixed(3) + 'cqw'; sw = el.scrollWidth;
+    }
+    if (sw > w) el.classList.add('pas-bungkus');
+    el.dataset.pasRasio = (uk / dasar).toFixed(3);
+  };
+  IKH.pasKartu = (root) => { const r = root && root.querySelectorAll ? root : document; if (r.matches && r.matches('[data-pas]')) pasSatu(r); r.querySelectorAll('[data-pas]').forEach(pasSatu); };
+  if (window.ResizeObserver && window.MutationObserver) {
+    const ro = new ResizeObserver((es) => es.forEach((e) => { if (!e.target.isConnected) ro.unobserve(e.target); else IKH.pasKartu(e.target); }));
+    const amati = (n) => { if (n.nodeType !== 1) return; if (n.classList.contains('kta')) ro.observe(n); else if (n.firstElementChild) n.querySelectorAll('.kta').forEach((k) => ro.observe(k)); };
+    new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach(amati))).observe(document.documentElement, { childList: true, subtree: true });
+    document.querySelectorAll('.kta').forEach((k) => ro.observe(k));
+  }
+  if (document.fonts) {
+    if (document.fonts.ready) document.fonts.ready.then(() => IKH.pasKartu());
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => IKH.pasKartu());
+  }
+
   /* Ketuk QR di kartu → QR diperbesar (memudahkan pemindaian, dan menghindari pemindai menangkap QR yang salah) */
   document.addEventListener('click', (e) => {
     const b = e.target && e.target.closest && e.target.closest('.kta [data-qr]');
@@ -576,14 +606,38 @@
       const font = (bobot, px, fam) => { g.font = bobot + ' ' + (px * u).toFixed(2) + 'px ' + fam; };
       const lebar = (s, ls) => { if (!ls) return g.measureText(s).width; let w = 0; for (const ch of s) w += g.measureText(ch).width + ls * u; return w; };
       const tulis = (s, X, Y, ls) => { if (!ls) { g.fillText(s, X, Y); return; } let px = X; for (const ch of s) { g.fillText(ch, px, Y); px += g.measureText(ch).width + ls * u; } };
-      const pangkas = (s, maks, ls) => { s = String(s); if (lebar(s, ls) <= maks) return s; while (s.length > 1 && lebar(s + '…', ls) > maks) s = s.slice(0, -1); return s.replace(/\s+$/, '') + '…'; };
-      const bungkus = (s, maks, maksBaris) => {
-        const kata = String(s).split(/\s+/).filter(Boolean), baris = []; let kini = '';
-        kata.forEach((k) => { const coba = kini ? kini + ' ' + k : k; if (!kini || g.measureText(coba).width <= maks) kini = coba; else { baris.push(kini); kini = k; } });
+      /** Bungkus per kata tanpa memotong teks ("…" tidak dipakai). Kata yang lebih lebar dari baris dipecah per huruf. */
+      const bungkus = (s, maks, ls) => {
+        const baris = [], pas = (t) => lebar(t, ls) <= maks; let kini = '';
+        String(s).split(/\s+/).filter(Boolean).forEach((k) => {
+          const coba = kini ? kini + ' ' + k : k;
+          if (pas(coba)) { kini = coba; return; }
+          if (kini) baris.push(kini);
+          kini = '';
+          for (const ch of k) { if (kini && !pas(kini + ch)) { baris.push(kini); kini = ch; } else kini += ch; }
+        });
         if (kini) baris.push(kini);
-        if (baris.length > maksBaris) { const sisa = baris.slice(maksBaris - 1).join(' '); baris.length = maksBaris; baris[maksBaris - 1] = sisa; }
-        return baris.map((b) => pangkas(b, maks));
+        return baris.length ? baris : [''];
       };
+      /** v1.8.1 — sama dengan pasSatu() di layar: satu baris, huruf diperkecil seperlunya (min 45%), tanpa "…".
+       *  Bila pada 45% masih belum muat → dibungkus di ukuran 45% (tetap di dalam kartu). lsEm = jarak huruf (em). */
+      const muat = (s, maks, bobot, px, fam, lsEm) => {
+        s = String(s); let p = px;
+        const ukur = () => { font(bobot, p, fam); return lebar(s, lsEm ? p * lsEm : 0); };
+        let w = ukur();
+        for (let i = 0; i < 5 && w > maks && p > px * PAS_MIN; i++) { p = Math.max(px * PAS_MIN, p * maks / w * .985); w = ukur(); }
+        const ls = lsEm ? p * lsEm : 0;
+        return { px: p, rasio: p / px, ls: ls, bobot: bobot, fam: fam, baris: w <= maks ? [s] : bungkus(s, maks, ls) };
+      };
+      /** Gambar hasil muat(): satu baris di tengah slot setinggi `slot`; bila terbungkus, tinggi baris = 1,2 × huruf (sama dengan layar).
+       *  kotak = tinggi area untuk penempatan tengah vertikal (opsional). Mengembalikan tinggi yang terpakai (cqw). */
+      const blok = (m, X, Y, slot, kotak) => {
+        const t = m.baris.length > 1 ? m.px * 1.2 : slot, h = t * m.baris.length;
+        if (kotak) Y += (kotak - h) / 2;
+        font(m.bobot, m.px, m.fam); m.baris.forEach((s, i) => tulis(s, X, (Y + t * i + t / 2) * u, m.ls));
+        return h;
+      };
+      const tata = c.tata = {};                                          // ringkasan ukuran huruf (untuk pengujian)
       const pas = (im, X, Y, w, h, tutupi) => { const s = (tutupi ? Math.max : Math.min)(w * u / im.width, h * u / im.height), dw = im.width * s, dh = im.height * s; g.drawImage(im, X * u + (w * u - dw) / 2, Y * u + (h * u - dh) / 2, dw, dh); };
       /* Latar kabur untuk pas foto utuh: foto diperkecil ke kanvas mungil lalu diperbesar lagi (berjalan di semua browser, tanpa ctx.filter) */
       const kabur = (im, X, Y, w, h) => {
@@ -614,11 +668,11 @@
         for (let d = 0; d < W + H; d += per) { g.beginPath(); g.moveTo(d, 0); g.lineTo(d + tb, 0); g.lineTo(0, d + tb); g.lineTo(0, d); g.closePath(); g.fill(); }
         // kepala: logo + judul
         const xT = 18.1 * u;
-        font(800, 3.6, F_HEAD); const t2 = bungkus(x.org, 76.9 * u, 2);
-        const hT = 3.45 + t2.length * 4.14, hHd = Math.max(10.5, hT), yT = 4.5 + (hHd - hT) / 2;
+        const t2 = tata.org = muat(x.org, 76.9 * u, 800, 3.6, F_HEAD);
+        const hT = 3.45 + (t2.baris.length > 1 ? t2.px * 1.2 * t2.baris.length : 4.14), hHd = Math.max(10.5, hT), yT = 4.5 + (hHd - hT) / 2;
         if (B.logo) pas(B.logo, 5, 4.5 + (hHd - 10.5) / 2, 10.5, 10.5, false);
         font(800, 2.3, F_BODY); g.fillStyle = GOLD; tulis('KARTU TANDA ANGGOTA', xT, (yT + 1.725) * u, 2.3 * .12);
-        font(800, 3.6, F_HEAD); g.fillStyle = '#fff'; t2.forEach((s, i) => g.fillText(s, xT, (yT + 3.45 + 4.14 * i + 2.07) * u));
+        g.fillStyle = '#fff'; blok(t2, xT, yT + 3.45, 4.14);
         // hiasan cip
         const cg = g.createLinearGradient(87.5 * u, 5 * u, 95 * u, 10.6 * u); cg.addColorStop(0, '#F9D86A'); cg.addColorStop(1, '#D9A514');
         rr(87.5 * u, 5 * u, 7.5 * u, 5.6 * u, 1 * u); g.fillStyle = cg; g.fill();
@@ -635,13 +689,14 @@
         const xD = 29 * u, wD = 66 * u; let y = 20;
         const label = (s, X, Y) => { font(600, 1.9, F_BODY); g.fillStyle = T.lbl; tulis(s, X, (Y + 1.425) * u, 1.9 * .09); };
         label('NAMA LENGKAP', xD, y); y += 2.85;
-        const tN = x.namaUk * 1.2;
-        font(800, x.namaUk, F_HEAD); g.fillStyle = '#fff'; const nm = bungkus(x.nama, wD, 2); nm.forEach((s, i) => g.fillText(s, xD, (y + tN * i + tN / 2) * u)); y += tN * nm.length + 1.2;
+        const nm = tata.nama = muat(x.nama, wD, 800, 4.4, F_HEAD);
+        g.fillStyle = '#fff'; y += blok(nm, xD, y, 5.28) + 1.2;
         label('NOMOR ANGGOTA', xD, y); y += 2.85;
-        font(600, 3.2, F_MONO); g.fillStyle = GOLD; tulis(pangkas(x.nomor, wD, 3.2 * .04), xD, (y + 1.92) * u, 3.2 * .04); y += 3.84 + 1.2;
-        label('NOTAR / ANGKATAN', xD, y); label('PROGRAM STUDI', xD + 26 * u, y); y += 2.85;      // kolom 24 + sela 2 + 40 (prodi boleh 2 baris)
-        font(600, 3, F_BODY); g.fillStyle = '#fff'; g.fillText(pangkas(x.nit, 24 * u), xD, (y + 1.8) * u);
-        bungkus(x.prodi, 40 * u, 2).forEach((s, i) => g.fillText(s, xD + 26 * u, (y + 3.6 * i + 1.8) * u));
+        const no = tata.nomor = muat(x.nomor, wD, 600, 3.2, F_MONO, .04);
+        g.fillStyle = GOLD; y += blok(no, xD, y, 3.84) + 1.2;
+        label('NOTAR / ANGKATAN', xD, y); label('PROGRAM STUDI', xD + 26 * u, y); y += 2.85;      // kolom 24 + sela 2 + 40
+        const nit = tata.nit = muat(x.nit, 24 * u, 600, 3, F_BODY), pr = tata.prodi = muat(x.prodi, 40 * u, 600, 3, F_BODY);
+        g.fillStyle = '#fff'; blok(nit, xD, y, 3.6); blok(pr, xD + 26 * u, y, 3.6);
         // kaki: masa berlaku + jenis anggota (status tidak dicetak: gambar tersimpan bisa usang, status ada di pindai QR)
         const yB = Hc - 3.6, yC = yB - 2.075, ls = 2.1 * .06;
         g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(5 * u, (yB - 6.35) * u, 90 * u, .2 * u);
@@ -655,12 +710,14 @@
         const TEKS = '#1A2233', REDUP = '#55647C', TEPI = '#E2E6ED';
         g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
         g.fillStyle = T.dasar; g.fillRect(0, 0, W, 9 * u);
-        font(800, 2.6, F_BODY); g.fillStyle = GOLD; tulis(x.singkat, 5 * u, 4.5 * u, 2.6 * .14);
+        const pt = tata.singkat = muat(x.singkat, 90 * u, 800, 2.6, F_BODY, .14);
+        g.fillStyle = GOLD; blok(pt, 5 * u, 0, 9, 9);
         // QR 1 — verifikasi keanggotaan
         kotakQr(B.qr, 5, 13, 28, 1.5, 2, TEPI);
         g.textAlign = 'center';
         font(600, 1.9, F_BODY); g.fillStyle = REDUP; g.fillText('PINDAI UNTUK VERIFIKASI', 19 * u, (42.5 + 1.425) * u);
-        font(600, 2.1, F_MONO); g.fillStyle = TEKS; g.fillText(pangkas(x.nomor, 28 * u), 19 * u, (45.3 + 1.5) * u);
+        const qn = tata.qrNomor = muat(x.nomor, 28 * u, 600, 2.1, F_MONO);
+        g.fillStyle = TEKS; blok(qn, 19 * u, 45.3, 3);
         if (x.terbit) { font(400, 1.8, F_BODY); g.fillStyle = REDUP; g.fillText(x.terbit, 19 * u, (48.4 + 1.35) * u); }
         g.textAlign = 'left';
         // ketentuan
@@ -668,14 +725,16 @@
         font(700, 2.4, F_BODY); g.fillStyle = T.dasar; tulis('KETENTUAN', 38 * u, (y + 1.68) * u, 2.4 * .06); y += 3.36 + .6;
         font(400, 2, F_BODY); g.fillStyle = REDUP;
         let sisa = 7;
-        x.ketentuan.forEach((k) => { if (sisa <= 0) return; const b = bungkus(k, 57 * u, sisa); b.forEach((s) => { g.fillText(s, 38 * u, (y + 1.4) * u); y += 2.8; }); sisa -= b.length; });
+        // ketentuan = kalimat biasa (boleh beberapa baris), maksimal 7 baris seperti di layar
+        x.ketentuan.forEach((k) => { bungkus(k, 57 * u).forEach((s) => { if (sisa-- > 0) { g.fillText(s, 38 * u, (y + 1.4) * u); y += 2.8; } }); });
         // pengesahan elektronik (v1.7.0: teks saja — tanpa QR kecil & tanggal): nama & jabatan ketua saat kartu disahkan
         g.fillStyle = TEPI; g.fillRect(38 * u, 37.8 * u, 57 * u, .2 * u);
-        font(800, 3, F_BODY); const nama = bungkus(x.sahOleh || '(nama ketua belum diisi)', 57 * u, 2);
-        const tinggi = 2.85 + .6 + 3.36 + 3.6 * nama.length; let ys = 39 + (19.6 - tinggi) / 2;
+        const jb = tata.sahJabatan = muat(x.sahJabatan + ',', 57 * u, 400, 2.4, F_BODY), nama = tata.sahOleh = muat(x.sahOleh || '(nama ketua belum diisi)', 57 * u, 800, 3, F_BODY);
+        const tj = jb.baris.length > 1 ? jb.px * 1.2 * jb.baris.length : 3.36, tn = nama.baris.length > 1 ? nama.px * 1.2 * nama.baris.length : 3.6;
+        let ys = 39 + (19.6 - (2.85 + .6 + tj + tn)) / 2;
         font(800, 1.9, F_BODY); g.fillStyle = T.dasar; tulis('DISAHKAN SECARA ELEKTRONIK', 38 * u, (ys + 1.425) * u, 1.9 * .07); ys += 2.85 + .6;
-        font(400, 2.4, F_BODY); g.fillStyle = REDUP; g.fillText(pangkas(x.sahJabatan + ',', 57 * u), 38 * u, (ys + 1.68) * u); ys += 3.36;
-        font(800, 3, F_BODY); g.fillStyle = TEKS; nama.forEach((s) => { g.fillText(s, 38 * u, (ys + 1.8) * u); ys += 3.6; });
+        g.fillStyle = REDUP; ys += blok(jb, 38 * u, ys, 3.36);
+        g.fillStyle = TEKS; blok(nama, 38 * u, ys, 3.6);
         // pita emas bawah + bingkai tipis
         g.fillStyle = GOLD; g.fillRect(0, H - 3 * u, W, 3 * u);
         if (sudut) { g.lineWidth = .3 * u; g.strokeStyle = TEPI; rr(.15 * u, .15 * u, W - .3 * u, H - .3 * u, rad - .15 * u); g.stroke(); }

@@ -1,9 +1,22 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.8.0",
+  "versi": "1.8.1",
   "tanggal": "2026-11-18",
   "server_min": "1.6.0",
   "riwayat": [
+    {
+      "versi": "1.8.1",
+      "tanggal": "2026-11-18",
+      "judul": "Teks KTA satu baris, diperkecil otomatis",
+      "poin": [
+        "Nama anggota, nama Ketua DPD, jabatan pengesah, nomor anggota, NOTAR/angkatan, program studi, nama organisasi di kepala kartu, dan nama singkat di pita belakang kini selalu satu baris. Bila terlalu panjang, huruf diperkecil otomatis secukupnya.",
+        "Paling kecil 45% dari ukuran normal. Teks tidak pernah dipotong dengan tanda \"…\" dan tidak keluar dari tepi kartu.",
+        "Bila pada 45% masih belum muat (data sangat panjang), teks turun ke baris berikutnya di dalam kartu, tetap utuh. Sebaiknya datanya dirapikan (misalnya gelar disingkat).",
+        "Berlaku sama di kartu yang tampil di layar (HP, laptop, layar penuh, beranda) dan di gambar/PDF kartu yang diunduh.",
+        "Kalimat ketentuan di sisi belakang tetap beberapa baris seperti sebelumnya.",
+        "Backend tidak berubah (tetap v1.6.0)."
+      ]
+    },
     {
       "versi": "1.8.0",
       "tanggal": "2026-11-18",
