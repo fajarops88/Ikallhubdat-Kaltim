@@ -291,9 +291,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .kta[data-jn="lb"] .bw .jn { color: #0B4A3A; } .kta[data-jn="kh"] .bw .jn { color: #6A1525; }
 .kta.belakang[data-jn="lb"] .pita { background: #0B4A3A; } .kta.belakang[data-jn="kh"] .pita { background: #6A1525; }
 .kta.belakang[data-jn="lb"] .kt b, .kta.belakang[data-jn="lb"] .sah .s1 { color: #0B4A3A; } .kta.belakang[data-jn="kh"] .kt b, .kta.belakang[data-jn="kh"] .sah .s1 { color: #6A1525; }
+/* v1.8.0 — KTA Pengurus (hitam–emas) */
+.kta.depan[data-jn="pg"] { background: radial-gradient(120% 120% at 100% 0%, #3B3B3B 0%, #1C1C1C 45%, #050505 100%); }
+.kta[data-jn="pg"] .dt .l, .kta[data-jn="pg"] .bw { color: #D8C58E; } .kta[data-jn="pg"] .ft { background-color: #2B2B2B; } .kta[data-jn="pg"] .bw .jn { color: #1C1C1C; }
+.kta.belakang[data-jn="pg"] .pita { background: #1C1C1C; } .kta.belakang[data-jn="pg"] .kt b, .kta.belakang[data-jn="pg"] .sah .s1 { color: #1C1C1C; }
 .badge.b-jn-b { background: var(--navy-soft); color: var(--navy); border-color: rgba(10, 42, 99, .18); }
 .badge.b-jn-lb { background: #E3F2EC; color: #0B4A3A; border-color: #B5E0CE; }
 .badge.b-jn-kh { background: #F9E6E9; color: #6A1525; border-color: #F0C4CB; }
+.badge.b-jn-pg { background: #1C1C1C; color: #F6C12B; border-color: #1C1C1C; }
 .sah-beda { color: var(--warn-tx); font-weight: 600; }
 /* Penanda "langsung" (v1.6.0): jam berjalan + titik berdenyut pada kartu milik sendiri di aplikasi */
 .kta .live { position: absolute; right: 5cqw; top: 3.3cqw; display: flex; align-items: center; gap: 1cqw; padding: .55cqw 1.6cqw .55cqw 1.3cqw; border-radius: 99px; background: rgba(0, 0, 0, .3); color: #fff; font: 600 1.85cqw/2.4cqw ui-monospace, Menlo, monospace; letter-spacing: .03em; white-space: nowrap; }

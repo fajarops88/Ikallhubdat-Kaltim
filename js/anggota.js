@@ -9,7 +9,7 @@
      Kata sandi Pengurus diatur di Panel Pengurus → Pengaturan, jadi menu Keamanan diganti tautan kembali ke panel. */
   const pengurus = () => !!(Sesi.me && Sesi.me.peran === 'pengurus');
   const menuKini = () => pengurus() ? [['/admin', 'Panel Pengurus', 'admin_panel_settings']].concat(MENU.filter((m) => m[0] !== '/anggota/keamanan')) : MENU;
-  const LABEL = { nama: 'Nama lengkap', nomor_taruna: 'NIT', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan terakhir', no_hp: 'Nomor WhatsApp', email: 'Email', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Pas foto' };
+  const LABEL = { nama: 'Nama lengkap', nomor_taruna: 'NOTAR', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan terakhir', no_hp: 'Nomor WhatsApp', email: 'Email', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Pas foto' };
 
   function layout() {
     return '<header class="agt-top"><div class="wrap"><a class="brand" href="#/" id="a-brand"></a><nav class="agt-nav" id="a-nav" aria-label="Menu anggota"></nav>' +
@@ -63,7 +63,7 @@
       const a = d.anggota, st = d.setting || {}, peng = d.pengajuan || [], pending = peng.find((p) => p.status === 'Menunggu');
       const seumur = IKH.seumurHidup(a), sisa = seumur ? null : fmt.sisaHari(a.masa_berlaku_kartu);
       el.innerHTML =
-        '<section class="card welcome"><div class="grow" style="min-width:280px"><div class="row wrap"><span class="badge ' + (a.status_kartu === 'Aktif' ? 'b-ok' : 'b-bad') + '">Status Keanggotaan: ' + esc((a.status_kartu || '').toUpperCase()) + '</span>' + IKH.badgeJenis(a) + (pending ? '<span class="badge b-wait">1 pengajuan menunggu</span>' : '') + '</div>' +
+        '<section class="card welcome"><div class="grow" style="min-width:280px"><div class="row wrap"><span class="badge ' + (a.status_kartu === 'Aktif' ? 'b-ok' : 'b-bad') + '">Status Keanggotaan: ' + esc((a.status_kartu || '').toUpperCase()) + '</span>' + IKH.badgeJenis(a) + IKH.badgePengurus(a) + (pending ? '<span class="badge b-wait">1 pengajuan menunggu</span>' : '') + '</div>' +
         '<h1>Selamat datang, ' + esc(a.nama) + '</h1><div class="muted">' + esc([a.prodi, a.angkatan ? 'Angkatan ' + a.angkatan : '', a.instansi].filter(Boolean).join(' • ')) + '</div></div>' +
         '<div class="masa"><div class="ico">' + ic('badge') + '</div><div><div class="kicker">Masa Berlaku KTA</div><div class="bb" style="font-size:17px">' + (seumur ? 'Seumur hidup' : 'Hingga ' + fmt.tgl(a.masa_berlaku_kartu, true)) + '</div><div class="small ' + (sisa !== null && sisa <= 30 ? '' : 'muted') + '" style="color:' + (sisa !== null && sisa <= 30 ? 'var(--bad)' : '') + '">' + (seumur ? 'Anggota Kehormatan, tanpa tanggal kedaluwarsa' : sisa === null ? '-' : sisa < 0 ? 'Sudah lewat ' + Math.abs(sisa) + ' hari — hubungi Pengurus' : 'Tersisa ' + fmt.angka(sisa) + ' hari') + '</div></div></div></section>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start" id="g1">' +
@@ -81,7 +81,7 @@
         (pengurus() ? svc('admin_panel_settings', 'Panel Pengurus', 'Kembali ke panel. Kata sandi akun diatur di Pengaturan → Keamanan.', 'Buka panel', '#/admin')
           : svc('lock', 'Keamanan Akun', 'Ganti kata sandi dan keluar dari semua perangkat.', 'Pengaturan akun', '#/anggota/keamanan')) + '</div>' +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:start" id="g2"><section class="card"><div class="card-h"><div><h3>Data Profil Resmi</h3><div class="sub">Data yang terverifikasi Pengurus</div></div><a class="btn btn-ghost btn-sm" href="#/anggota/profil">' + ic('edit', 'sm') + 'Ajukan Perubahan</a></div>' +
-        '<div class="card-b grid g2"><div><h4 class="row">' + ic('school', 'sm') + 'Akademik Kedinasan</h4><div class="kv box">' + kv([['NIT', a.nomor_taruna], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div></div>' +
+        '<div class="card-b grid g2"><div><h4 class="row">' + ic('school', 'sm') + 'Akademik Kedinasan</h4><div class="kv box">' + kv([['NOTAR', a.nomor_taruna], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div></div>' +
         '<div><h4 class="row">' + ic('work', 'sm') + 'Kepegawaian & Kontak</h4><div class="kv box">' + kv([['Status', a.status_kepegawaian], ['Instansi', a.instansi], ['Jabatan', a.jabatan_terakhir], ['WhatsApp', a.no_hp], ['Email', a.email]]) + '</div></div></div></section>' +
         '<section class="col gap-lg"><div class="card"><div class="card-h"><h3>Riwayat Keanggotaan</h3></div><div class="card-b"><div class="timeline">' + riwayat(a, peng) + '</div></div></div>' +
         '<div class="card card-b"><div class="row">' + ic('help') + '<h4 class="mb-0">Pusat Layanan Anggota</h4></div><p class="small muted mt">Kendala data atau kartu? Hubungi sekretariat.</p>' +

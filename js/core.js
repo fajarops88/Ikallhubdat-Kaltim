@@ -5,8 +5,8 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.7.1';
-  const RILIS = '2026-11-17';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
+  const VERSI = '1.8.0';
+  const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
   IKH.VERSI = VERSI; IKH.RILIS = RILIS;
@@ -451,6 +451,13 @@
   IKH.seumurHidup = (a) => IKH.jenisAgt(a) === 'Kehormatan';
   IKH.masaTeks = (a, panjang) => IKH.seumurHidup(a) ? 'Seumur hidup' : (a && a.masa_berlaku_kartu ? fmt.tgl(a.masa_berlaku_kartu, panjang) : '-');
   IKH.badgeJenis = (a, ringkas) => { const j = IKH.jenisAgt(a); return '<span class="badge ' + JENIS[j].badge + '">' + (ringkas ? j : 'Anggota ' + j) + '</span>'; };
+  /* v1.8.0 — Pengurus: alumni yang menjabat di Struktur & Pengurus (ditentukan server, backend v1.6.0). Bukan jenis anggota:
+     jenis & masa berlaku asli tetap; KTA hanya berganti tampilan (hitam–emas, label PENGURUS) selama menjabat. Pembina/Penasehat tidak termasuk. */
+  IKH.pengurusAgt = (a) => (a && a.pengurus && typeof a.pengurus === 'object') ? a.pengurus : null;
+  IKH.teksPengurus = (p) => (p ? [p.bidang && p.bidang !== p.jabatan ? p.bidang : '', p.periode ? 'Periode ' + p.periode : ''].filter(Boolean).join(' • ') : '');
+  IKH.badgePengurus = (a) => { const p = IKH.pengurusAgt(a); return p ? '<span class="badge b-jn-pg" title="' + esc(p.jabatan || 'Pengurus') + '">Pengurus</span>' : ''; };
+  /** Baris kv "Jabatan pengurus" (kosong bila bukan pengurus) */
+  IKH.kvPengurus = (a, label) => { const p = IKH.pengurusAgt(a); if (!p) return ''; const r = IKH.teksPengurus(p); return '<div>' + (label || 'Jabatan pengurus') + '</div><div><b>' + esc(p.jabatan || 'Pengurus') + '</b>' + (r ? '<div class="small muted">' + esc(r) + '</div>' : '') + '</div>'; };
 
   /* ---------------- KTA digital (v1.6.0) ----------------
      Kartu hanya digital: tampil di layar (HTML) dan disimpan sebagai gambar/PDF ukuran kartu ID-1 (85,6 × 54 mm).
@@ -461,7 +468,8 @@
   const TEMA = {
     b: { g: ['#183F86', '#0A2A63', '#001640'], dasar: '#0A2A63', lbl: '#A9BCEB', foto: '#2B4B8C' },
     lb: { g: ['#1E6B55', '#0B4A3A', '#05261D'], dasar: '#0B4A3A', lbl: '#A8D5C2', foto: '#2A6B58' },
-    kh: { g: ['#8E2A3C', '#6A1525', '#3A0812'], dasar: '#6A1525', lbl: '#E7B3BC', foto: '#8C3443' }
+    kh: { g: ['#8E2A3C', '#6A1525', '#3A0812'], dasar: '#6A1525', lbl: '#E7B3BC', foto: '#8C3443' },
+    pg: { g: ['#3B3B3B', '#1C1C1C', '#050505'], dasar: '#1C1C1C', lbl: '#D8C58E', foto: '#2B2B2B' }      // v1.8.0 Pengurus: hitam–emas
   };
   const dua = (n) => String(n).padStart(2, '0');
   /** Penanda "langsung": tanggal & jam berjalan (WITA) — membedakan kartu di aplikasi dari tangkapan layar */
@@ -478,10 +486,10 @@
     /** Semua teks kartu (dipakai tampilan layar DAN gambar unduhan) */
     isi(a, st, sah) {
       st = st || {};
-      const J = JENIS[IKH.jenisAgt(a)], p = Kta.sah(a, st, sah), nama = String(a.nama || 'NAMA ANGGOTA').toUpperCase();
+      const J = JENIS[IKH.jenisAgt(a)], pg = IKH.pengurusAgt(a), p = Kta.sah(a, st, sah), nama = String(a.nama || 'NAMA ANGGOTA').toUpperCase();
       return {
         namaUk: nama.length <= 30 ? 4.4 : nama.length <= 44 ? 3.7 : 3.1,        // nama bergelar panjang → huruf diperkecil agar muat 2 baris
-        kode: J.kode, jenis: J.judul, status: Kta.statusTeks(a),
+        kode: pg ? 'pg' : J.kode, jenis: pg ? 'PENGURUS' : J.judul, status: Kta.statusTeks(a),         // Pengurus: tampilan saja; masa berlaku tetap jenis asli
         org: st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur', singkat: st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM',
         nama: nama, nomor: a.id_member || '—',
         nit: (a.nomor_taruna || '-') + ' / ' + (a.angkatan || '-'), prodi: a.prodi || '-',
@@ -503,7 +511,7 @@
         '<div class="ft' + (a.foto_id ? ' fu' : '') + '" ' + fotoUtuh(a.foto_id, 400) + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
         '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm"' + (x.namaUk < 4.4 ? ' style="font-size:' + x.namaUk + 'cqw"' : '') + '>' + esc(x.nama) + '</div></div>' +
         '<div><div class="l">Nomor Anggota</div><div class="v no">' + esc(x.nomor) + '</div></div>' +
-        '<div class="dua"><div><div class="l">NIT / Angkatan</div><div class="v">' + esc(x.nit) + '</div></div><div><div class="l">Program Studi</div><div class="v pr">' + esc(x.prodi) + '</div></div></div></div>' +
+        '<div class="dua"><div><div class="l">NOTAR / Angkatan</div><div class="v">' + esc(x.nit) + '</div></div><div><div class="l">Program Studi</div><div class="v pr">' + esc(x.prodi) + '</div></div></div></div>' +
         '<div class="bw"><span>' + (x.seumur ? 'BERLAKU <b>SEUMUR HIDUP</b>' : 'BERLAKU S.D. <b>' + esc(x.masa) + '</b>') + '</span>' +
         '<span class="kn"><span class="jn">' + x.jenis + '</span><span class="st ' + (s === 'AKTIF' ? '' : 'bad') + '">' + s + '</span></span></div></div>';
     },
@@ -631,7 +639,7 @@
         font(800, x.namaUk, F_HEAD); g.fillStyle = '#fff'; const nm = bungkus(x.nama, wD, 2); nm.forEach((s, i) => g.fillText(s, xD, (y + tN * i + tN / 2) * u)); y += tN * nm.length + 1.2;
         label('NOMOR ANGGOTA', xD, y); y += 2.85;
         font(600, 3.2, F_MONO); g.fillStyle = GOLD; tulis(pangkas(x.nomor, wD, 3.2 * .04), xD, (y + 1.92) * u, 3.2 * .04); y += 3.84 + 1.2;
-        label('NIT / ANGKATAN', xD, y); label('PROGRAM STUDI', xD + 26 * u, y); y += 2.85;      // kolom 24 + sela 2 + 40 (prodi boleh 2 baris)
+        label('NOTAR / ANGKATAN', xD, y); label('PROGRAM STUDI', xD + 26 * u, y); y += 2.85;      // kolom 24 + sela 2 + 40 (prodi boleh 2 baris)
         font(600, 3, F_BODY); g.fillStyle = '#fff'; g.fillText(pangkas(x.nit, 24 * u), xD, (y + 1.8) * u);
         bungkus(x.prodi, 40 * u, 2).forEach((s, i) => g.fillText(s, xD + 26 * u, (y + 3.6 * i + 1.8) * u));
         // kaki: masa berlaku + jenis anggota (status tidak dicetak: gambar tersimpan bisa usang, status ada di pindai QR)

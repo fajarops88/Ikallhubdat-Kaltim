@@ -6,7 +6,7 @@
 (function () {
   'use strict';
   const { $, $$, esc, ic, img, bg, fmt, UI, api, apiQ, Store, Sesi, Router, Kta, LS, daftar, hariIni } = IKH;
-  const LABEL = { nama: 'Nama lengkap', nomor_taruna: 'NIT', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan terakhir', no_hp: 'Nomor WhatsApp', email: 'Email', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Pas foto' };
+  const LABEL = { nama: 'Nama lengkap', nomor_taruna: 'NOTAR', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan terakhir', no_hp: 'Nomor WhatsApp', email: 'Email', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Pas foto' };
   const FIELD = ['nama', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'no_hp', 'email', 'kota_domisili', 'alamat', 'nomor_taruna', 'angkatan', 'prodi', 'tahun_kelulusan', 'status_kepegawaian', 'instansi', 'jabatan_terakhir'];
 
   /* ---------------- Turunan data ---------------- */
@@ -104,7 +104,7 @@
         kartuPeta() +
         '<div class="grid mt-lg" style="grid-template-columns:minmax(0,1fr) 340px;align-items:start" id="dg">' +
         '<div class="col gap-lg"><section class="card"><div class="card-h"><div><h3 class="row"><span class="dot"></span>Antrean Verifikasi Pendaftaran</h3><div class="sub">Pendaftar terlama tampil lebih dulu</div></div><a class="btn btn-ghost btn-sm" href="#/admin/verifikasi">Lihat semua' + ic('arrow_forward', 'sm') + '</a></div>' +
-        (x.menunggu.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nama alumni</th><th>NIT</th><th>Prodi & angkatan</th><th>Tanggal daftar</th><th></th></tr></thead><tbody>' +
+        (x.menunggu.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nama alumni</th><th>NOTAR</th><th>Prodi & angkatan</th><th>Tanggal daftar</th><th></th></tr></thead><tbody>' +
           x.menunggu.slice(0, 6).map((a) => '<tr class="clk" data-go="/admin/verifikasi?id=' + esc(a.id_record) + '"><td>' + '<div class="person">' + UI.ava(a.nama, a.foto_id) + '<div><div class="nm">' + esc(a.nama) + '</div><div class="sb">' + esc(a.instansi || '-') + '</div></div></div></td><td class="mono">' + esc(a.nomor_taruna) + '</td><td>' + esc(a.prodi) + '<div class="small muted">Angk. ' + esc(a.angkatan) + ' • Lulus ' + esc(a.tahun_kelulusan) + '</div></td><td class="small">' + fmt.relatif(a.tgl_daftar) + '</td><td class="act"><span class="btn btn-ghost btn-xs">Tinjau' + ic('chevron_right', 'sm') + '</span></td></tr>').join('') + '</tbody></table></div>' : UI.kosong('Tidak ada pendaftaran yang menunggu. 🎉', 'task_alt')) + '</section>' +
         '<section class="card"><div class="card-h"><div><h3 class="row"><span class="dot info"></span>Pengajuan Perubahan Data Mandiri</h3><div class="sub">Data resmi berubah setelah disetujui</div></div><a class="btn btn-ghost btn-sm" href="#/admin/perubahan">Lihat semua' + ic('arrow_forward', 'sm') + '</a></div>' +
         (x.chg.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Anggota</th><th>Isian diubah</th><th>Diajukan</th><th></th></tr></thead><tbody>' +
@@ -201,7 +201,7 @@
       if (awal) {
         main.innerHTML = ph('how_to_reg', 'Verifikasi Pendaftaran Anggota Baru', 'Tinjau kelengkapan data & berkas, lalu setujui untuk menerbitkan nomor anggota, akun, dan KTA digital.') +
           '<div class="split"><section class="card"><div class="tabs"><button data-tab="menunggu">Antrean <span class="count" id="v-n"></span></button><button data-tab="riwayat">Riwayat</button></div>' +
-          '<div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="v-q" placeholder="Cari nama, NIT, instansi…" value="' + esc(VS.q) + '"></div><select class="inp" id="v-prodi" style="max-width:100%"></select></div><div class="qlist" id="v-list"></div></section>' +
+          '<div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="v-q" placeholder="Cari nama, NOTAR, instansi…" value="' + esc(VS.q) + '"></div><select class="inp" id="v-prodi" style="max-width:100%"></select></div><div class="qlist" id="v-list"></div></section>' +
           '<section class="card" id="v-det" style="overflow:hidden"></section></div>';
         $('#v-q').oninput = IKH.debounce((e) => { VS.q = e.target.value; daftarV(); }, 200);
         $('#v-prodi').onchange = (e) => { VS.prodi = e.target.value; daftarV(); };
@@ -223,7 +223,7 @@
     const ps = $('#v-prodi'); if (ps) ps.innerHTML = opsi(uniq(x.d.anggota.map((a) => a.prodi)), VS.prodi, 'Semua program studi');
     if (!VS.sel || !list.find((a) => a.id_record === VS.sel)) VS.sel = list[0] ? list[0].id_record : null;
     el.innerHTML = list.length ? list.map((a) => '<div class="qitem ' + (a.id_record === VS.sel ? 'on' : '') + '" data-id="' + esc(a.id_record) + '" role="button" tabindex="0"><div class="ft" ' + (a.foto_id ? bg(a.foto_id, 160) : '') + '>' + (a.foto_id ? '' : ic('person')) + '</div><div class="grow" style="min-width:0"><div class="row between"><span class="nm trunc">' + esc(a.nama) + '</span>' + UI.badgeStatus(VS.tab === 'menunggu' ? 'Menunggu' : a.status_verifikasi) + '</div>' +
-      '<div class="mt mono">NIT ' + esc(a.nomor_taruna || '-') + ' • Angk. ' + esc(a.angkatan || '-') + '</div><div class="mt trunc">' + esc(a.prodi || '') + '</div><div class="mt">' + ic('calendar_month', 'sm') + ' ' + fmt.waktu(VS.tab === 'menunggu' ? a.tgl_daftar : a.tgl_verifikasi) + '</div></div></div>').join('')
+      '<div class="mt mono">NOTAR ' + esc(a.nomor_taruna || '-') + ' • Angk. ' + esc(a.angkatan || '-') + '</div><div class="mt trunc">' + esc(a.prodi || '') + '</div><div class="mt">' + ic('calendar_month', 'sm') + ' ' + fmt.waktu(VS.tab === 'menunggu' ? a.tgl_daftar : a.tgl_verifikasi) + '</div></div></div>').join('')
       : UI.kosong(VS.tab === 'menunggu' ? 'Antrean kosong — semua pendaftaran sudah diproses.' : 'Belum ada riwayat.', 'task_alt');
     $$('.qitem', el).forEach((it) => { const go = () => { VS.sel = it.dataset.id; $$('.qitem', el).forEach((y) => y.classList.toggle('on', y === it)); detailV(); if (window.innerWidth <= 1024) $('#v-det').scrollIntoView({ behavior: 'smooth' }); }; it.onclick = go; it.onkeydown = (e) => { if (e.key === 'Enter') go(); }; });
     detailV();
@@ -240,7 +240,7 @@
       (dup.length ? '<div class="alert warn" style="border-radius:0;border-left:0;border-right:0">' + ic('warning') + '<div><b>Kemungkinan data ganda:</b> ' + dup.map((b) => esc(b.nama) + ' (' + esc(b.id_record) + ', ' + esc(b.status_verifikasi) + ')').join('; ') + '</div></div>' : '') +
       '<div class="sect"><h4>' + ic('person') + '1. Data Pribadi & Kontak</h4>' + k2([['Jenis kelamin', a.jenis_kelamin], ['Tempat, tanggal lahir', [a.tempat_lahir, a.tanggal_lahir ? fmt.tgl(a.tanggal_lahir, true) : ''].filter(Boolean).join(', ')],
         ['Nomor WhatsApp', a.no_hp ? esc(a.no_hp) + ' <a class="badge b-ok" target="_blank" rel="noopener" href="https://wa.me/' + esc(String(a.no_hp).replace(/^0/, '62')) + '">' + ic('chat', 'sm') + 'Chat</a>' : '-', true], ['Email', a.email], ['Domisili', a.kota_domisili], ['Alamat', a.alamat]]) + '</div>' +
-      '<div class="sect"><h4>' + ic('school') + '2. Data Akademik Kedinasan</h4>' + k2([['Nomor Induk Taruna', '<span class="mono">' + esc(a.nomor_taruna || '-') + '</span>', true], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div>' +
+      '<div class="sect"><h4>' + ic('school') + '2. Data Akademik Kedinasan</h4>' + k2([['NOTAR (Nomor Taruna)', '<span class="mono">' + esc(a.nomor_taruna || '-') + '</span>', true], ['Angkatan', a.angkatan], ['Program studi', a.prodi], ['Tahun lulus', a.tahun_kelulusan]]) + '</div>' +
       '<div class="sect"><h4>' + ic('work') + '3. Kepegawaian & Penempatan</h4>' + k2([['Status kepegawaian', a.status_kepegawaian], ['Instansi', a.instansi], ['Jabatan terakhir', a.jabatan_terakhir]]) + '</div>' +
       '<div class="sect"><h4>' + ic('folder_open') + '4. Dokumen Pendukung <span class="muted small" style="font-weight:500">' + (berkas.length + (a.foto_id ? 1 : 0)) + ' berkas</span></h4><div class="berkas">' +
       (a.foto_id ? '<div class="bk"><div class="im" ' + bg(a.foto_id, 300) + '></div><b class="small">Pas foto KTA</b><button class="btn btn-ghost btn-xs" data-bk="' + esc(a.foto_id) + '">' + ic('visibility', 'sm') + 'Lihat</button></div>' : '') +
@@ -277,7 +277,7 @@
     if (Router.parse().path === '/admin/verifikasi') { daftarV(); bingkai('/admin/verifikasi', 'Verifikasi Pendaftaran'); }
   }
   async function tolakReg(a) {
-    const k = await UI.konfirmasi('Tolak pendaftaran <b>' + esc(a.nama) + '</b>? Alasan akan dikirim ke pendaftar.', { judul: 'Tolak Pendaftaran', ya: 'Tolak Pendaftaran', bahaya: true, input: { label: 'Alasan penolakan', wajib: true, ph: 'Mis. NIT tidak sesuai ijazah; mohon unggah ijazah yang jelas' } });
+    const k = await UI.konfirmasi('Tolak pendaftaran <b>' + esc(a.nama) + '</b>? Alasan akan dikirim ke pendaftar.', { judul: 'Tolak Pendaftaran', ya: 'Tolak Pendaftaran', bahaya: true, input: { label: 'Alasan penolakan', wajib: true, ph: 'Mis. NOTAR tidak sesuai ijazah; mohon unggah ijazah yang jelas' } });
     if (!k.ok) return;
     const lama = Object.assign({}, a);
     Store.patchAnggota({ id_record: a.id_record, status_verifikasi: 'Ditolak', catatan_verifikasi: k.nilai, tgl_verifikasi: new Date().toISOString() });
@@ -362,14 +362,14 @@
       const data = x.d.anggota.map((a) => Object.assign({}, a, { _st: statusKartu(a), _jn: IKH.jenisAgt(a) }));
       if (awal || !AS.tbl || !$('#al-tbl')) {
         main.innerHTML = ph('groups', 'Data Alumni', fmt.angka(x.alumni.length) + ' terverifikasi • ' + fmt.angka(x.d.anggota.length) + ' total data', '<button class="btn btn-ghost btn-sm" id="al-xls">' + ic('table_view', 'sm') + 'Ekspor Excel</button><button class="btn btn-primary btn-sm" id="al-add">' + ic('person_add', 'sm') + 'Tambah Manual</button>') +
-          '<section class="card"><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="al-q" placeholder="Cari nama, NIT, nomor anggota, instansi, email…" value="' + esc(AS.q) + '"></div>' +
-          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-dom" style="width:auto" aria-label="Domisili"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select><select class="inp" id="al-jn" style="width:auto" aria-label="Jenis anggota">' + opsi(['Biasa', 'Luar Biasa', 'Kehormatan'], AS.jn, 'Semua jenis') + '</select></div><div id="al-tbl"></div></section>';
+          '<section class="card"><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="al-q" placeholder="Cari nama, NOTAR, nomor anggota, instansi, email…" value="' + esc(AS.q) + '"></div>' +
+          '<select class="inp" id="al-prodi" style="width:auto"></select><select class="inp" id="al-angk" style="width:auto"></select><select class="inp" id="al-dom" style="width:auto" aria-label="Domisili"></select><select class="inp" id="al-st" style="width:auto">' + opsi(['Aktif', 'Kedaluwarsa', 'Nonaktif', 'Menunggu Verifikasi', 'Ditolak'], AS.status, 'Semua status') + '</select><select class="inp" id="al-jn" style="width:auto" aria-label="Jenis anggota">' + opsi(['Biasa', 'Luar Biasa', 'Kehormatan', 'Pengurus'], AS.jn, 'Semua jenis') + '</select></div><div id="al-tbl"></div></section>';
         AS.tbl = IKH.Tabel($('#al-tbl'), {
-          data, idKey: 'id_record', per: 25, cari: (a) => [a.nama, a.nomor_taruna, a.id_member, a.instansi, a.email, a.no_hp, a.prodi, a._jn].join(' '),
+          data, idKey: 'id_record', per: 25, cari: (a) => [a.nama, a.nomor_taruna, a.id_member, a.instansi, a.email, a.no_hp, a.prodi, a._jn, IKH.pengurusAgt(a) ? 'Pengurus ' + IKH.pengurusAgt(a).jabatan : ''].join(' '),
           kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member || '-') + '</span>' },
-            { k: 'angkatan', label: 'NIT / Angk.', render: (a) => '<span class="mono">' + esc(a.nomor_taruna || '-') + '</span><div class="small muted">Angk. ' + esc(a.angkatan || '-') + '</div>' },
+            { k: 'angkatan', label: 'NOTAR / Angk.', render: (a) => '<span class="mono">' + esc(a.nomor_taruna || '-') + '</span><div class="small muted">Angk. ' + esc(a.angkatan || '-') + '</div>' },
             { k: 'prodi', label: 'Program studi' }, { k: 'instansi', label: 'Instansi', render: (a) => esc(a.instansi || '-') + '<div class="small muted">' + esc(a.jabatan_terakhir || '') + '</div>' },
-            { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') }, { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) },
+            { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') + (IKH.pengurusAgt(a) ? '<div class="mt-0">' + IKH.badgePengurus(a) + '</div>' : '') }, { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) },
             { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="ubah">' + ic('edit', 'sm') + '</button>' }],
           onRow: (a) => drawerAlumni(a.id_record), onAksi: (act, a) => act === 'ubah' ? formAlumni(a.id_record) : drawerAlumni(a.id_record)
         });
@@ -388,8 +388,8 @@
       if (tambahSaya && awal) { const me = Sesi.me || {}; formAlumni(null, { email: me.email || '', nama: me.nama || '' }); }
     });
   }
-  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom) && (!AS.jn || a._jn === AS.jn)); }
-  const baris = (a) => ({ 'No. Anggota': a.id_member, Nama: a.nama, NIT: a.nomor_taruna, Angkatan: a.angkatan, 'Program Studi': a.prodi, 'Tahun Lulus': a.tahun_kelulusan, 'Status Kepegawaian': a.status_kepegawaian, Instansi: a.instansi, Jabatan: a.jabatan_terakhir, 'No. WhatsApp': a.no_hp, Email: a.email, 'Jenis Kelamin': a.jenis_kelamin, Domisili: a.kota_domisili, Status: statusKartu(a), 'Jenis Anggota': IKH.jenisAgt(a), 'Berlaku s.d.': IKH.seumurHidup(a) ? 'Seumur hidup' : a.masa_berlaku_kartu, 'Tgl Penetapan Jenis': a.tgl_penetapan || '', 'No. SK Penetapan': a.no_sk_penetapan || '', 'ID Registrasi': a.id_record });
+  function saringA() { if (AS.tbl) AS.tbl.saring((a) => (!AS.prodi || a.prodi === AS.prodi) && (!AS.angkatan || String(a.angkatan) === AS.angkatan) && (!AS.status || a._st === AS.status) && (!AS.hanyaVer || a.status_verifikasi === 'Disetujui') && (!AS.dom || (kodeDomisili(a.kota_domisili) || 'KOSONG') === AS.dom) && (!AS.jn || (AS.jn === 'Pengurus' ? !!IKH.pengurusAgt(a) : a._jn === AS.jn))); }
+  const baris = (a) => ({ 'No. Anggota': a.id_member, Nama: a.nama, NOTAR: a.nomor_taruna, Angkatan: a.angkatan, 'Program Studi': a.prodi, 'Tahun Lulus': a.tahun_kelulusan, 'Status Kepegawaian': a.status_kepegawaian, Instansi: a.instansi, Jabatan: a.jabatan_terakhir, 'No. WhatsApp': a.no_hp, Email: a.email, 'Jenis Kelamin': a.jenis_kelamin, Domisili: a.kota_domisili, Status: statusKartu(a), 'Jenis Anggota': IKH.jenisAgt(a), 'Jabatan Pengurus': (IKH.pengurusAgt(a) || {}).jabatan || '', 'Berlaku s.d.': IKH.seumurHidup(a) ? 'Seumur hidup' : a.masa_berlaku_kartu, 'Tgl Penetapan Jenis': a.tgl_penetapan || '', 'No. SK Penetapan': a.no_sk_penetapan || '', 'ID Registrasi': a.id_record });
   IKH.barisAlumni = baris;
   function drawerAlumni(id) {
     const x = D(), a = x.cari(id); if (!a) return UI.toast('Data tidak ditemukan.', 'bad');
@@ -397,11 +397,11 @@
     const sc = document.createElement('div'); sc.className = 'scrim'; sc.style.placeItems = 'stretch end'; sc.style.padding = '0';
     const s = statusKartu(a);
     sc.innerHTML = '<aside class="drawer" role="dialog" aria-modal="true" aria-label="Detail alumni"><div class="modal-h"><h3>Detail Alumni</h3><button class="btn btn-ghost btn-icon btn-sm" data-x aria-label="Tutup">' + ic('close') + '</button></div>' +
-      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row wrap mt">' + UI.badgeStatus(s) + (a.status_verifikasi === 'Disetujui' ? IKH.badgeJenis(a) : '') + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
+      '<div class="modal-b" style="flex:1"><div class="row gap-lg">' + UI.ava(a.nama, a.foto_id, 'lg sq') + '<div><h3 class="mb-0">' + esc(a.nama) + '</h3><div class="mono small">' + esc(a.id_member || a.id_record) + '</div><div class="row wrap mt">' + UI.badgeStatus(s) + (a.status_verifikasi === 'Disetujui' ? IKH.badgeJenis(a) + IKH.badgePengurus(a) : '') + (akun ? '<span class="badge ' + (akun.peran === 'pengurus' ? 'b-navy' : 'b-info') + '">' + (akun.peran === 'pengurus' ? 'Akun Pengurus' : 'Akun') + ' ' + esc(akun.status) + '</span>' : '<span class="badge b-mute">Belum punya akun</span>') + '</div></div></div>' +
       (a.status_verifikasi === 'Disetujui' ? '<div class="mt-lg" style="max-width:420px">' + Kta.depan(a, x.st) + '</div>' : '') +
       '<h4 class="mt-lg">Data Lengkap</h4><div class="kv">' + FIELD.map((k) => '<div>' + LABEL[k] + '</div><div>' + esc(a[k] || '-') + '</div>').join('') +
       '<div>Jenis anggota</div><div>' + esc('Anggota ' + IKH.jenisAgt(a)) + (a.tgl_penetapan ? '<div class="small muted">Ditetapkan ' + fmt.tgl(a.tgl_penetapan, true) + (a.no_sk_penetapan ? ' • SK ' + esc(a.no_sk_penetapan) : '') + (a.ket_penetapan ? '<br>' + esc(a.ket_penetapan) : '') + '</div>' : '') + '</div>' +
-      '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div>' + (a.kta_sah_pada ? '<div>Pengesahan KTA</div><div>' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '<div class="small muted">' + esc(a.kta_sah_jabatan || '') + ' • ' + fmt.tgl(a.kta_sah_pada, true) + '</div></div>' : '') + '<div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
+      IKH.kvPengurus(a) + '<div>Masa berlaku</div><div>' + IKH.masaTeks(a, true) + '</div>' + (a.kta_sah_pada ? '<div>Pengesahan KTA</div><div>' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '<div class="small muted">' + esc(a.kta_sah_jabatan || '') + ' • ' + fmt.tgl(a.kta_sah_pada, true) + '</div></div>' : '') + '<div>Tanggal daftar</div><div>' + fmt.waktu(a.tgl_daftar) + '</div><div>Diverifikasi</div><div>' + (a.tgl_verifikasi ? fmt.waktu(a.tgl_verifikasi) + ' • ' + esc(a.diverifikasi_oleh || '') : '-') + '</div><div>Sumber data</div><div>' + esc(a.sumber || '-') + '</div><div>Login terakhir</div><div>' + (akun && akun.login_terakhir ? fmt.waktu(akun.login_terakhir) : '-') + '</div></div></div>' +
       '<div class="modal-f"><button class="btn btn-danger" data-a="arsip">' + ic('inventory_2', 'sm') + 'Arsipkan</button>' + (akun ? '<button class="btn btn-ghost" data-a="reset">' + ic('lock_reset', 'sm') + 'Reset Sandi</button>' : '') +
       (a.status_verifikasi === 'Disetujui' ? '<button class="btn btn-ghost" data-a="jenis">' + ic('workspace_premium', 'sm') + 'Jenis Anggota</button><button class="btn btn-ghost" data-a="kta">' + ic('badge', 'sm') + 'Kartu Digital</button>' : '') + '<button class="btn btn-primary" data-a="ubah">' + ic('edit', 'sm') + 'Ubah Data</button></div></aside>';
     document.body.appendChild(sc);
@@ -513,11 +513,11 @@
   const KS = { f: '', q: '', tbl: null };
   function kta(p, q) {
     if (q && q.get('f') !== null) KS.f = q.get('f');
-    if (['', 'sah', '30', 'exp', 'non', 'lb', 'kh'].indexOf(KS.f) === -1) KS.f = '';      // mis. tautan lama ?f=usang
+    if (['', 'sah', '30', 'exp', 'non', 'lb', 'kh', 'pg'].indexOf(KS.f) === -1) KS.f = '';      // mis. tautan lama ?f=usang
     return halaman('/admin/kta', 'Kartu Digital KTA', (main, x, awal) => {
       const data = x.alumni.map((a) => Object.assign({}, a, { _st: statusKartu(a), _beda: sahBeda(a, x.st), _jn: IKH.jenisAgt(a), _sisa: IKH.seumurHidup(a) ? null : fmt.sisaHari(a.masa_berlaku_kartu) }));
       const n = { sah: data.filter((a) => a._beda).length, 30: data.filter((a) => a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30).length, exp: data.filter((a) => a._st === 'Kedaluwarsa').length, non: data.filter((a) => a._st === 'Nonaktif').length,
-        lb: data.filter((a) => a._jn === 'Luar Biasa').length, kh: data.filter((a) => a._jn === 'Kehormatan').length };
+        lb: data.filter((a) => a._jn === 'Luar Biasa').length, kh: data.filter((a) => a._jn === 'Kehormatan').length, pg: data.filter((a) => !!IKH.pengurusAgt(a)).length };
       if (awal || !$('#k-tbl')) {
         main.innerHTML = ph('badge', 'Manajemen KTA Digital', 'Pratinjau & simpan kartu, perpanjang masa berlaku, sahkan ulang, dan kirim pengingat kedaluwarsa.') +
           '<section class="card"><div class="toolbar" id="k-chips"></div><div class="toolbar"><div class="inp-ic cari">' + ic('search') + '<input class="inp" id="k-q" placeholder="Cari nama / nomor anggota…" value="' + esc(KS.q) + '"></div></div>' +
@@ -525,8 +525,8 @@
           '<button class="btn btn-primary btn-xs" data-b="perpanjang">' + ic('event_available', 'sm') + 'Perpanjang</button><button class="btn btn-ghost btn-xs" data-b="sahkan">' + ic('verified_user', 'sm') + 'Sahkan Ulang</button>' +
           '<button class="btn btn-ghost btn-xs" data-b="ingat">' + ic('notifications', 'sm') + 'Kirim Pengingat</button><button class="btn btn-text btn-xs" data-b="batal">Batal pilih</button></div><div id="k-tbl"></div></section>';
         KS.tbl = IKH.Tabel($('#k-tbl'), {
-          data, idKey: 'id_record', pilih: true, per: 25, cari: (a) => [a.nama, a.id_member, a.nomor_taruna, a._jn].join(' '),
-          kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member) + '</span>' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') },
+          data, idKey: 'id_record', pilih: true, per: 25, cari: (a) => [a.nama, a.id_member, a.nomor_taruna, a._jn, IKH.pengurusAgt(a) ? 'Pengurus ' + IKH.pengurusAgt(a).jabatan : ''].join(' '),
+          kolom: [{ k: 'nama', label: 'Anggota', render: personCell }, { k: 'id_member', label: 'No. Anggota', render: (a) => '<span class="mono">' + esc(a.id_member) + '</span>' }, { k: '_st', label: 'Status', render: (a) => UI.badgeStatus(a._st) + (a._jn !== 'Biasa' ? '<div class="mt-0">' + IKH.badgeJenis(a, true) + '</div>' : '') + (IKH.pengurusAgt(a) ? '<div class="mt-0">' + IKH.badgePengurus(a) + '</div>' : '') },
             { k: 'masa_berlaku_kartu', label: 'Berlaku s.d.', render: (a) => IKH.masaTeks(a) + '<div class="small ' + (a._sisa !== null && a._sisa <= 30 ? '' : 'muted') + '" style="' + (a._sisa !== null && a._sisa <= 30 ? 'color:var(--bad);font-weight:600' : '') + '">' + (a._sisa === null ? '' : a._sisa < 0 ? 'lewat ' + Math.abs(a._sisa) + ' hari' : a._sisa + ' hari lagi') + '</div>' },
             { k: 'kta_sah_oleh', label: 'Disahkan oleh', render: (a) => a.kta_sah_pada ? '<div class="small' + (a._beda ? ' sah-beda' : '') + '">' + esc(a.kta_sah_oleh || '(nama ketua belum diisi)') + '</div><div class="tiny muted">' + fmt.tgl(a.kta_sah_pada) + (a._beda ? ' • bukan ketua saat ini' : '') + '</div>' : '<span class="tiny muted">—</span>' },
             { label: '', kelas: 'act', sort: false, render: () => '<button class="btn btn-ghost btn-xs" data-act="lihat" title="Pratinjau kartu">' + ic('visibility', 'sm') + '</button> <button class="btn btn-ghost btn-xs" data-act="simpan" title="Simpan kartu (gambar/PDF)">' + ic('download', 'sm') + '</button>' }],
@@ -537,9 +537,9 @@
         $$('[data-b]', main).forEach((b) => b.onclick = () => aksiMassalKta(b.dataset.b));
         if (KS.q) KS.tbl.cari(KS.q);
       } else KS.tbl.set(data);
-      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['sah', 'Pengesah bukan ketua saat ini', n.sah], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non], ['lb', 'Luar Biasa', n.lb], ['kh', 'Kehormatan', n.kh]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
+      $('#k-chips').innerHTML = [['', 'Semua', data.length], ['sah', 'Pengesah bukan ketua saat ini', n.sah], ['30', '≤ 30 hari', n[30]], ['exp', 'Kedaluwarsa', n.exp], ['non', 'Nonaktif', n.non], ['lb', 'Luar Biasa', n.lb], ['kh', 'Kehormatan', n.kh], ['pg', 'Pengurus', n.pg]].map((c) => '<button class="chip ' + (KS.f === c[0] ? 'on' : '') + '" data-f="' + c[0] + '">' + c[1] + ' <span class="n">' + c[2] + '</span></button>').join('');
       $$('[data-f]', main).forEach((c) => c.onclick = () => { KS.f = c.dataset.f; kta(); });
-      KS.tbl.saring((a) => !KS.f || (KS.f === 'sah' && a._beda) || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif') || (KS.f === 'lb' && a._jn === 'Luar Biasa') || (KS.f === 'kh' && a._jn === 'Kehormatan'));
+      KS.tbl.saring((a) => !KS.f || (KS.f === 'sah' && a._beda) || (KS.f === '30' && a._st === 'Aktif' && a._sisa !== null && a._sisa <= 30) || (KS.f === 'exp' && a._st === 'Kedaluwarsa') || (KS.f === 'non' && a._st === 'Nonaktif') || (KS.f === 'lb' && a._jn === 'Luar Biasa') || (KS.f === 'kh' && a._jn === 'Kehormatan') || (KS.f === 'pg' && !!IKH.pengurusAgt(a)));
     });
   }
   /** Pratinjau kartu seorang anggota: kedua sisi dengan QR asli (diambil dari server), lalu bisa disimpan. */
@@ -625,7 +625,7 @@
         $('#r-reset').onclick = () => { Object.assign(RS, { prodi: '', angkatan: '', status: '', lulus: '', peg: '', jn: '', q: '' }); $('#r-q').value = ''; rekap(); };
         $('#r-xls').onclick = () => IKH.Ekspor.excel(RS.data.map(baris), 'Rekap-Alumni-' + hariIni(), 'Rekap');
         $('#r-pdf').onclick = () => IKH.Ekspor.pdf({ judul: 'Rekap Data Alumni — ' + (x.st.ORG_NAMA || ''), sub: ringkasFilter() + ' • ' + RS.data.length + ' data', nama: 'Rekap-Alumni-' + hariIni(), rows: RS.data.map((a, i) => Object.assign({ no: i + 1 }, a)),
-          kolom: [{ k: 'no', label: 'No' }, { k: 'nama', label: 'Nama' }, { k: 'id_member', label: 'No. Anggota' }, { k: 'nomor_taruna', label: 'NIT' }, { k: 'angkatan', label: 'Angk.' }, { k: 'prodi', label: 'Program Studi' }, { k: 'tahun_kelulusan', label: 'Lulus' }, { k: 'status_kepegawaian', label: 'Kepegawaian' }, { k: 'instansi', label: 'Instansi' }, { k: 'no_hp', label: 'WhatsApp' }, { k: '_st', label: 'Status' }, { k: '_jn', label: 'Jenis' }] });
+          kolom: [{ k: 'no', label: 'No' }, { k: 'nama', label: 'Nama' }, { k: 'id_member', label: 'No. Anggota' }, { k: 'nomor_taruna', label: 'NOTAR' }, { k: 'angkatan', label: 'Angk.' }, { k: 'prodi', label: 'Program Studi' }, { k: 'tahun_kelulusan', label: 'Lulus' }, { k: 'status_kepegawaian', label: 'Kepegawaian' }, { k: 'instansi', label: 'Instansi' }, { k: 'no_hp', label: 'WhatsApp' }, { k: '_st', label: 'Status' }, { k: '_jn', label: 'Jenis' }] });
       }
       const all = x.d.anggota;
       $('#r-prodi').innerHTML = opsi(uniq(all.map((a) => a.prodi)), RS.prodi, 'Semua prodi');

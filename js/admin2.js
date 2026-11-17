@@ -329,7 +329,7 @@
     const t = (k, ph, type) => '<input class="inp" id="fs-' + k + '" value="' + esc(v[k] || '') + '" placeholder="' + esc(ph || '') + '" type="' + (type || 'text') + '">';
     const label = (a) => a.nama + ' — ' + [a.angkatan ? 'Angk. ' + a.angkatan : '', a.prodi, a.id_member].filter(Boolean).join(' • ');
     const isi = '<div class="seg mb" role="tablist" id="fs-mode"><button type="button" data-m="alumni">' + ic('link', 'sm') + 'Alumni terdaftar</button><button type="button" data-m="manual">' + ic('edit', 'sm') + 'Bukan alumni (ketik manual)</button></div>' +
-      '<div id="fs-al" class="col gap-lg"><div class="fld"><label for="fs-q">Cari alumni terverifikasi</label><div class="inp-ic">' + ic('search') + '<input class="inp" id="fs-q" placeholder="Ketik nama, NIT, angkatan, atau nomor anggota…" autocomplete="off"></div></div>' +
+      '<div id="fs-al" class="col gap-lg"><div class="fld"><label for="fs-q">Cari alumni terverifikasi</label><div class="inp-ic">' + ic('search') + '<input class="inp" id="fs-q" placeholder="Ketik nama, NOTAR, angkatan, atau nomor anggota…" autocomplete="off"></div></div>' +
       '<select class="inp pilih-al" id="fs-sel" size="6" aria-label="Pilih alumni"></select><div id="fs-info" class="small muted"></div>' +
       '<div class="hint">Nama & pas foto mengikuti data alumni. Perubahan data alumni yang disetujui otomatis ikut tampil di bagan.</div></div>' +
       '<div id="fs-man" class="hide">' + f('nama', 'Nama & gelar', t('nama'), 'Untuk Pembina/Penasehat atau pengurus yang bukan alumni.') + '</div>' +
@@ -389,7 +389,7 @@
         if (!UI.hasil(r)) return false;
         const k = Store.menu.konten && Store.menu.konten.d; if (k) { const arr = k.struktur; const i = arr.findIndex((y) => y.id === r.data.item.id); if (i > -1) arr[i] = r.data.item; else arr.push(r.data.item);
           arr.sort((p, q) => (Number(p.urutan) || 999) - (Number(q.urutan) || 999)); gambarKonten(k); }
-        Store.pubBoot(true); return true;
+        Store.pubBoot(true); Store.admAt = 0; Store.agtAt = 0; return true;     // v1.8.0: status Pengurus di KTA ikut Struktur
       } }] });
   }
   /** Pratinjau bagan otomatis (memakai pengurus yang ditandai Tampil) */
@@ -435,6 +435,7 @@
     if (!UI.hasil(r)) return;
     const k = Store.menu.konten && Store.menu.konten.d; if (k) { k[PETA_K[jenis].kunci] = k[PETA_K[jenis].kunci].filter((y) => y.id !== item.id); gambarKonten(k); }
     Store.pubBoot(true);
+    if (jenis === 'struktur') { Store.admAt = 0; Store.agtAt = 0; }
   }
 
   /* ======================= WHATSAPP & NOTIFIKASI ======================= */
@@ -798,11 +799,11 @@
   }
 
   /* ======================= IMPOR DATA LAMA ======================= */
-  const ALIAS = { nama: ['nama', 'namalengkap', 'name', 'namaanggota', 'namaalumni'], nomor_taruna: ['nomortaruna', 'nit', 'notaruna', 'nim', 'nomorinduktaruna'], angkatan: ['angkatan', 'angk', 'tahunangkatan'], prodi: ['prodi', 'programstudi', 'jurusan', 'program'], tahun_kelulusan: ['tahunkelulusan', 'tahunlulus', 'lulus'],
+  const ALIAS = { nama: ['nama', 'namalengkap', 'name', 'namaanggota', 'namaalumni'], nomor_taruna: ['nomortaruna', 'notar', 'nit', 'notaruna', 'nim', 'nomorinduktaruna'], angkatan: ['angkatan', 'angk', 'tahunangkatan'], prodi: ['prodi', 'programstudi', 'jurusan', 'program'], tahun_kelulusan: ['tahunkelulusan', 'tahunlulus', 'lulus'],
     status_kepegawaian: ['statuskepegawaian', 'statuspegawai', 'kepegawaian'], instansi: ['instansi', 'unitkerja', 'tempatkerja', 'kantor'], jabatan_terakhir: ['jabatanterakhir', 'jabatan'], no_hp: ['nohp', 'hp', 'whatsapp', 'wa', 'nowa', 'nomorhp', 'telepon', 'notelp'], email: ['email', 'surel', 'alamatemail'],
     id_member: ['idmember', 'noanggota', 'nomoranggota', 'nokta', 'nomorkta', 'kta', 'idanggota'], status_verifikasi: ['statusverifikasi', 'verifikasi', 'status'], status_anggota: ['statusanggota', 'keanggotaan'], masa_berlaku_kartu: ['masaberlakukartu', 'masaberlaku', 'berlaku', 'berlakusampai', 'expired'],
     jenis_kelamin: ['jeniskelamin', 'jk', 'gender'], tempat_lahir: ['tempatlahir'], tanggal_lahir: ['tanggallahir', 'tgllahir'], kota_domisili: ['kotadomisili', 'domisili', 'kota', 'kabupatenkota'], alamat: ['alamat', 'alamatlengkap'], foto_id: ['fotoid', 'foto', 'pasfoto', 'urlfoto'], tgl_daftar: ['tgldaftar', 'tanggaldaftar', 'timestamp'] };
-  const LBL = { nama: 'Nama lengkap *', nomor_taruna: 'NIT', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan', no_hp: 'No. WhatsApp', email: 'Email', id_member: 'Nomor anggota (KTA lama)', status_verifikasi: 'Status verifikasi', status_anggota: 'Status anggota', masa_berlaku_kartu: 'Masa berlaku', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Foto (ID/URL Drive)', tgl_daftar: 'Tanggal daftar' };
+  const LBL = { nama: 'Nama lengkap *', nomor_taruna: 'NOTAR (Nomor Taruna)', angkatan: 'Angkatan', prodi: 'Program studi', tahun_kelulusan: 'Tahun lulus', status_kepegawaian: 'Status kepegawaian', instansi: 'Instansi', jabatan_terakhir: 'Jabatan', no_hp: 'No. WhatsApp', email: 'Email', id_member: 'Nomor anggota (KTA lama)', status_verifikasi: 'Status verifikasi', status_anggota: 'Status anggota', masa_berlaku_kartu: 'Masa berlaku', jenis_kelamin: 'Jenis kelamin', tempat_lahir: 'Tempat lahir', tanggal_lahir: 'Tanggal lahir', kota_domisili: 'Domisili', alamat: 'Alamat', foto_id: 'Foto (ID/URL Drive)', tgl_daftar: 'Tanggal daftar' };
   const nh = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   function tebak(headers) { const p = {}, pakai = {}; Object.keys(ALIAS).forEach((t) => { const al = ALIAS[t].concat([nh(t)]); const h = headers.find((x) => !pakai[x] && al.indexOf(nh(x)) > -1); if (h) { p[t] = h; pakai[h] = 1; } }); return p; }
   const IM = { mode: 'sheet', src: null, headers: [], rows: null, peta: {}, info: null };

@@ -1,9 +1,22 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.7.1",
-  "tanggal": "2026-11-17",
-  "server_min": "1.5.0",
+  "versi": "1.8.0",
+  "tanggal": "2026-11-18",
+  "server_min": "1.6.0",
   "riwayat": [
+    {
+      "versi": "1.8.0",
+      "tanggal": "2026-11-18",
+      "judul": "KTA Pengurus (hitam–emas) dan istilah NOTAR",
+      "poin": [
+        "KTA Pengurus: alumni yang menjabat di Struktur & Pengurus otomatis mendapat kartu hitam–emas berlabel PENGURUS, tanpa perlu ditetapkan terpisah.",
+        "Jenis anggota (Biasa/Luar Biasa/Kehormatan) dan masa berlaku asli tidak berubah. Setelah dicoret dari struktur atau disembunyikan (Tampil = TIDAK), kartu kembali ke warna jenis aslinya.",
+        "Pembina, Penasehat, Pelindung, dan Dewan Pertimbangan/Pakar/Kehormatan/Pengawas/Etik tidak mendapat kartu Pengurus.",
+        "Jabatan, bidang, dan periode pengurus tampil di halaman hasil pindai QR, Data Alumni, dan ekspor Excel. Filter \"Pengurus\" di Data Alumni dan Kartu Digital KTA.",
+        "Istilah NIT diganti NOTAR (Nomor Taruna) di kartu, formulir, tabel, dan ekspor. Datanya tidak berubah; impor tetap mengenali kolom \"NIT\" maupun \"NOTAR\".",
+        "Perbaikan bagan struktur: jabatan seperti \"Ketua Bidang Pembinaan Anggota\" tidak lagi salah ditempatkan di baris Pembina."
+      ]
+    },
     {
       "versi": "1.7.1",
       "tanggal": "2026-11-17",

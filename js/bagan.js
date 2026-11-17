@@ -17,7 +17,7 @@
   /** Peran sebuah jabatan dalam bagan */
   function peran(jabatan) {
     const s = low(jabatan);
-    if (/(pembina|penasehat|penasihat|pelindung|dewan (pertimbangan|pakar|penasehat|penasihat|kehormatan|pengawas|etik))/.test(s)) return 'pembina';
+    if (/\b(pembina|penasehat|penasihat|pelindung)\b|dewan (pertimbangan|pakar|penasehat|penasihat|kehormatan|pengawas|etik)/.test(s)) return 'pembina';   // v1.8.0: \b — "Ketua Bidang Pembinaan …" bukan Pembina
     if (/(bidang|seksi|divisi|departemen|komisi|biro|koordinator|kabid|korbid|\banggota\b)/.test(s)) return 'bidang';
     if (/(wakil ketua|wk\.? ?ketua|\bwaka\b)/.test(s)) return 'wakil';
     if (/\bketua\b/.test(s)) return 'ketua';
