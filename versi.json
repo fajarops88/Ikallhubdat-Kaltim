@@ -1,9 +1,19 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "1.7.0",
+  "versi": "1.7.1",
   "tanggal": "2026-11-17",
   "server_min": "1.5.0",
   "riwayat": [
+    {
+      "versi": "1.7.1",
+      "tanggal": "2026-11-17",
+      "judul": "Pas foto KTA tampil utuh",
+      "poin": [
+        "Pas foto di KTA digital tidak lagi terpotong: seluruh foto tampil di tengah bingkai, sisa bingkai diisi warna latar dari foto yang sama (dikaburkan).",
+        "Berlaku sama di kartu yang tampil di layar dan di kartu yang diunduh sebagai gambar/PDF.",
+        "Foto di halaman verifikasi KTA (hasil pindai QR) juga tampil utuh."
+      ]
+    },
     {
       "versi": "1.7.0",
       "tanggal": "2026-11-17",

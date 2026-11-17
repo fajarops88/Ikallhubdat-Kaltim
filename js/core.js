@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '1.7.0';
+  const VERSI = '1.7.1';
   const RILIS = '2026-11-17';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
@@ -20,6 +20,8 @@
   const ic = (n, cls) => '<svg class="ic ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + n + '"></use></svg>';
   const img = (id, w) => (id ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + (w || 600) : '');
   const bg = (id, w) => (id ? 'style="background-image:url(\'' + img(id, w) + '\')"' : '');
+  /* v1.7.1: pas foto tampil utuh (tidak terpotong) — foto penuh di tengah, sisa bingkai diisi versi kabur dari foto yang sama. Pakai bersama kelas "fu". */
+  const fotoUtuh = (id, w) => (id ? 'style="--ft:url(\'' + img(id, w) + '\')"' : '');
   /* Logo: hasil unggahan Pengurus (Drive) bila ada, selain itu logo bawaan img/logo.png */
   const logoBg = (st, w) => 'style="background-image:url(\'' + (st && st.LOGO_ID ? img(st.LOGO_ID, w || 160) : 'img/logo.png') + '\')"';
   const inisial = (n) => String(n || '?').replace(/[,.].*$/, '').trim().split(/\s+/).slice(0, 2).map((x) => x[0] || '').join('').toUpperCase() || '?';
@@ -47,7 +49,7 @@
     angka(n) { return Number(n || 0).toLocaleString('id-ID'); },
     sisaHari(v) { const d = tglObj(v); if (!d) return null; return Math.ceil((d.getTime() - tglObj(hariIni()).getTime()) / 864e5); }
   };
-  Object.assign(IKH, { $, $$, esc, ic, img, bg, logoBg, inisial, warnaAva, debounce, daftar, hp08, hariIni, fmt });
+  Object.assign(IKH, { $, $$, esc, ic, img, bg, fotoUtuh, logoBg, inisial, warnaAva, debounce, daftar, hp08, hariIni, fmt });
 
   /* ---------------- Penyimpanan lokal (aman) ---------------- */
   const LS = {
@@ -498,7 +500,7 @@
       return '<div class="kta depan" data-jn="' + x.kode + '" role="img" aria-label="KTA sisi depan ' + esc(a.nama) + ', ' + x.jenis.toLowerCase() + '">' +
         '<div class="hd"><div class="lg" ' + logoBg(st, 160) + '></div><div><div class="t1">KARTU TANDA ANGGOTA</div><div class="t2">' + esc(x.org) + '</div></div></div>' +
         (o.langsung ? '<div class="live" title="Tampil langsung dari aplikasi"><i></i><span data-jam>' + jamKini() + '</span></div>' : '<div class="chipg"></div>') + '<div class="garis"></div>' +
-        '<div class="ft" ' + (a.foto_id ? bg(a.foto_id, 400) : '') + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
+        '<div class="ft' + (a.foto_id ? ' fu' : '') + '" ' + fotoUtuh(a.foto_id, 400) + '>' + (a.foto_id ? '' : ic('person')) + '</div>' +
         '<div class="dt"><div><div class="l">Nama Lengkap</div><div class="v nm"' + (x.namaUk < 4.4 ? ' style="font-size:' + x.namaUk + 'cqw"' : '') + '>' + esc(x.nama) + '</div></div>' +
         '<div><div class="l">Nomor Anggota</div><div class="v no">' + esc(x.nomor) + '</div></div>' +
         '<div class="dua"><div><div class="l">NIT / Angkatan</div><div class="v">' + esc(x.nit) + '</div></div><div><div class="l">Program Studi</div><div class="v pr">' + esc(x.prodi) + '</div></div></div></div>' +
@@ -575,6 +577,13 @@
         return baris.map((b) => pangkas(b, maks));
       };
       const pas = (im, X, Y, w, h, tutupi) => { const s = (tutupi ? Math.max : Math.min)(w * u / im.width, h * u / im.height), dw = im.width * s, dh = im.height * s; g.drawImage(im, X * u + (w * u - dw) / 2, Y * u + (h * u - dh) / 2, dw, dh); };
+      /* Latar kabur untuk pas foto utuh: foto diperkecil ke kanvas mungil lalu diperbesar lagi (berjalan di semua browser, tanpa ctx.filter) */
+      const kabur = (im, X, Y, w, h) => {
+        const k = document.createElement('canvas'); k.width = 10; k.height = Math.max(4, Math.round(10 * h / w));
+        const kg = k.getContext('2d'), s = Math.max(k.width / im.width, k.height / im.height), dw = im.width * s, dh = im.height * s;
+        kg.imageSmoothingEnabled = true; kg.drawImage(im, (k.width - dw) / 2, (k.height - dh) / 2, dw, dh);
+        g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(k, X * u - w * u * .06, Y * u - h * u * .06, w * u * 1.12, h * u * 1.12); g.restore();
+      };
       const kotakQr = (m, X, Y, S, pad, r, garis) => {
         rr(X * u, Y * u, S * u, S * u, r * u); g.fillStyle = '#fff'; g.fill();
         g.lineWidth = .3 * u; g.strokeStyle = garis; rr((X + .15) * u, (Y + .15) * u, (S - .3) * u, (S - .3) * u, Math.max(0, r - .15) * u); g.stroke();
@@ -611,7 +620,7 @@
         g.fillStyle = lg; g.fillRect(5 * u, 17 * u, 90 * u, .25 * u);
         // pas foto
         rr(5 * u, 20.5 * u, 20 * u, 25 * u, 1.6 * u); g.fillStyle = T.foto; g.fill();
-        if (B.foto) { g.save(); rr(5 * u, 20.5 * u, 20 * u, 25 * u, 1.6 * u); g.clip(); pas(B.foto, 5, 20.5, 20, 25, true); g.restore(); }
+        if (B.foto) { g.save(); rr(5 * u, 20.5 * u, 20 * u, 25 * u, 1.6 * u); g.clip(); kabur(B.foto, 5, 20.5, 20, 25); pas(B.foto, 5, 20.5, 20, 25, false); g.restore(); }
         else { g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(15 * u, 30.2 * u, 3.4 * u, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(15 * u, 39.6 * u, 6.2 * u, 4.4 * u, 0, Math.PI, 0); g.fill(); }
         g.lineWidth = .45 * u; g.strokeStyle = 'rgba(255,255,255,.85)'; rr(5.225 * u, 20.725 * u, 19.55 * u, 24.55 * u, 1.4 * u); g.stroke();
         // data

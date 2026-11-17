@@ -3,7 +3,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const { $, $$, esc, ic, img, bg, fmt, UI, api, Store, Sesi, Router, Kta, daftar, LS, hariIni } = IKH;
+  const { $, $$, esc, ic, img, bg, fotoUtuh, fmt, UI, api, Store, Sesi, Router, Kta, daftar, LS, hariIni } = IKH;
 
   /* ---------------- Bingkai publik ---------------- */
   // v1.7.0: menu "Pendaftaran Alumni" diganti "Galeri" (pendaftaran lewat tombol "Daftar" di ujung menu)
@@ -534,7 +534,7 @@
     if (!d.valid) { el.innerHTML = '<div class="res"><div class="hd bad">' + ic('cancel') + '<div><h3>KTA TIDAK VALID</h3><div>' + esc(d.pesan || '') + '</div></div></div><div class="bd small muted">Diperiksa ' + fmt.waktu(d.dicek) + '. Bila menurut Anda ini keliru, hubungi sekretariat.</div></div>'; return; }
     const a = d.anggota, aktif = d.status === 'Aktif';
     el.innerHTML = '<div class="res"><div class="hd ' + (aktif ? 'ok' : 'warn') + '">' + ic(aktif ? 'verified' : 'warning') + '<div><h3>' + (aktif ? 'KTA VALID & TERDAFTAR RESMI' : 'KTA TERDAFTAR — STATUS ' + esc(d.status).toUpperCase()) + '</h3><div>' + esc(d.org || '') + (d.qr ? ' • QR bertanda tangan sah' : ' • Pencarian manual') + '</div></div></div>' +
-      '<div class="bd"><div class="row top gap-lg">' + (a.foto_id ? '<div style="width:96px;height:120px;border-radius:10px;flex:none;background:#E9EDF3 center/cover no-repeat;background-image:url(\'' + esc(img(a.foto_id, 300)) + '\')"></div>' : '') +
+      '<div class="bd"><div class="row top gap-lg">' + (a.foto_id ? '<div class="fu foto-v" ' + fotoUtuh(a.foto_id, 300) + '></div>' : '') +
       '<div class="grow"><div class="kicker">Nama Lengkap</div><h3 style="margin:.15rem 0 .5rem">' + esc(a.nama) + '</h3>' + UI.badgeStatus(d.status) + '</div></div>' +
       '<div class="kv mt"><div>Jenis anggota</div><div>' + IKH.badgeJenis(a) + '</div><div>Nomor anggota</div><div class="mono">' + esc(a.id_member) + '</div>' + (a.nomor_taruna ? '<div>NIT</div><div class="mono">' + esc(a.nomor_taruna) + '</div>' : '') + '<div>Angkatan</div><div>' + esc(a.angkatan || '-') + '</div><div>Program studi</div><div>' + esc(a.prodi || '-') + '</div>' +
       (a.tahun_kelulusan ? '<div>Tahun lulus</div><div>' + esc(a.tahun_kelulusan) + '</div>' : '') + (a.instansi ? '<div>Instansi</div><div>' + esc(a.instansi) + '</div>' : '') + (a.seumur_hidup ? '<div>Masa berlaku</div><div>Seumur hidup</div>' : '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div>') +
@@ -559,7 +559,7 @@
       const a = d.anggota, s = d.sah || {}, aktif = d.status === 'Aktif', baik = d.terkini && aktif;
       el.innerHTML = '<div class="res"><div class="hd ' + (baik ? 'ok' : 'warn') + '">' + ic(baik ? 'verified' : 'warning') + '<div><h3>' + (!d.terkini ? 'PENGESAHAN SUDAH DIGANTIKAN' : aktif ? 'KTA DISAHKAN SECARA ELEKTRONIK' : 'DISAHKAN — STATUS KARTU ' + esc(d.status).toUpperCase()) + '</h3><div>' + esc(d.org || '') + ' • kode pengesahan bertanda tangan sah</div></div></div>' +
         '<div class="bd">' + (!d.terkini ? '<div class="alert warn mb">' + ic('warning') + '<div>Kode pada kartu ini berasal dari pengesahan <b>' + fmt.tgl(d.sahKode, true) + '</b> yang sudah digantikan pengesahan baru (kartu diperpanjang atau datanya diperbarui). Minta pemegang kartu menampilkan <b>kartu terbaru dari aplikasi</b>.</div></div>' : '') +
-        '<div class="row top gap-lg">' + (a.foto_id ? '<div style="width:96px;height:120px;border-radius:10px;flex:none;background:#E9EDF3 center/cover no-repeat;background-image:url(\'' + esc(img(a.foto_id, 300)) + '\')"></div>' : '') +
+        '<div class="row top gap-lg">' + (a.foto_id ? '<div class="fu foto-v" ' + fotoUtuh(a.foto_id, 300) + '></div>' : '') +
         '<div class="grow"><div class="kicker">Pemegang kartu</div><h3 style="margin:.15rem 0 .5rem">' + esc(a.nama) + '</h3>' + UI.badgeStatus(d.status) + ' ' + IKH.badgeJenis(a) + '</div></div>' +
         '<div class="kv mt"><div>Nomor anggota</div><div class="mono">' + esc(a.id_member) + '</div>' + (a.seumur_hidup ? '<div>Masa berlaku</div><div>Seumur hidup</div>' : '<div>Berlaku s.d.</div><div>' + fmt.tgl(a.masa_berlaku_kartu, true) + '</div>') +
         '<div>Disahkan oleh</div><div><b>' + esc(s.oleh || '(nama ketua belum diisi Pengurus)') + '</b><div class="small muted">' + esc(s.jabatan || '') + '</div></div>' +
