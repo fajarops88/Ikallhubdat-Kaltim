@@ -23,12 +23,13 @@
     const brand = $('#brand'); if (!brand) return;
     brand.innerHTML = logoHtml(st) + '<div class="grow"><div class="t1">SIM IKALLHUBDAT</div><div class="t2">' + esc((st.ORG_NAMA || 'DPD Kalimantan Timur').replace(/^DPD IKALLHUBDAT\s*/i, 'DPD ')) + '</div></div>';
     $('#pubnav').innerHTML = NAV.filter((n) => !sem(n[2])).map((n) => '<a href="#' + n[0] + '" class="' + ((n[0] === '/' ? path === '/' : path.indexOf(n[0]) === 0) ? 'on' : '') + '">' + n[1] + '</a>').join('') +
+      IKH.tombolPasang('btn-ghost btn-sm nav-pasang') +
       (me ? '<a class="btn btn-primary btn-sm" href="#' + (me.peran === 'pengurus' ? '/admin' : '/anggota') + '">' + ic('person', 'sm') + (me.peran === 'pengurus' ? 'Panel Pengurus' : 'Ruang Anggota') + '</a>'
         : (sem('masuk') ? '' : '<a class="btn btn-ghost btn-sm" href="#/masuk">' + ic('lock', 'sm') + 'Masuk</a>') + (sem('daftar') ? '' : '<a class="btn btn-gold btn-sm btn-daftar" href="#/daftar">' + ic('how_to_reg', 'sm') + '<span>Daftar</span></a>'));
     const tahun = new Date().getFullYear();
     $('#foot').innerHTML = '<div class="wrap"><div><a class="brand" href="#/" style="color:#fff">' + logoHtml(st) + '<div><div class="t1" style="color:#fff">' + esc(st.ORG_SINGKAT || 'IKALLHUBDAT KALTIM') + '</div><div class="t2" style="color:#93A6D4">' + esc(st.ORG_NAMA_PANJANG || '') + '</div></div></a>' +
       '<p class="mt" style="font-size:13.5px;max-width:420px">Portal resmi keanggotaan alumni: pendaftaran mandiri, verifikasi berjenjang oleh Pengurus, dan KTA digital ber-QR yang dapat diperiksa keasliannya.</p>' +
-      '<button class="btn btn-gold btn-sm hide" data-install>' + ic('download', 'sm') + 'Pasang Aplikasi</button></div>' +
+      IKH.tombolPasang('btn-gold btn-sm') + '</div>' +
       '<div><h4>Tautan Cepat</h4>' + TAUTAN_FOOT.filter((t) => !sem(t[2])).map((t) => '<a href="#' + t[0] + '">' + t[1] + '</a>').join('') + '</div>' +
       '<div><h4>Sekretariat</h4>' +
       (st.ORG_ALAMAT ? '<div class="ln">' + ic('location_on', 'sm') + '<span>' + esc(st.ORG_ALAMAT) + '</span></div>' : '') +
@@ -38,8 +39,7 @@
       (st.ORG_JAM_LAYANAN ? '<div class="ln">' + ic('schedule', 'sm') + '<span>' + esc(st.ORG_JAM_LAYANAN) + '</span></div>' : '') +
       (!st.ORG_ALAMAT && !st.ORG_EMAIL ? '<div class="ln small">Kontak sekretariat belum diisi Pengurus.</div>' : '') +
       '</div></div><div class="bawah"><div class="wrap"><span>© ' + tahun + ' ' + esc(st.ORG_NAMA || 'DPD IKALLHUBDAT Kalimantan Timur') + '</span><span>SIM IKALLHUBDAT ' + IKH.chipVersi('gelap') + '</span></div></div>';
-    if (IKH.bisaPasang()) $$('[data-install]').forEach((b) => b.classList.remove('hide'));
-    $$('[data-install]').forEach((b) => b.onclick = () => IKH.pasangApp());
+    IKH.Pasang.segarkan();
     const bg2 = $('#burger'), nav = $('#pubnav');
     bg2.onclick = () => { const o = nav.classList.toggle('open'); bg2.setAttribute('aria-expanded', o); };
     $$('a', nav).forEach((a) => a.addEventListener('click', () => { nav.classList.remove('open'); bg2.setAttribute('aria-expanded', 'false'); }));

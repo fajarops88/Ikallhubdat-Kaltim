@@ -1,9 +1,22 @@
 {
   "app": "SIM IKALLHUBDAT Kaltim",
-  "versi": "2.0.1",
-  "tanggal": "2026-11-18",
+  "versi": "2.0.2",
+  "tanggal": "2026-11-21",
   "server_min": "1.8.0",
   "riwayat": [
+    {
+      "versi": "2.0.2",
+      "tanggal": "2026-11-21",
+      "judul": "Tombol Pasang Aplikasi untuk semua perangkat",
+      "poin": [
+        "Tombol \"Pasang Aplikasi\" kini tampil di semua perangkat: menu atas situs (di HP ada di dalam menu ☰), footer, kepala Ruang Anggota, dan kartu baru di Dasbor Saya.",
+        "Android dan komputer (Chrome/Edge): tombol membuka dialog pasang bawaan browser. Bila dialog belum tersedia, muncul petunjuk lewat menu browser.",
+        "iPhone/iPad: tombol membuka petunjuk bergambar Bagikan → Tambah ke Layar Utama, termasuk letak tombol di iOS 26.",
+        "Dibuka dari WhatsApp/Instagram/Facebook: petunjuk membuka di Chrome atau Safari dulu (Android dengan tombol \"Buka di Chrome\"). Samsung Internet, Firefox, dan Safari Mac mendapat petunjuk masing-masing.",
+        "Tombol otomatis hilang bila aplikasi sudah dibuka dari ikon layar utama.",
+        "Perbaikan: tulisan tombol \"Panel Pengurus\" / \"Ruang Anggota\" di menu atas situs kini putih dan terbaca (sebelumnya gelap di atas biru tua)."
+      ]
+    },
     {
       "versi": "2.0.1",
       "tanggal": "2026-11-18",

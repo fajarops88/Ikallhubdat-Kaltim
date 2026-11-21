@@ -5,8 +5,8 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VERSI = '2.0.1';
-  const RILIS = '2026-11-18';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
+  const VERSI = '2.0.2';
+  const RILIS = '2026-11-21';   // VERSI & RILIS disetel otomatis oleh skrip build bersama versi.json & sw.js
   const CFG = window.APP_CONFIG || {};
   const IKH = (window.IKH = window.IKH || {});
   IKH.VERSI = VERSI; IKH.RILIS = RILIS;
@@ -1161,9 +1161,109 @@
       setInterval(() => { if (document.visibilityState === 'visible') Versi.cek(true); }, 30 * 60e3);
     }
   };
-  /* Pasang aplikasi (PWA) */
-  let _install = null;
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _install = e; $$('[data-install]').forEach((b) => b.classList.remove('hide')); });
-  IKH.pasangApp = async function () { if (!_install) return UI.toast('Gunakan menu browser → "Tambahkan ke layar utama".', 'warn'); _install.prompt(); await _install.userChoice; _install = null; $$('[data-install]').forEach((b) => b.classList.add('hide')); };
-  IKH.bisaPasang = () => !!_install;
+  /* ---------------- Pasang aplikasi (PWA) — v2.0.2 ----------------
+     Chrome/Edge (Android & komputer): dialog pasang bawaan browser (beforeinstallprompt).
+     iPhone/iPad, browser lain, atau saat dialog bawaan belum tersedia: lembar petunjuk sesuai perangkat.
+     Semua tombol [data-install] (dan wadah [data-install-wadah]) disembunyikan bila aplikasi sudah dibuka dari ikon layar utama. */
+  const Pasang = {
+    ev: null, _ok: false,
+    ua() { return navigator.userAgent || ''; },
+    ios() { return /iPhone|iPad|iPod/.test(this.ua()) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+    ipad() { return /iPad/.test(this.ua()) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+    /** true bila halaman sedang dibuka sebagai aplikasi terpasang (bukan tab browser) */
+    terpasang() {
+      try {
+        if (navigator.standalone === true) return true;
+        return ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some((m) => window.matchMedia('(display-mode: ' + m + ')').matches);
+      } catch (e) { return false; }
+    },
+    /** Jenis perangkat/browser untuk memilih petunjuk */
+    jenis() {
+      const ua = this.ua();
+      if (Google.dalamAplikasi()) return 'aplikasi';
+      if (this.ios()) return /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser|GSA\//.test(ua) ? 'ios-lain' : 'ios';
+      if (/Android/.test(ua)) return /SamsungBrowser/.test(ua) ? 'samsung' : /Firefox\//.test(ua) ? 'android-firefox' : 'android';
+      if (/Firefox\//.test(ua)) return 'pc-firefox';
+      if (/Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium|Edg\//.test(ua)) return 'mac-safari';
+      return 'pc';
+    },
+    alamat() { return location.origin + location.pathname.replace(/index\.html$/, ''); },
+    /** Tombol pasang disembunyikan: sudah dibuka sebagai aplikasi, atau baru saja dipasang di tab ini */
+    sembunyi() { return this._ok || this.terpasang(); },
+    segarkan() {
+      const sembunyi = this.sembunyi();
+      $$('[data-install],[data-install-wadah]').forEach((b) => b.classList.toggle('hide', sembunyi));
+    },
+    selesai() {
+      if (this._ok) return;
+      this._ok = true; this.ev = null; lsSet('ikh_terpasang', String(Date.now())); this.segarkan();
+      UI.toast('Aplikasi terpasang. Buka dari ikon IKALLHUBDAT di layar utama atau daftar aplikasi.', 'ok', 6500);
+    },
+    async mulai() {
+      const nav = $('#pubnav.open'); if (nav) { nav.classList.remove('open'); const b = $('#burger'); if (b) b.setAttribute('aria-expanded', 'false'); }
+      if (this.ev) {                                      // dialog bawaan Chrome/Edge
+        const ev = this.ev; this.ev = null;
+        try { await ev.prompt(); const r = await ev.userChoice; if (r && r.outcome === 'accepted') this.selesai(); return; } catch (e) { }
+      }
+      this.petunjuk();
+    },
+    langkah(arr) {
+      return '<ol class="psg-l">' + arr.map((x) => '<li><span class="psg-i">' + ic(x[0]) + '</span><div>' + x[1] + '</div></li>').join('') + '</ol>';
+    },
+    isi(j) {
+      const andro = Google.android(), ipad = this.ipad();
+      const salin = '<div class="psg-alamat"><span class="mono grow">' + esc(this.alamat()) + '</span><button class="btn btn-ghost btn-xs" type="button" data-psg-salin>' + ic('content_copy', 'sm') + 'Salin</button></div>';
+      const P = {
+        aplikasi: { judul: 'Buka di Chrome atau Safari dulu',
+          pengantar: 'Halaman ini terbuka di browser bawaan WhatsApp, Instagram, atau Facebook. Browser bawaan aplikasi tidak bisa memasang aplikasi ke layar utama.',
+          langkah: andro ? [['open_in_browser', 'Tekan <b>Buka di Chrome</b> di bawah, atau ketuk menu <b>⋮</b> lalu <b>Buka di Chrome</b>.'], ['mobile_arrow_down', 'Setelah terbuka di Chrome, tekan <b>Pasang Aplikasi</b> lagi.']]
+            : [['more_horiz', 'Ketuk menu <b>•••</b> atau ikon kompas, lalu pilih <b>Buka di Safari</b>. Bisa juga salin alamat di bawah lalu tempel di Safari.'], ['mobile_arrow_down', 'Setelah terbuka di Safari, tekan <b>Pasang Aplikasi</b> lagi.']],
+          tambahan: (andro ? '<a class="btn btn-primary btn-block mt" href="' + esc(Google.keChrome()) + '">' + ic('open_in_browser', 'sm') + 'Buka di Chrome</a>' : '') + salin },
+        ios: { judul: ipad ? 'Pasang di iPad' : 'Pasang di iPhone',
+          langkah: [['ios_share', 'Ketuk ikon <b>Bagikan</b> (kotak dengan panah ke atas) ' + (ipad ? 'di kanan atas Safari.' : 'di bilah bawah Safari.') + '<div class="small muted">iOS 26: ketuk dulu tombol <b>•••</b> di samping bilah alamat, lalu <b>Bagikan</b>.</div>'],
+            ['add_box', 'Gulir ke bawah, lalu pilih <b>Tambah ke Layar Utama</b>.<div class="small muted">Tidak ada? Ketuk <b>Edit Tindakan</b> di paling bawah daftar untuk menampilkannya.</div>'],
+            ['check_circle', 'Ketuk <b>Tambah</b> di kanan atas. Bila ada sakelar untuk membuka sebagai aplikasi web, biarkan menyala.']] },
+        'ios-lain': { judul: 'Pasang di iPhone',
+          pengantar: 'Di iPhone dan iPad, pemasangan paling lancar lewat <b>Safari</b>.',
+          langkah: [['content_copy', 'Salin alamat di bawah, lalu buka di <b>Safari</b>.'], ['ios_share', 'Di Safari, ketuk <b>Bagikan</b> (iOS 26: <b>•••</b> → <b>Bagikan</b>), lalu <b>Tambah ke Layar Utama</b> → <b>Tambah</b>.']],
+          tambahan: salin + '<p class="small muted mt mb-0">Chrome di iPhone (iOS 16.4 ke atas) juga bisa: ketuk ikon <b>Bagikan</b> di bilah alamat, lalu cari pilihan <b>Layar Utama</b>.</p>' },
+        android: { judul: 'Pasang di HP Android',
+          langkah: [['more_vert', 'Ketuk menu <b>⋮</b> di kanan atas Chrome.'], ['mobile_arrow_down', 'Pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>.'], ['check_circle', 'Ketuk <b>Instal</b> untuk mengonfirmasi.']] },
+        samsung: { judul: 'Pasang di HP Android',
+          langkah: [['menu', 'Ketuk menu <b>≡</b> di kanan bawah Samsung Internet.'], ['add_box', 'Pilih <b>Tambahkan halaman ke</b>, lalu <b>Layar Utama</b>.'], ['check_circle', 'Konfirmasi dengan <b>Tambah</b>.']],
+          tambahan: '<p class="small muted mt mb-0">Bisa juga buka alamat ini di Chrome; Chrome menampilkan dialog pasang otomatis.</p>' },
+        'android-firefox': { judul: 'Pasang di HP Android',
+          langkah: [['more_vert', 'Ketuk menu <b>⋮</b> Firefox.'], ['add_box', 'Pilih <b>Tambahkan ke layar Utama</b> atau <b>Instal</b>.'], ['check_circle', 'Konfirmasi dengan <b>Tambah</b>.']] },
+        pc: { judul: 'Pasang di komputer',
+          langkah: [['install_desktop', 'Klik ikon <b>Pasang</b> (layar dengan panah ke bawah) di ujung kanan bilah alamat.'],
+            ['more_vert', 'Tidak ada ikonnya? Buka menu <b>⋮</b> (Chrome) atau <b>···</b> (Edge), lalu cari pilihan <b>Instal</b>.'],
+            ['check_circle', 'Klik <b>Instal</b>. Aplikasi terbuka di jendelanya sendiri dan muncul di menu Start atau Launchpad.']] },
+        'mac-safari': { judul: 'Pasang di Mac',
+          langkah: [['ios_share', 'Di Safari, klik ikon <b>Bagikan</b> atau buka menu <b>File</b>.'], ['add_box', 'Pilih <b>Tambahkan ke Dock</b>, lalu klik <b>Tambah</b>.']],
+          tambahan: '<p class="small muted mt mb-0">Butuh macOS Sonoma (14) atau lebih baru. Di versi lebih lama, buka alamat ini di Chrome atau Edge.</p>' },
+        'pc-firefox': { judul: 'Pasang di komputer',
+          pengantar: 'Firefox di komputer belum mendukung pemasangan aplikasi web.',
+          langkah: [['open_in_browser', 'Buka alamat di bawah di <b>Chrome</b> atau <b>Edge</b>.'], ['install_desktop', 'Tekan <b>Pasang Aplikasi</b> lagi, atau klik ikon pasang di bilah alamat.']],
+          tambahan: salin }
+      };
+      return P[j] || P.pc;
+    },
+    petunjuk() {
+      const j = this.jenis(), d = this.isi(j);
+      UI.modal({ judul: d.judul,
+        isi: '<div class="psg-app"><img src="img/icon-192.png" alt="" width="48" height="48"><div><b>SIM IKALLHUBDAT</b><div class="small muted">Buka seperti aplikasi biasa: langsung dari ikon, layar penuh, tanpa mengetik alamat.</div></div></div>' +
+          (d.pengantar ? '<p class="mt mb-0">' + d.pengantar + '</p>' : '') + this.langkah(d.langkah) + (d.tambahan || '') +
+          '<p class="tiny muted mt mb-0">Sudah pernah dipasang? Cari ikon <b>IKALLHUBDAT</b> di layar utama atau daftar aplikasi.</p>',
+        tombol: [{ teks: 'Mengerti', kelas: 'btn-primary', nilai: null }],
+        onBuka: (md) => { md.classList.add('psg', 'psg-' + j); $$('[data-psg-salin]', md).forEach((b) => b.onclick = () => UI.salin(this.alamat())); } });
+    }
+  };
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); Pasang.ev = e; Pasang.segarkan(); });
+  window.addEventListener('appinstalled', () => Pasang.selesai());
+  try { window.matchMedia('(display-mode: standalone)').addEventListener('change', () => Pasang.segarkan()); } catch (e) { }
+  document.addEventListener('click', (e) => { const t = e.target && e.target.closest && e.target.closest('[data-install]'); if (t) { e.preventDefault(); Pasang.mulai(); } });
+  IKH.Pasang = Pasang;
+  IKH.pasangApp = () => Pasang.mulai();
+  /** Tombol "Pasang Aplikasi" siap ditempel; kelas hide otomatis bila sudah terpasang. label '' = ikon saja */
+  IKH.tombolPasang = (kelas, label) => '<button type="button" class="btn ' + (kelas || 'btn-ghost btn-sm') + (Pasang.sembunyi() ? ' hide' : '') + '" data-install aria-label="Pasang aplikasi" title="Pasang aplikasi ke layar utama">' + ic('mobile_arrow_down', 'sm') + (label === '' ? '' : '<span>' + (label || 'Pasang Aplikasi') + '</span>') + '</button>';
 })();

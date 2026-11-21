@@ -4,8 +4,8 @@
    • API Apps Script & gambar Drive: TIDAK pernah dicache oleh service worker
    • Cache "ikh-galeri-…" (foto galeri yang sudah dimuat, diisi oleh publik.js) TIDAK dihapus saat versi berganti
    VERSI & ?v= di bawah disetel otomatis oleh skrip build (sama dengan versi.json & core.js) */
-const VERSI = 'ikh-v2.0.1';
-const SHELL = ['./', './index.html', './css/style.css?v=2.0.1', './js/config.js?v=2.0.1', './js/core.js?v=2.0.1', './js/publik.js?v=2.0.1',
+const VERSI = 'ikh-v2.0.2';
+const SHELL = ['./', './index.html', './css/style.css?v=2.0.2', './js/config.js?v=2.0.2', './js/core.js?v=2.0.2', './js/publik.js?v=2.0.2',
   './manifest.json', './img/logo.png', './img/favicon.png', './img/icon-192.png', './img/icon-512.png'];
 
 self.addEventListener('install', (e) => {

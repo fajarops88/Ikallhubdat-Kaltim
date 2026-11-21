@@ -658,3 +658,22 @@ select.inp.pilih-al option:checked { background: var(--navy-soft) linear-gradien
 .g-kat .k span{font-size:12px;color:var(--muted,#55647C)}
 .g-kat .k.ok b{color:var(--ok,#1E7B4F)} .g-kat .k.warn b{color:#B26A00} .g-kat .k.bad b{color:var(--bad,#B3261E)}
 .code-origin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#F2F4F8;border:1px solid var(--border,#E3E7EE);border-radius:8px;padding:6px 10px;word-break:break-all;display:inline-block}
+
+/* ---------------- v2.0.2 — Pasang aplikasi (PWA) ---------------- */
+.nav-pasang { padding-left: .55rem; padding-right: .55rem; }
+.nav-pasang span { display: none; }
+@media (min-width: 1240px) { .nav-pasang span { display: inline; } .nav-pasang { padding-left: .8rem; padding-right: .95rem; } }
+@media (max-width: 860px) { .pub-nav .nav-pasang { justify-content: center; padding: .7rem 1rem; font-size: 15px; } .pub-nav .nav-pasang span { display: inline; } }
+.psg-app { display: flex; align-items: center; gap: .8rem; padding: .75rem .85rem; border-radius: 12px; background: var(--navy-soft); }
+.psg-app img { width: 48px; height: 48px; border-radius: 12px; flex: none; box-shadow: 0 1px 3px rgba(10, 42, 99, .18); }
+.psg-l { list-style: none; counter-reset: psg; padding: 0; margin: 1.1rem 0 0; display: grid; gap: .9rem; }
+.psg-l li { counter-increment: psg; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: .85rem; align-items: start; line-height: 1.5; }
+.psg-l li > div { padding-top: .45rem; }
+.psg-i { position: relative; width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 1px solid var(--border); display: grid; place-items: center; color: var(--navy); flex: none; }
+.psg-l .psg-i::after { content: counter(psg); position: absolute; top: -7px; left: -7px; width: 19px; height: 19px; border-radius: 50%; background: var(--gold); color: var(--navy); font: 700 11px/19px Inter, system-ui, sans-serif; text-align: center; }
+.psg-i.besar { width: 46px; height: 46px; background: var(--navy-soft); border: 0; }
+.psg-alamat { display: flex; gap: .5rem; align-items: center; margin-top: 1rem; padding: .5rem .55rem .5rem .8rem; border: 1px dashed var(--border); border-radius: 10px; background: #fff; }
+.psg-alamat .mono { word-break: break-all; font-size: 13px; }
+/* Tombol biru di menu atas (Panel Pengurus / Ruang Anggota saat sudah masuk): teks putih, tidak tertimpa warna tautan menu */
+.pub-nav a.btn-primary, .pub-nav a.btn-primary:hover, .pub-nav a.btn-primary:focus-visible { color: #fff; background: var(--navy); }
+.pub-nav a.btn-primary:hover, .pub-nav a.btn-primary:focus-visible { background: var(--navy-3); }

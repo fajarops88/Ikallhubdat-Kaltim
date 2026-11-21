@@ -13,7 +13,7 @@
 
   function layout() {
     return '<header class="agt-top"><div class="wrap"><a class="brand" href="#/" id="a-brand"></a><nav class="agt-nav" id="a-nav" aria-label="Menu anggota"></nav>' +
-      '<div class="who"><div class="tx"><div class="nm" id="a-nm"></div><div class="st" id="a-st"></div></div><span id="a-ava"></span><button class="btn btn-ghost btn-icon btn-sm" id="a-out" aria-label="Keluar" title="Keluar">' + ic('logout') + '</button></div></div></header>' +
+      '<div class="who"><div class="tx"><div class="nm" id="a-nm"></div><div class="st" id="a-st"></div></div><span id="a-ava"></span>' + IKH.tombolPasang('btn-ghost btn-icon btn-sm a-pasang', '') + '<button class="btn btn-ghost btn-icon btn-sm" id="a-out" aria-label="Keluar" title="Keluar">' + ic('logout') + '</button></div></div></header>' +
       '<nav class="agt-tabs" id="a-tabs" aria-label="Menu anggota"></nav><main id="main" class="agt-main"><div class="wrap" id="a-isi"></div></main>' +
       '<footer class="pub-foot" style="margin-top:0"><div class="bawah"><div class="wrap"><span id="a-foot"></span><span>SIM IKALLHUBDAT ' + IKH.chipVersi('gelap') + '</span></div></div></footer>';
   }
@@ -27,6 +27,7 @@
     $('#a-ava').innerHTML = UI.ava(a.nama, a.foto_id);
     $('#a-out').onclick = keluar;
     $('#a-foot').textContent = '© ' + new Date().getFullYear() + ' ' + (st.ORG_NAMA || '');
+    IKH.Pasang.segarkan();
   }
   async function keluar() {
     if (!(await UI.konfirmasi(pengurus() ? 'Keluar dari akun Anda (Panel Pengurus juga ikut keluar)?' : 'Keluar dari Ruang Anggota?', { ya: 'Keluar' })).ok) return;
@@ -73,6 +74,8 @@
         '<button class="btn btn-gold btn-block" id="b-layar">' + ic('fullscreen') + 'Tampilkan Layar Penuh</button>' +
         '<button class="btn btn-ghost btn-block mt" id="b-simpan">' + ic('download') + 'Simpan Kartu (Gambar / PDF)</button>' +
         '<div class="row mt"><button class="btn btn-ghost grow" id="b-link">' + ic('link', 'sm') + 'Salin Tautan Verifikasi</button><a class="btn btn-ghost btn-icon" href="' + esc(linkVerif(d)) + '" target="_blank" rel="noopener" aria-label="Buka halaman verifikasi">' + ic('open_in_new', 'sm') + '</a></div></div>' +
+        '<div class="card card-b psg-kartu' + (IKH.Pasang.sembunyi() ? ' hide' : '') + '" id="a-pasang" data-install-wadah><div class="row top"><span class="psg-i besar">' + ic('mobile_arrow_down') + '</span><div class="grow"><b>Pasang aplikasi di HP</b><div class="small muted">Buka KTA dan Ruang Anggota langsung dari ikon di layar utama, tanpa mengetik alamat.</div></div></div>' +
+        IKH.tombolPasang('btn-gold btn-block mt', 'Pasang Aplikasi') + '</div>' +
         '<div class="card card-b" style="background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#DAE2FF;border:0"><div class="row top">' + ic('verified_user', 'lg') + '<div><b style="color:#fff">Keaslian kartu dapat diperiksa publik</b><div class="small mt-0">QR di sisi belakang memeriksa status keanggotaan dan pengesahan Ketua langsung ke basis data organisasi. Jam berjalan di sudut kartu menandakan kartu tampil langsung dari aplikasi.</div></div></div></div></section></div>' +
         '<h3 class="mt-lg">Layanan Mandiri</h3><div class="grid g4">' +
         svc('edit_note', 'Ajukan Pembaruan Data', 'Mutasi instansi, jabatan, nomor WhatsApp, email, atau foto. Berlaku setelah disetujui Pengurus.', pending ? '1 menunggu' : 'Buat pengajuan', '#/anggota/profil') +
